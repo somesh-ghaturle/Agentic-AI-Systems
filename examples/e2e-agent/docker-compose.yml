@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  e2e-agent:
+    build: .
+    command: uvicorn app:app --host 0.0.0.0 --port 8000
+    environment:
+      E2E_AGENT_API_KEY: ${E2E_AGENT_API_KEY:-local-test-key}
+      E2E_AGENT_MODEL: ${E2E_AGENT_MODEL:-v0.1-demo}
+      E2E_AGENT_COMMIT: ${E2E_AGENT_COMMIT:-local-demo}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
