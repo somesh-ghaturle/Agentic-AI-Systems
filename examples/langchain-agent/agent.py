@@ -25,7 +25,7 @@ def run_with_langchain(prompt: str) -> str:
         return "OPENAI_API_KEY not set — set it to use OpenAI LLM."
 
     llm = OpenAI(temperature=0.2)
-    template = PromptTemplate(input_variables=["input"], template="""
+    template = PromptTemplate(input_variables=["system", "input"], template="""
 {system}
 
 User: {input}
