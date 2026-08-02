@@ -14,10 +14,13 @@ DOCS = [
 ]
 
 
-def query(q: str, k: int = 2, model_name: str = "all-mpnet-base-v2"):
+def query(q: str, k: int = 2, model_name: str = "all-MiniLM-L6-v2"):
+    from pathlib import Path
+
     model = SentenceTransformer(model_name)
     emb = model.encode([q], convert_to_numpy=True)
-    index = faiss.read_index("examples/rag-faiss/index.faiss")
+    index_path = Path(__file__).resolve().parent / "index.faiss"
+    index = faiss.read_index(str(index_path))
     D, I = index.search(emb, k)
     results = [(DOCS[i], float(D[0][j])) for j, i in enumerate(I[0])]
     return results
