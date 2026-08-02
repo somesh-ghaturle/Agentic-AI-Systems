@@ -14,13 +14,16 @@ DOCS = [
 ]
 
 
-def build_index(model_name: str = "all-mpnet-base-v2"):
+def build_index(model_name: str = "all-MiniLM-L6-v2"):
+    from pathlib import Path
+
     model = SentenceTransformer(model_name)
     embeddings = model.encode(DOCS, convert_to_numpy=True)
     dim = embeddings.shape[1]
     index = faiss.IndexFlatL2(dim)
     index.add(embeddings)
-    faiss.write_index(index, "examples/rag-faiss/index.faiss")
+    index_path = Path(__file__).resolve().parent / "index.faiss"
+    faiss.write_index(index, str(index_path))
     print(f"Built index with {index.ntotal} vectors (dim={dim})")
 
 
