@@ -1,0 +1,5 @@
+sentence-transformers>=2.2.0
+faiss-cpu
+langchain>=0.0.300
+openai>=0.27.0
+numpy
