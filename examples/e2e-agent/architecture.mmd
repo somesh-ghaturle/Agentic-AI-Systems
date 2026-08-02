@@ -3,13 +3,13 @@ flowchart LR
   APIGW[API Gateway / Load Balancer]
   Agent[FastAPI E2E Agent]
   OTel[OpenTelemetry Collector]
-  Traces[Tracing Backend\n(Jaeger/Tempo)]
-  Metrics[Metrics Backend\n(Prometheus)]
-  Audit[Audit Store / SIEM]
-  Provenance[Provenance Store\n(Immutable Object Storage)]
-  ModelRegistry[Model Registry]
-  Secrets[Secrets Manager]
-  CI[CI/CD Pipeline]
+  Traces["Tracing Backend\n(Jaeger/Tempo)"]
+  Metrics["Metrics Backend\n(Prometheus)"]
+  Audit["Audit Store / SIEM"]
+  Provenance["Provenance Store\n(Immutable Object Storage)"]
+  ModelRegistry["Model Registry"]
+  Secrets["Secrets Manager"]
+  CI["CI/CD Pipeline"]
 
   Client --> APIGW
   APIGW --> Agent

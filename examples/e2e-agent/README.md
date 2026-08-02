@@ -13,32 +13,32 @@ System architecture (mermaid)
 
 ```mermaid
 flowchart LR
-	Client[Client]
-	APIGW[API Gateway / Load Balancer]
-	Agent[FastAPI E2E Agent]
-	OTel[OpenTelemetry Collector]
-	Traces[Tracing Backend\n(Jaeger/Tempo)]
-	Metrics[Metrics Backend\n(Prometheus)]
-	Audit[Audit Store / SIEM]
-	Provenance[Provenance Store\n(Immutable Object Storage)]
-	ModelRegistry[Model Registry]
-	Secrets[Secrets Manager]
-	CI[CI/CD Pipeline]
+  Client[Client]
+  APIGW[API Gateway / Load Balancer]
+  Agent[FastAPI E2E Agent]
+  OTel[OpenTelemetry Collector]
+  Traces["Tracing Backend\n(Jaeger/Tempo)"]
+  Metrics["Metrics Backend\n(Prometheus)"]
+  Audit["Audit Store / SIEM"]
+  Provenance["Provenance Store\n(Immutable Object Storage)"]
+  ModelRegistry["Model Registry"]
+  Secrets["Secrets Manager"]
+  CI["CI/CD Pipeline"]
 
-	Client --> APIGW
-	APIGW --> Agent
-	Agent --> OTel
-	OTel --> Traces
-	OTel --> Metrics
-	Agent --> Audit
-	Agent --> Provenance
-	CI --> ModelRegistry
-	CI --> Agent
-	Agent --> Secrets
-	ModelRegistry --> Agent
+  Client --> APIGW
+  APIGW --> Agent
+  Agent --> OTel
+  OTel --> Traces
+  OTel --> Metrics
+  Agent --> Audit
+  Agent --> Provenance
+  CI --> ModelRegistry
+  CI --> Agent
+  Agent --> Secrets
+  ModelRegistry --> Agent
 
-	classDef infra fill:#f8f9fa,stroke:#333,stroke-width:1px
-	class OTel,Traces,Metrics,Audit,Provenance,ModelRegistry,Secrets,CI infra
+  classDef infra fill:#f8f9fa,stroke:#333,stroke-width:1px
+  class OTel,Traces,Metrics,Audit,Provenance,ModelRegistry,Secrets,CI infra
 ```
 
 	SVG diagram (auto-generated on PR): [examples/e2e-agent/architecture.svg](examples/e2e-agent/architecture.svg)
