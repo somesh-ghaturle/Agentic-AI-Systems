@@ -70,5 +70,6 @@ More runnable templates (examples):
 - LangChain agent: [examples/langchain-agent/README.md](examples/langchain-agent/README.md)
 - Retrieval (RAG) with FAISS: [examples/rag-faiss/README.md](examples/rag-faiss/README.md)
 - Ray orchestration sample: [examples/ray-orchestrator/README.md](examples/ray-orchestrator/README.md)
+ - End-to-end secure & observable agent (traceability, SLA, governance): [examples/e2e-agent/README.md](examples/e2e-agent/README.md)
 
 CI: A basic smoke-test workflow is included at `.github/workflows/smoke.yml` to run tests and basic checks on push/PR.
