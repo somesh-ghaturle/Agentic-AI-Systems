@@ -41,6 +41,8 @@ flowchart LR
 	class OTel,Traces,Metrics,Audit,Provenance,ModelRegistry,Secrets,CI infra
 ```
 
+	SVG diagram (auto-generated on PR): [examples/e2e-agent/architecture.svg](examples/e2e-agent/architecture.svg)
+
 Design guidance & 2026 reference
 
 This example follows the 2026 agentic architecture patterns described here:
