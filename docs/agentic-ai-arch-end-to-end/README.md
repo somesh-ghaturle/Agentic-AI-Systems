@@ -1,4 +1,4 @@
-# Agentic Coding Playbook
+# Agentic AI Arch End-to-End
 
 A drop-in kit for working with Claude (or any coding agent) as an **agent inside your
 workflow** rather than a chatbot you consult.
@@ -14,6 +14,7 @@ success, and when to stop.
 
 | Path | What it gives you |
 |---|---|
+| [HOW-TO-USE.md](HOW-TO-USE.md) | **Start here.** What every file does, how the pieces fit, and a step-by-step day one |
 | [PLAYBOOK.md](PLAYBOOK.md) | The eight habits, in the order you should build them |
 | [TWO-WEEK-RAMP.md](TWO-WEEK-RAMP.md) | A concrete day-by-day adoption plan |
 | [ANTIPATTERNS.md](ANTIPATTERNS.md) | Failure modes named so you catch them live |
@@ -63,7 +64,7 @@ the model does not.
 
 ## Reading order
 
-New to this: [PLAYBOOK.md](PLAYBOOK.md) → [TWO-WEEK-RAMP.md](TWO-WEEK-RAMP.md) → copy the templates.
+New to this: [HOW-TO-USE.md](HOW-TO-USE.md) → [PLAYBOOK.md](PLAYBOOK.md) → [TWO-WEEK-RAMP.md](TWO-WEEK-RAMP.md) → copy the templates.
 
 Already using agents daily and plateauing: skip to habit 6 in [PLAYBOOK.md](PLAYBOOK.md#6-anything-youve-prompted-twice-becomes-an-artifact),
 then read [ANTIPATTERNS.md](ANTIPATTERNS.md). The plateau is almost always "never got past habit 1."
