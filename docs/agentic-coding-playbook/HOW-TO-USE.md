@@ -92,7 +92,8 @@ Then run one real task plan-first using [checklists/task-start.md](checklists/ta
 | [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) | Multiple people in one repo — the shared/personal file split, gitignore, conflicts, onboarding | Before a second person starts using this kit |
 | [ANTIPATTERNS.md](ANTIPATTERNS.md) | Failure modes named so you recognize them live | After your first week, or when something feels wrong |
 | [GLOSSARY.md](GLOSSARY.md) | Rules vs. commands vs. skills vs. subagents vs. MCP — what each is and when to reach for it | When you are unsure which artifact a need calls for |
-| [ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) | What changes under governance — tool access, data egress, model provenance | Before rolling out at a bank, hospital, or agency |
+| [ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) | What changes under governance — tool access, data egress, cost, scale, legacy code, incidents | Before rolling out at a bank, hospital, or agency |
+| [AGENT-SECURITY.md](AGENT-SECURITY.md) | Prompt injection, secrets in context, supply chain, IP and licensing | Before a security review, or any use on untrusted input |
 | [REFERENCES.md](REFERENCES.md) | Source material and further reading | When you want the primary sources |
 
 ### Copy these (the artifacts)
@@ -329,6 +330,10 @@ day." The first is true far more often and has a ten-second fix.
 [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) → [PLAYBOOK.md](PLAYBOOK.md) → standardize the
 templates as your team's starting point. Add
 [ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) if you are in a governed environment.
+
+**Facing a security review, or pointing an agent at untrusted input**
+[AGENT-SECURITY.md](AGENT-SECURITY.md) — it stands alone and has a controls table built for
+pasting into a review.
 
 **Unsure whether something should be a rule, command, skill, or subagent**
 [GLOSSARY.md](GLOSSARY.md), or the ladder table in

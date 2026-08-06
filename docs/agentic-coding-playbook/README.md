@@ -20,6 +20,7 @@ success, and when to stop.
 | [ANTIPATTERNS.md](ANTIPATTERNS.md) | Failure modes named so you catch them live |
 | [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) | Multiple people, one repo — what to commit, what to gitignore, handling conflicts |
 | [ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) | What changes in a governed environment (banks, health, gov) |
+| [AGENT-SECURITY.md](AGENT-SECURITY.md) | Prompt injection, secrets, supply chain, IP — written for a security reviewer |
 | [GLOSSARY.md](GLOSSARY.md) | Rules vs. commands vs. skills vs. subagents vs. MCP |
 | [REFERENCES.md](REFERENCES.md) | Source material and further reading |
 | [templates/](templates/) | Copy-paste starting files: `CLAUDE.md`, rules, commands, skills, agents |

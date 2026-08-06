@@ -18,9 +18,12 @@ What changes is that three things become governed rather than personal choices:
 2. **Data egress** — what leaves your boundary, and to where
 3. **Model provenance** — which model, hosted where, under what terms, with what retention
 
-> Worth asking about in your **first week** rather than discovering later. The
-> uncomfortable version of this conversation is the one that happens after code is already
-> written.
+Worth asking about in your **first week** rather than discovering later. The uncomfortable
+version of this conversation is the one that happens after code is already written.
+
+> **Security is its own document.** Prompt injection, secrets handling, supply chain, and
+> IP/licensing are covered in [AGENT-SECURITY.md](AGENT-SECURITY.md), written to be read
+> standalone by a security reviewer. This document covers governance and rollout.
 
 ---
 
@@ -112,6 +115,124 @@ governance conversation lands.
 
 ---
 
+## Cost, and who pays for it
+
+Token spend is invisible until it is a line item someone has to defend. Get ahead of it.
+
+**What actually drives cost.** Not the number of people — the shape of their sessions. A
+long-running session re-sends its accumulated context on every turn, so a polluted
+five-hour session costs far more than five clean one-hour ones. Context hygiene is a cost
+control before it is a quality control, which is a useful thing to mention when the
+finance conversation happens.
+
+**Set up attribution before you need it.** Per-team or per-project keys, so spend maps to
+a budget owner. Retrofitting attribution after three months of pooled usage is unpleasant.
+
+**Expect the distribution to be lopsided.** A small number of people will account for most
+of the spend, and they are usually the ones getting the most value. Investigate before
+capping — the useful question is whether their pattern should be taught to everyone, not
+whether it should be stopped.
+
+**Compare against the right baseline.** The comparison finance will reach for is "cost per
+seat versus zero." The honest comparison is against engineering hours saved, and against
+the review time you now spend instead. Both directions are real; present both.
+
+**Practical controls:** budget alerts rather than hard caps at first, since a hard cap
+mid-task wastes the work already paid for. Prompt caching where the platform supports it,
+which mostly rewards the same thin-context discipline the playbook already asks for.
+
+---
+
+## Scale: config for hundreds of engineers
+
+Everything in [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) holds. Three things change past roughly
+fifty people.
+
+**Layer the config deliberately.** Context files compose across org settings, user home
+directory, project root, and subdirectories. Use that structure rather than fighting it:
+
+| Layer | Owns | Changes |
+|---|---|---|
+| Org / enterprise settings | Security, compliance, and egress constraints | Rarely, through a governance process |
+| Repository `CLAUDE.md` | Stack, commands, boundaries, conventions | Via PR, reviewed by the repo's owners |
+| Subdirectory rules | Domain invariants for that subtree | Via PR, reviewed by the domain owner |
+| Personal `~/.claude/CLAUDE.md` | Individual preferences | Freely, by the individual |
+
+The failure mode is org-level rules that should have been repository-level: they apply
+everywhere, cannot be tuned by the teams they affect, and get quietly worked around.
+
+**Give rules an owner.** A rules file with no owner rots — it accumulates rules nobody
+enforces and keeps rules whose reason expired. `CODEOWNERS` on `.claude/` and `CLAUDE.md`
+is a small change that makes review routing automatic.
+
+**In a monorepo, scope by path from day one.** A single root `CLAUDE.md` for a monorepo is
+either uselessly generic or enormous. Push almost everything into path-scoped rules and
+keep the root file to what is genuinely universal — the build system, the boundaries, the
+commands.
+
+**Do not centralize prompt libraries prematurely.** Teams sharing commands is good; a
+central "approved prompts" repository that requires a ticket to change is a way to ensure
+nobody writes commands at all. The whole value of habit 6 is that the loop from "I typed
+this twice" to "it is a command" stays short.
+
+---
+
+## Legacy codebases with no verification signal
+
+The playbook assumes a runnable test command. Large organizations frequently have
+codebases where that assumption fails — no tests, a forty-minute build, a suite that has
+been red for two years, or a system nobody fully understands.
+
+**This is the honest hard case, and it is often where the leverage is.** The advice is not
+"fix your test suite first," because that is a multi-year program.
+
+**Build a narrow signal instead of a complete one.** You do not need the suite green. You
+need *something* unambiguous for the code path you are touching:
+
+- A characterization test that captures current behavior, whatever it is — not correct
+  behavior, just present behavior, so you can detect change
+- A script that exercises one path and asserts the output
+- A diff of logs or output before and after
+- For a UI, a screenshot comparison
+
+Any of these is enough to iterate against, and writing one **is** the first task. That is
+the same rule as everywhere else in the playbook; it just costs more here.
+
+**Use the agent for comprehension, not only for change.** Explaining an unfamiliar
+subsystem, mapping call paths, and drafting the characterization tests are all high-value
+and low-risk — the output is a document or a test, and both are cheap to verify. Many
+teams find this is where most of the value lands in a legacy system, well before any
+production code changes.
+
+**Autonomy skews Red by default.** In a system where the behavior is not specified and the
+tests do not cover it, you cannot distinguish a bug fix from a behavior change. Treat that
+as Red until characterization tests exist.
+
+**Slow builds change the loop, not the habits.** When the signal takes forty minutes, the
+plan-first discipline matters more, not less — you cannot afford to iterate blindly. Batch
+verification, and use whatever fast partial signal exists (compile, lint, a subset) during
+the loop.
+
+---
+
+## Offboarding and access changes
+
+Rarely considered until an audit asks. The checklist is short.
+
+- **Revoke API access** with everything else — the agent endpoint belongs on the standard
+  offboarding list, and often is not on it yet
+- **Personal config leaves with the person.** `~/.claude/` is theirs. Anything the team
+  needs should already be in the repository, which is the practical argument for the
+  shared/personal split
+- **Review their recent agent-assisted changes** at the same bar as any other departing
+  engineer's work
+- **Rotate anything their agent had in scope** if credentials were ever in its
+  environment. See [AGENT-SECURITY.md](AGENT-SECURITY.md)
+- **Keep their learnings file.** `docs/learnings/<name>.md` is institutional knowledge and
+  should outlive their access
+
+---
+
 ## A workable rollout shape
 
 1. **Start in the safest bucket.** Tests, docs, internal tooling, and non-production
@@ -125,6 +246,38 @@ governance conversation lands.
    the control questions answered for each.
 5. **Keep `learnings.md` shared.** In an enterprise this doubles as the artifact that shows
    the practice is managed and improving.
+
+---
+
+## When agent-assisted code causes an incident
+
+It will eventually, the same way human-written code does. What matters is that your process
+does not treat it as a special category requiring a new investigation style.
+
+**Run your normal incident process.** The change went through review and was approved by a
+human — it is your organization's change, and the postmortem is about the same things it
+always is: what broke, why the checks did not catch it, and what control closes the gap.
+
+**Resist two opposite failure modes.** Blaming the tool and exempting the tool are both
+wrong. "The AI wrote it" is not a root cause; neither is treating an agent-assisted defect
+as unremarkable when the review process clearly did not fit the risk.
+
+**The useful questions are about the process:**
+
+- What autonomy bucket was this, and was that the right call in hindsight?
+- Did the change have a verification signal, and did the signal cover the failure mode?
+- Did a human read the diff, or approve a summary?
+- Was this a conceptual bug that passed green tests — the known dominant class? If so, the
+  gap is in review depth, not in testing volume
+- Would any rule already in `CLAUDE.md` have prevented it, and was it followed?
+
+**Close the loop structurally.** The finding goes into `learnings.md`, and anything
+recurring gets promoted into a rule. An incident that changes no rule is one you have
+agreed to have again.
+
+For security incidents specifically — credential exposure, suspected injection, config
+tampering — see [AGENT-SECURITY.md](AGENT-SECURITY.md). For the general process, see the
+[incident runbook](../incident-runbook.md).
 
 ---
 
