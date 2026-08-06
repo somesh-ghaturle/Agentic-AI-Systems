@@ -1,0 +1,172 @@
+# Antipatterns
+
+Failure modes named so you catch them live. Each one has a tell, a cause, and a fix.
+
+---
+
+## The 300-line kitchen sink `CLAUDE.md`
+
+**Tell:** the file has grown for months. It contains aspirations ("write clean code"),
+speculation about situations that never arise, and somewhere in the middle, three rules
+that actually matter.
+
+**Cause:** every correction got appended and nothing was ever deleted.
+
+**Why it fails:** the model weighs instructions roughly equally. Burying three real rules
+under forty decorative ones means it follows none of them reliably. You have not added
+context, you have diluted it.
+
+**Fix:** cut to under 200 lines. For each line ask *would I correct the agent if it
+violated this?* If no, delete it. Push subtree-specific rules into `.claude/rules/*.md`
+with `globs:`. Point at docs rather than pasting them.
+
+---
+
+## "Should work"
+
+**Tell:** the agent reports completion. No command output, no test result, no screenshot.
+
+**Cause:** no verification signal exists, or no rule requires using it.
+
+**Why it fails:** you have moved the work from writing code to reviewing unverified code,
+which is the more expensive half. Everything downstream is built on an unchecked claim.
+
+**Fix:** [verification.md](templates/.claude/rules/verification.md). Require pasted output.
+If there is no test command, creating one *is* the task.
+
+---
+
+## Green tests over a suppressed symptom
+
+**Tell:** a stubborn failure suddenly goes green. The diff contains a bare `except`, a
+type widened to `Any`, a skipped test, or a hardcoded fallback value.
+
+**Cause:** "make the test pass" has an easy local minimum that is not "fix the bug."
+
+**Why it fails:** worse than the original bug — the failure is now invisible and the check
+that would have caught it is disabled.
+
+**Fix:** add the root-cause rule explicitly. Scan every diff for the suppression list in
+[pre-merge.md](checklists/pre-merge.md). When the real fix is out of scope, the correct
+output is a report, not a workaround.
+
+---
+
+## The kitchen-sink session
+
+**Tell:** you debugged a test, then changed some UI, then asked about deploys — all in one
+context. Quality is visibly dropping and it "feels dumber than this morning."
+
+**Cause:** unrelated earlier material is still in context, still being attended to,
+distorting current reasoning.
+
+**Why it fails:** it gets misdiagnosed as model degradation, so people try prompt
+improvements. No prompt fixes a polluted context.
+
+**Fix:** one session, one task. `/handoff`, clear, restart.
+
+---
+
+## Correcting in circles
+
+**Tell:** third correction on the same problem. Fixes are getting narrower; progress has
+asymptoted.
+
+**Cause:** each failed attempt remains in context. The model is reasoning in a neighborhood
+defined by wrong approaches, and each correction anchors it deeper.
+
+**Why it fails:** it feels like progress — you are refining! — but the trend is flat.
+
+**Fix:** after the **second** failed correction, stop. Write down what it keeps getting
+wrong, save progress, clear, and restart with that constraint in the *first* message.
+
+---
+
+## Global autonomy
+
+**Tell:** auto-accept is either always on or always off.
+
+**Cause:** treating supervision as a personality setting instead of a per-task decision.
+
+**Why it fails:** always-on ships subtle bugs in auth and payments. Always-off means
+babysitting test scaffolding, so you get the cost of agents without the leverage.
+
+**Fix:** Green / Yellow / Red per task, decided before starting. See
+[autonomy.md](templates/.claude/rules/autonomy.md).
+
+---
+
+## The permanent beginner
+
+**Tell:** six months in, still typing the same prompts by hand. No `.claude/commands/`.
+Every session starts from the same cold floor.
+
+**Cause:** habit 1 works well enough that there is never an acute reason to build habit 6.
+
+**Why it fails:** the gains never compound. This is the single most common plateau, and it
+is invisible because nothing is going wrong — it just is not getting better.
+
+**Fix:** the rule is mechanical, so it does not require noticing. **Prompted it twice →
+make it an artifact.** Two commands this week.
+
+---
+
+## The generic subagent
+
+**Tell:** agents named "QA engineer," "backend engineer," "code reviewer." They
+underperform and nobody is sure why.
+
+**Cause:** role-shaped thinking. It reads as reusable.
+
+**Why it fails:** the description is too vague to drive good tool selection, so the agent
+explores from scratch every time and carries loose context. It is worse than doing the work
+inline, because you also pay the handoff cost.
+
+**Fix:** feature-specific agents. One per feature you work on repeatedly, naming your real
+paths, fixtures, and commands.
+
+---
+
+## Reviewing the summary instead of the diff
+
+**Tell:** you read "refactored the auth handler for clarity," it sounded fine, you approved.
+
+**Cause:** the summary is well-written and reviewing diffs is tedious.
+
+**Why it fails:** the summary was generated by the same process that wrote the code, and it
+describes *intent*. If the code does something other than what was intended, the summary
+describes the intention, not the bug.
+
+**Fix:** read every changed line in Yellow and Red. Be most suspicious of code that worked
+on the first try in a sensitive area.
+
+---
+
+## Trusting the type checker to catch conceptual errors
+
+**Tell:** "it type-checks and the tests pass, so it is correct."
+
+**Cause:** the old bug taxonomy, where most bugs were mechanical.
+
+**Why it fails:** the taxonomy shifted. Generated code has fewer syntax-level bugs and more
+conceptual ones — inverted conditions, wrong boundary, right-for-the-happy-path logic. All
+of those type-check perfectly. And the tests often encode the same misunderstanding as the
+code, so green is weak evidence.
+
+**Fix:** [review-diff.md](templates/.claude/commands/review-diff.md). Ask what it does with
+empty, duplicate, and hostile input. The unsolved fraction of engineering benchmarks trends
+toward exactly this class of bug.
+
+---
+
+## Learnings that never get promoted
+
+**Tell:** `learnings.md` has thirty entries. `CLAUDE.md` has not changed in two months.
+
+**Cause:** writing things down feels like the fix. It is only half.
+
+**Why it fails:** you are paying for the same mistake every week and keeping a careful
+record of doing so.
+
+**Fix:** weekly promotion review. Anything appearing twice becomes a rule. See
+[learnings.md](worksheets/learnings.md).

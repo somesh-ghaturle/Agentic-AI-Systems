@@ -57,6 +57,10 @@ If you'd like, I can add more targeted advanced references (papers, repos, templ
 
 These resources provide governance, risk, and security perspectives suitable for enterprise adoption.
 
+## Working with coding agents
+
+- **Agentic AI Arch End-to-End**: [docs/agentic-ai-arch-end-to-end/](docs/agentic-ai-arch-end-to-end/README.md) — a drop-in kit for treating Claude (or any coding agent) as an agent inside your workflow rather than a chatbot you consult. Eight habits, a two-week ramp, named antipatterns, and copy-paste templates for `CLAUDE.md`, scoped rules, slash commands, skills, and subagents.
+
 ## Included templates & checklists
 
 - Governance checklist: [docs/governance-checklist.md](docs/governance-checklist.md)
