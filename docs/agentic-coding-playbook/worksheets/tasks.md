@@ -2,6 +2,9 @@
   Copy to your repo root as tasks.md.
   Updated before every context clear. Keep it short — if it is long, it is a backlog, and
   backlogs belong in your issue tracker, not in agent context.
+
+  SHARED REPO: gitignore this file. It is per-task, per-person state — committed to a
+  repo other people work in, it conflicts on nearly every merge. See TEAM-WORKFLOW.md.
 -->
 
 # Tasks

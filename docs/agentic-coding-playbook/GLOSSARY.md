@@ -100,3 +100,9 @@ hardcoded fallbacks are all suppression.
 **Conceptual bug** — a defect in the logic rather than the syntax: inverted condition, wrong
 boundary, right-for-the-happy-path. Type-checks cleanly, survives tests that encode the same
 misunderstanding, and is the dominant remaining bug class in generated code.
+
+**Shared vs. personal config** — the split that matters once more than one person works in
+a repo. *Shared*: `CLAUDE.md`, rules, commands, skills, and agents — committed and
+PR-reviewed, because they change how everyone's agent behaves. *Personal*: `plan.md`,
+`tasks.md`, `context.md` — gitignored, because they are per-task scratch state that
+conflicts on every merge. See [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md).

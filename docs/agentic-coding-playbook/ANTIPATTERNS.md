@@ -170,3 +170,37 @@ record of doing so.
 
 **Fix:** weekly promotion review. Anything appearing twice becomes a rule. See
 [learnings.md](worksheets/learnings.md).
+
+---
+
+## Committing session state to a shared repo
+
+**Tell:** `plan.md` and `tasks.md` conflict on nearly every merge. People resolve them by
+picking a side at random, because neither version matters to anyone but its author.
+
+**Cause:** the worksheets say "copy to your repo root," and in a solo repo that is fine.
+Nobody revisited it when the second person joined.
+
+**Why it fails:** you get permanent merge friction in exchange for preserving a scratchpad
+whose value is measured in hours. Worse, the conflicts train people to resolve carelessly,
+and that habit does not stay confined to these files.
+
+**Fix:** gitignore `plan.md`, `tasks.md`, and `context.md`. Keep `learnings.md` shared but
+split per person. See [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md).
+
+---
+
+## Rules that drift between teammates
+
+**Tell:** two people describe the agent behaving differently on the same repo. Someone's
+`CLAUDE.md` has a rule nobody else has, or a rule everyone else deleted months ago.
+
+**Cause:** agent config was treated as personal tooling rather than shared code — edited
+locally, never committed, or committed without anyone noticing.
+
+**Why it fails:** the rules file is the thing making behavior reproducible. When it drifts,
+you lose the one property that makes agent output reviewable by someone other than its
+author, and debugging "why did it do that" becomes impossible.
+
+**Fix:** shared config goes through PR review exactly like a lint config, and rule changes
+get announced. See [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md).

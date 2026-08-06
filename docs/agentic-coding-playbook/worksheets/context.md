@@ -2,6 +2,9 @@
   Copy to your repo root as context.md.
   This is the file that lets a fresh session resume instead of restarting.
   Overwrite stale entries — this is living state, not a log.
+
+  SHARED REPO: gitignore this file. It is per-task, per-person state — committed to a
+  repo other people work in, it conflicts on nearly every merge. See TEAM-WORKFLOW.md.
 -->
 
 # Context

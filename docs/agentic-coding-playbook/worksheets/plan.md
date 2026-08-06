@@ -1,4 +1,9 @@
-<!-- Copy to your repo root as plan.md. Written before code, read by a human, then executed. -->
+<!--
+  Copy to your repo root as plan.md. Written before code, read by a human, then executed.
+
+  SHARED REPO: gitignore this file. It is per-task, per-person state — committed to a
+  repo other people work in, it conflicts on nearly every merge. See TEAM-WORKFLOW.md.
+-->
 
 # Plan: `<task name>`
 

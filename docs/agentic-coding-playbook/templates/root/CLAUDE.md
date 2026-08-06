@@ -81,6 +81,9 @@ root cause is out of scope, stop and say so rather than papering over it.
 - `.github/workflows/` — CI changes need a human
 - `**/secrets*`, `.env*` — never read, never write, never echo into output
 - Anything under `<auth module path>` — plan first, no auto-accept
+- **Git remote and history**: never run `git push`, `git rebase`, `git reset --hard`, or
+  any history-rewriting command. Staging and committing locally is fine when asked;
+  anything that touches the remote or rewrites history is the human's call.
 
 ## Autonomy
 

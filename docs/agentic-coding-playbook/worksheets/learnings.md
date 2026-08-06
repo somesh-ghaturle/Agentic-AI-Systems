@@ -7,6 +7,11 @@
 
   Without this step, you correct the same three mistakes forever and plateau. With it,
   each mistake is paid for once.
+
+  SHARED REPO: unlike the other worksheets, this one is worth committing — but not at the
+  repo root. An append-only file with newest-at-top means every teammate writes to line 1
+  and every merge conflicts. Give each person their own file instead:
+  docs/learnings/<your-name>.md. See TEAM-WORKFLOW.md.
 -->
 
 # Learnings

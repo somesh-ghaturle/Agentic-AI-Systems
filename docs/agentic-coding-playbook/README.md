@@ -1,4 +1,4 @@
-# Agentic AI Arch End-to-End
+# Agentic Coding Playbook
 
 A drop-in kit for working with Claude (or any coding agent) as an **agent inside your
 workflow** rather than a chatbot you consult.
@@ -18,6 +18,7 @@ success, and when to stop.
 | [PLAYBOOK.md](PLAYBOOK.md) | The eight habits, in the order you should build them |
 | [TWO-WEEK-RAMP.md](TWO-WEEK-RAMP.md) | A concrete day-by-day adoption plan |
 | [ANTIPATTERNS.md](ANTIPATTERNS.md) | Failure modes named so you catch them live |
+| [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) | Multiple people, one repo — what to commit, what to gitignore, handling conflicts |
 | [ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) | What changes in a governed environment (banks, health, gov) |
 | [GLOSSARY.md](GLOSSARY.md) | Rules vs. commands vs. skills vs. subagents vs. MCP |
 | [REFERENCES.md](REFERENCES.md) | Source material and further reading |
@@ -31,7 +32,7 @@ success, and when to stop.
 
 ```bash
 # From the root of the repo you want to instrument:
-PLAYBOOK=path/to/docs/agentic-ai-arch-end-to-end
+PLAYBOOK=path/to/docs/agentic-coding-playbook
 
 cp $PLAYBOOK/templates/root/CLAUDE.md            ./CLAUDE.md
 mkdir -p .claude/rules .claude/commands
@@ -68,5 +69,8 @@ New to this: [HOW-TO-USE.md](HOW-TO-USE.md) → [PLAYBOOK.md](PLAYBOOK.md) → [
 
 Already using agents daily and plateauing: skip to habit 6 in [PLAYBOOK.md](PLAYBOOK.md#6-anything-youve-prompted-twice-becomes-an-artifact),
 then read [ANTIPATTERNS.md](ANTIPATTERNS.md). The plateau is almost always "never got past habit 1."
+
+Working in a shared repo with other people: [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) — it
+resolves what to commit and what to gitignore, which the rest of this kit assumes away.
 
 Rolling this out to a governed org: [ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) first.

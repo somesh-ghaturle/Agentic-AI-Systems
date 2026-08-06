@@ -11,6 +11,10 @@ where this one stopped.
 Update these files (create them if absent). Overwrite stale content — these are living
 state, not append-only logs.
 
+In a shared repository `tasks.md` and `context.md` should be gitignored — they are
+per-person, per-task state. Write them anyway; they are for your next session, not for
+your teammates.
+
 ## `tasks.md`
 
 ```markdown

@@ -53,7 +53,7 @@ but the habits transfer to any agent with filesystem and shell access.
 From the root of the repo you want to instrument:
 
 ```bash
-PLAYBOOK=path/to/docs/agentic-ai-arch-end-to-end
+PLAYBOOK=path/to/docs/agentic-coding-playbook
 
 cp $PLAYBOOK/templates/root/CLAUDE.md            ./CLAUDE.md
 mkdir -p .claude/rules .claude/commands
@@ -89,6 +89,7 @@ Then run one real task plan-first using [checklists/task-start.md](checklists/ta
 | [README.md](README.md) | The one-page overview and quick start | First |
 | [PLAYBOOK.md](PLAYBOOK.md) | **The core document.** Eight habits in dependency order, each with the reasoning behind it | First real read, ~15 min |
 | [TWO-WEEK-RAMP.md](TWO-WEEK-RAMP.md) | Day-by-day adoption plan — what to do on day 1, day 2, and so on | When you have decided to actually do this |
+| [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) | Multiple people in one repo — the shared/personal file split, gitignore, conflicts, onboarding | Before a second person starts using this kit |
 | [ANTIPATTERNS.md](ANTIPATTERNS.md) | Failure modes named so you recognize them live | After your first week, or when something feels wrong |
 | [GLOSSARY.md](GLOSSARY.md) | Rules vs. commands vs. skills vs. subagents vs. MCP — what each is and when to reach for it | When you are unsure which artifact a need calls for |
 | [ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) | What changes under governance — tool access, data egress, model provenance | Before rolling out at a bank, hospital, or agency |
@@ -133,6 +134,12 @@ survives a context clear.
 | [worksheets/context.md](worksheets/context.md) | `./context.md` | Decisions and *why*, constraints discovered, dead ends, open questions, environment notes |
 | [worksheets/tasks.md](worksheets/tasks.md) | `./tasks.md` | Next action, in progress, blocked, done, deliberately-not-doing |
 | [worksheets/learnings.md](worksheets/learnings.md) | `./learnings.md` | Every mistake the agent made, and which rules file it should be promoted into |
+
+**If anyone else works in this repo, read [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) before
+copying these.** The first three are per-task personal state and should be gitignored —
+committed to a shared repo they conflict on nearly every merge. `learnings.md` is worth
+sharing but needs a per-person layout, because an append-only file collides every time two
+people write to it in the same week.
 
 ---
 
@@ -319,8 +326,9 @@ the first hypothesis should be "my context is polluted," not "the model is havin
 day." The first is true far more often and has a ten-second fix.
 
 **Rolling out to a team**
-[ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) → [PLAYBOOK.md](PLAYBOOK.md) →
-standardize the templates as your team's starting point.
+[TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) → [PLAYBOOK.md](PLAYBOOK.md) → standardize the
+templates as your team's starting point. Add
+[ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) if you are in a governed environment.
 
 **Unsure whether something should be a rule, command, skill, or subagent**
 [GLOSSARY.md](GLOSSARY.md), or the ladder table in

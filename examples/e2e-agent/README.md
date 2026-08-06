@@ -41,7 +41,7 @@ flowchart LR
   class OTel,Traces,Metrics,Audit,Provenance,ModelRegistry,Secrets,CI infra
 ```
 
-	SVG diagram (auto-generated on PR): [examples/e2e-agent/architecture.svg](examples/e2e-agent/architecture.svg)
+	SVG diagram (auto-generated on PR): [architecture.svg](architecture.svg)
 
 Design guidance & 2026 reference
 

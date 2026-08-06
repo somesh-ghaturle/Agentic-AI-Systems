@@ -54,3 +54,15 @@ diff is what ships.
 
 That last pair is what makes next week cheaper than this week. Skipping it is why some
 teams run agents for six months and are no faster than on day one.
+
+## If someone else will review this
+
+- [ ] The PR states the **autonomy bucket** — it tells the reviewer how hard to look
+- [ ] The **verification output is pasted in**, not summarized. `/verify` produces a table
+      built for this
+- [ ] Nothing personal or machine-specific leaked into committed config (local paths,
+      credentials, your own scratch notes)
+- [ ] Session state files (`plan.md`, `tasks.md`, `context.md`) are **not** in the diff —
+      they should be gitignored
+
+See [TEAM-WORKFLOW.md](../TEAM-WORKFLOW.md) for the full shared-repo workflow.

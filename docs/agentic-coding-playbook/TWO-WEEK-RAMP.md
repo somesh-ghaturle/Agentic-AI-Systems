@@ -43,6 +43,8 @@ have run three real tasks plan-first.
 ### Days 4–5 — Three real tasks, plan-first
 
 - [ ] Copy the [worksheets](worksheets/) to your repo root
+- [ ] **If anyone else works in this repo:** gitignore `plan.md`, `tasks.md`, and
+      `context.md` now, before they get committed — see [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md)
 - [ ] Copy [plan.md](templates/.claude/commands/plan.md) and
       [verify.md](templates/.claude/commands/verify.md) into `.claude/commands/`
 - [ ] Run **three real tasks**, each: `/plan` → read and correct the plan → execute →
@@ -94,6 +96,9 @@ Goal: stop retyping. Turn repetition into artifacts so next week is cheaper than
 - [ ] Copy [review-diff.md](templates/.claude/commands/review-diff.md) and run it on a
       real diff
 - [ ] Adopt [checklists/pre-merge.md](checklists/pre-merge.md) as your merge gate
+- [ ] **If you share this repo:** commit `CLAUDE.md` and `.claude/` in a PR so the team is
+      working from the same rules — [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) has the setup and
+      the review checklist
 
 **End of Week 2 you should have:** two commands, one skill, one subagent, a handoff habit,
 and a `learnings.md` that has already fed back into your rules at least once.
