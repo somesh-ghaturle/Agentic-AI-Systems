@@ -4,6 +4,11 @@ In the order you should build them. Each habit assumes the ones above it. Skippi
 the most common reason people plateau — habits 6 and 7 do almost nothing for you if habit 4
 is missing, because you end up automating an unverified loop.
 
+New here? [HOW-TO-USE.md](HOW-TO-USE.md) explains what every file in this folder does and
+gives you a step-by-step day one. Sharing the repo with other people, or pointing an agent
+at untrusted input? [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md) and
+[AGENT-SECURITY.md](AGENT-SECURITY.md) cover what these eight habits assume away.
+
 ---
 
 ## 1. Make an agentic surface your default, not chat
@@ -34,7 +39,7 @@ conventions, your test command, what is off-limits. It is read from several plac
 they compose:
 
 | Location | Scope | Use for |
-|---|---|---|
+| --- | --- | --- |
 | Org / enterprise settings | Everyone in the org | Compliance and security constraints |
 | `~/.claude/CLAUDE.md` | You, all projects | Your personal preferences |
 | `./CLAUDE.md` (project root) | This repo | Stack, commands, conventions, boundaries |
@@ -70,7 +75,7 @@ to discover that you and the agent disagree about what the task even is.
 Persist task state **outside the conversation**, in files:
 
 | File | Holds |
-|---|---|
+| --- | --- |
 | `plan.md` | The approach, the steps, the acceptance criteria |
 | `context.md` | Decisions made, constraints discovered, why things are the way they are |
 | `tasks.md` | What is done, in progress, and blocked |
@@ -127,7 +132,7 @@ what the code touches.
 A workable split:
 
 | Bucket | Examples | Mode |
-|---|---|---|
+| --- | --- | --- |
 | **Green** — peripheral, reversible, well-tested | Tests, docs, scaffolding, refactors under green tests, log lines, config in dev | Auto-accept, review the diff at the end |
 | **Yellow** — real logic, contained blast radius | Feature code, internal APIs, data transforms | Plan first, review each significant edit |
 | **Red** — core, security, money, data, irreversible | Auth, permissions, payments, migrations, deletes, prod config, crypto | Step-by-step, you read every line, no auto-accept |
@@ -148,7 +153,7 @@ the same cold floor as the last one.
 The escalation ladder:
 
 | You have | Make it a | Which is | Lives in |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Prompted the same thing twice | **Command** | A reusable prompt you invoke by name | `.claude/commands/*.md` |
 | Domain knowledge the agent keeps needing | **Skill** | Reference material loaded on demand | `.claude/skills/*/SKILL.md` |
 | Work that would pollute your main context | **Subagent** | A separate context that reports back a result | `.claude/agents/*.md` |

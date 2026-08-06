@@ -8,7 +8,7 @@ This repository is a curated reference hub for **systematic AI enterprise system
 - Deployment-oriented design references
 - Tool orchestration, memory, and context engineering concepts
 - Security and reliability guidance for production workflows
- - Governance, lifecycle, and reproducibility for enterprise AI
+- Governance, lifecycle, and reproducibility for enterprise AI
 
 ## Curated references
 
@@ -37,29 +37,33 @@ This repository's main purpose is to provide practitioners and engineering teams
 
 ## Advanced references (examples to include)
 
-- LangChain (practical agent and orchestration patterns): https://github.com/langchain-ai/langchain
-- Ray (distributed execution for agents and workloads): https://github.com/ray-project/ray
-- Kubeflow (ML orchestration and pipelines): https://www.kubeflow.org/
-- MLflow (experiment tracking and reproducibility): https://mlflow.org/
-- Google MLOps: Continuous Delivery for Machine Learning (guide): https://cloud.google.com/architecture/mlops-continuous-delivery-automation
-- Model Cards for model reporting (best practices for model documentation): https://modelcards.withgoogle.com/
-- Hidden Technical Debt in Machine Learning Systems (operational risks paper): https://papers.nips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf
+- [LangChain](https://github.com/langchain-ai/langchain) (practical agent and orchestration patterns)
+- [Ray](https://github.com/ray-project/ray) (distributed execution for agents and workloads)
+- [Kubeflow](https://www.kubeflow.org/) (ML orchestration and pipelines)
+- [MLflow](https://mlflow.org/) (experiment tracking and reproducibility)
+- [Google MLOps: Continuous Delivery for Machine Learning](https://cloud.google.com/architecture/mlops-continuous-delivery-automation) (guide)
+- [Model Cards](https://modelcards.withgoogle.com/) for model reporting (best practices for model documentation)
+- [Hidden Technical Debt in Machine Learning Systems](https://papers.nips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf) (operational risks paper)
 
 If you'd like, I can add more targeted advanced references (papers, repos, templates) for governance, security, or large-scale orchestration — tell me which areas to prioritize.
 
 ## Governance & security references
 
-- NIST AI Risk Management Framework: https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf
-- EU AI Act (summary and compliance guidance): https://commission.europa.eu/publications/eu-artificial-intelligence-act_en
-- Responsible AI practices (Microsoft): https://learn.microsoft.com/en-us/azure/ai/fundamentals/responsible-ai
-- Model Cards & documentation best practices: https://modelcards.withgoogle.com/
-- OWASP AI Security Top Ten (emerging guidance): https://owasp.org/www-project-top-ten/
+- [NIST AI Risk Management Framework](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf)
+- [EU AI Act](https://commission.europa.eu/publications/eu-artificial-intelligence-act_en) (summary and compliance guidance)
+- [Responsible AI practices](https://learn.microsoft.com/en-us/azure/ai/fundamentals/responsible-ai) (Microsoft)
+- [Model Cards & documentation best practices](https://modelcards.withgoogle.com/)
+- [OWASP AI Security Top Ten](https://owasp.org/www-project-top-ten/) (emerging guidance)
 
 These resources provide governance, risk, and security perspectives suitable for enterprise adoption.
 
+## System architecture reference
+
+- **Agentic System Architecture**: [docs/agentic-system-architecture/](docs/agentic-system-architecture/README.md) — reference architecture for building agentic systems as production software. Single-agent vs. multi-agent trade-offs, the six building blocks (model routing, tool contracts, memory and state, orchestration, trace-level evals, approval gates), production engineering principles, and a design-review checklist.
+
 ## Working with coding agents
 
-- **Agentic Coding Playbook**: [docs/agentic-coding-playbook/](docs/agentic-coding-playbook/README.md) — a drop-in kit for treating Claude (or any coding agent) as an agent inside your workflow rather than a chatbot you consult. Eight habits, a two-week ramp, named antipatterns, a team workflow for shared repos, and copy-paste templates for `CLAUDE.md`, scoped rules, slash commands, skills, and subagents.
+- **Agentic Coding Playbook**: [docs/agentic-coding-playbook/](docs/agentic-coding-playbook/README.md) — a drop-in kit for treating Claude (or any coding agent) as an agent inside your workflow rather than a chatbot you consult. Eight habits, a two-week ramp, named antipatterns, a team workflow for shared repos, enterprise rollout and agent-security guidance, and copy-paste templates for `CLAUDE.md`, scoped rules, slash commands, skills, and subagents.
 
 ## Included templates & checklists
 
@@ -74,6 +78,6 @@ More runnable templates (examples):
 - LangChain agent: [examples/langchain-agent/README.md](examples/langchain-agent/README.md)
 - Retrieval (RAG) with FAISS: [examples/rag-faiss/README.md](examples/rag-faiss/README.md)
 - Ray orchestration sample: [examples/ray-orchestrator/README.md](examples/ray-orchestrator/README.md)
- - End-to-end secure & observable agent (traceability, SLA, governance): [examples/e2e-agent/README.md](examples/e2e-agent/README.md)
+- End-to-end secure & observable agent (traceability, SLA, governance): [examples/e2e-agent/README.md](examples/e2e-agent/README.md)
 
 CI: A basic smoke-test workflow is included at `.github/workflows/smoke.yml` to run tests and basic checks on push/PR.

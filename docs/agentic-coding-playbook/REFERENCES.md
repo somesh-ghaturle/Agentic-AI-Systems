@@ -22,13 +22,13 @@ Verify anything before quoting it in a document that matters.
 
 Start here. This is the material that is authoritative and stays current.
 
-- **Claude Code documentation** — https://code.claude.com/docs
+- **Claude Code documentation** — [code.claude.com/docs](https://code.claude.com/docs)
   Context files, rules, commands, skills, subagents, hooks, permissions, MCP, settings.
-- **Claude Docs** — https://docs.claude.com
+- **Claude Docs** — [docs.claude.com](https://docs.claude.com)
   Model capabilities, tool use, prompt caching, the API surface.
-- **Model Context Protocol** — https://modelcontextprotocol.io
+- **Model Context Protocol** — [modelcontextprotocol.io](https://modelcontextprotocol.io)
   The spec for exposing external tools and data to agents.
-- **Anthropic Engineering blog** — https://www.anthropic.com/engineering
+- **Anthropic Engineering blog** — [anthropic.com/engineering](https://www.anthropic.com/engineering)
   Agent design patterns, context engineering, evaluation.
 
 ---
@@ -36,7 +36,7 @@ Start here. This is the material that is authoritative and stays current.
 ## Concepts and where they come from
 
 | Concept | Source type | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Context file layering (org → user → project → subdirectory) | Primary docs | Verifiable in the docs |
 | Commands, skills, subagents, MCP | Primary docs | Verifiable in the docs |
 | Keep context thin; short beats long | Practitioner consensus | Widely reported; the ~200-line cap is a heuristic, not an official limit |
@@ -48,6 +48,11 @@ Start here. This is the material that is authoritative and stays current.
 | Feature-specific over role-generic subagents | Attributed practitioner guidance | Attribution unverified; the underlying reasoning is sound and independently testable |
 | Non-engineering uses (legal, marketing, data science) | Reported internal Anthropic experience | Directionally reported in Anthropic material |
 | Shift in bug taxonomy toward conceptual errors | Emerging research + practitioner reports | Direction is well-supported; magnitudes vary by study |
+| Prompt injection as the dominant agent risk | Established security research | OWASP LLM01; the "instructions and data share a channel" framing is well-established |
+| Capability limits over content filtering | Security consensus | Standard defense-in-depth reasoning, not specific to any vendor |
+| Shared vs. personal config split | This document's own | Derived from ordinary git practice; no external source claimed |
+| Cost driven by session shape, not headcount | Mechanical | Follows from how context is re-sent per turn; verify against your own billing |
+| Characterization tests for legacy code | Established practice | Predates agents entirely — see Feathers, *Working Effectively with Legacy Code* |
 
 ---
 
@@ -56,11 +61,11 @@ Start here. This is the material that is authoritative and stays current.
 Relevant when adapting this for a regulated environment — see
 [ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md).
 
-- **NIST AI Risk Management Framework** — https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf
-- **EU AI Act** — https://commission.europa.eu/publications/eu-artificial-intelligence-act_en
-- **OWASP Top 10 for LLM Applications** — https://owasp.org/www-project-top-10-for-large-language-model-applications/
-- **Model Cards for Model Reporting** — https://modelcards.withgoogle.com/
-- **Hidden Technical Debt in Machine Learning Systems** — https://papers.nips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf
+- **NIST AI Risk Management Framework** — [nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf)
+- **EU AI Act** — [commission.europa.eu/publications/eu-artificial-intelligence-act_en](https://commission.europa.eu/publications/eu-artificial-intelligence-act_en)
+- **OWASP Top 10 for LLM Applications** — [owasp.org/www-project-top-10-for-large-language-model-applications/](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
+- **Model Cards for Model Reporting** — [modelcards.withgoogle.com](https://modelcards.withgoogle.com/)
+- **Hidden Technical Debt in Machine Learning Systems** — [papers.nips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf](https://papers.nips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf)
   Predates the agent era and remains the best account of why the code is the easy part.
 
 ---

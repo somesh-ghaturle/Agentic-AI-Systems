@@ -75,3 +75,6 @@ Working in a shared repo with other people: [TEAM-WORKFLOW.md](TEAM-WORKFLOW.md)
 resolves what to commit and what to gitignore, which the rest of this kit assumes away.
 
 Rolling this out to a governed org: [ENTERPRISE-ADAPTATION.md](ENTERPRISE-ADAPTATION.md) first.
+
+Building an agentic system rather than using one to code? That is a different subject —
+see [agentic-system-architecture/](../agentic-system-architecture/README.md).
