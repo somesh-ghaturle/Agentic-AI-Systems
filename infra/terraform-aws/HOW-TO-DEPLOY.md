@@ -96,6 +96,41 @@ that also writes an audit row is a write tool. When unsure, classify as `write` 
 unnecessary gate costs a click, a missing one costs an irreversible action nobody
 authorized.
 
+### The model step
+
+The state machine's `Reason` state is the model call, and the reference ships no handler
+for it — what you send a model and how you parse the response is the part of this system
+that is actually yours. Declare it as a read tool named `reason` and the definition wires
+itself:
+
+```hcl
+reason = {
+  access          = "read"
+  handler         = "index.handler"
+  runtime         = "python3.12"
+  package_path    = "../../build/reason.zip"
+  timeout_seconds = 120
+}
+```
+
+Two things it must return, because states downstream read them by path:
+
+- `action_type` — `"write"` routes into the approval gate, `"continue"` loops, anything
+  else completes
+- `usage` — `{"total_tokens": …, "cost_usd": …}`, which is where the terminal trace record
+  gets the numbers the cost alarm counts. No usage, no cost metric; the reference does not
+  invent one
+
+Leave `reason` undeclared and the definition renders with `REASON_TOOL_NOT_CONFIGURED` in
+place of the ARN. The state machine still deploys, and fails at that step — visibly,
+down the `RecordFailure` path, rather than silently.
+
+### The state machine definition
+
+`envs/*/state-machine.json.tftpl` is rendered by `templatefile` with the ARNs of things
+that only exist after apply — the retrieve tool, the validator, the approval topic, the
+trace emitter. You do not substitute anything by hand.
+
 ---
 
 ## 4 · Apply
@@ -190,7 +225,13 @@ with the documented fields:
 `cost_usd` and `total_tokens` belong on the terminal record only — emitting them per step
 multiply-counts them.
 
-Two things are easy to get wrong here, and `shared/agentic_trace.py` handles both:
+The orchestrator's own records — the terminal outcome of a request, the loop bound firing
+— are produced by states inside the state machine, and a state machine writes to its
+execution log group rather than to the trace group. They reach the filters through the
+`trace_emitter` function, which the terminal states invoke. Omit it and the loop-bound and
+cost alarms sit at zero forever, which reads exactly like a healthy system.
+
+Two more things are easy to get wrong, and `shared/agentic_trace.py` handles both:
 
 - The filters are attached to **one** log group, `/agentic/<prefix>/traces`, not to each
   function's own group. A handler that only prints to stdout looks healthy in the console

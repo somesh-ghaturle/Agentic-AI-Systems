@@ -20,7 +20,7 @@ import uuid
 import boto3
 
 from agentic_trace import tracer_for
-from contracts import error, fingerprint, positive_int
+from contracts import fingerprint, positive_int
 
 # Namespace for deterministic approval IDs. A retried validation produces the same
 # approval_id, so the audit table shows one decision with revisions rather than two
@@ -228,7 +228,3 @@ def _policy_max_refund_cents():
 
 def _now_iso():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-
-
-# Kept importable for tests that exercise the error contract without AWS.
-__all__ = ["handler", "validate", "error"]

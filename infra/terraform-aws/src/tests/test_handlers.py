@@ -72,6 +72,7 @@ retrieve = _load("retrieve", "index.py", "handler_retrieve")
 refund = _load("process_refund", "index.py", "handler_refund")
 validator = _load("approval_validator", "validator.py", "handler_validator")
 executor = _load("approval_executor", "executor.py", "handler_executor")
+emit_trace = _load("emit_trace", "index.py", "handler_emit_trace")
 
 
 class TestContracts(unittest.TestCase):
@@ -300,6 +301,95 @@ class TestExecutor(unittest.TestCase):
         self.assertEqual(plain["amount"], 2500)
         self.assertIsInstance(plain["amount"], int)
         self.assertEqual(plain["rate"], 0.5)
+
+
+class TestEmitTrace(unittest.TestCase):
+    """The emitter is what makes two of the four metric filters able to match anything.
+
+    Its whole job is to be unfailingly forgiving about its input, because the alternative
+    — reading fields with `.$` paths in ASL — is a runtime error on any absent field, in
+    the terminal states, where a failure destroys the record of what happened.
+    """
+
+    def test_loop_bound_record_matches_the_metric_filter(self):
+        record = emit_trace.normalize(
+            {
+                "event_type": "loop_bound_exceeded",
+                "correlation_id": "c-1",
+                "step_count": 12,
+                "max_steps": 12,
+            }
+        )
+        self.assertEqual(record["event_type"], "loop_bound_exceeded")
+        self.assertEqual(record["correlation_id"], "c-1")
+        self.assertEqual(record["step_count"], 12)
+
+    def test_terminal_record_carries_usage_from_the_model_step(self):
+        record = emit_trace.normalize(
+            {
+                "event_type": "request_complete",
+                "correlation_id": "c-1",
+                "outcome": "success",
+                "decision": {
+                    "Payload": {
+                        "model_version": "claude-opus-5",
+                        "usage": {"total_tokens": 4210, "cost_usd": 0.0631},
+                    }
+                },
+            }
+        )
+        self.assertEqual(record["total_tokens"], 4210)
+        self.assertEqual(record["cost_usd"], 0.0631)
+        self.assertEqual(record["model_version"], "claude-opus-5")
+
+    def test_missing_usage_is_absent_rather_than_invented(self):
+        record = emit_trace.normalize(
+            {"event_type": "request_complete", "correlation_id": "c-1", "outcome": "success"}
+        )
+        self.assertNotIn("cost_usd", record)
+        self.assertNotIn("total_tokens", record)
+
+    def test_usage_is_not_attached_to_non_terminal_records(self):
+        record = emit_trace.normalize(
+            {
+                "event_type": "loop_bound_exceeded",
+                "correlation_id": "c-1",
+                "decision": {"Payload": {"usage": {"cost_usd": 9.99}}},
+            }
+        )
+        self.assertNotIn("cost_usd", record)
+
+    def test_empty_and_malformed_input_still_produce_a_record(self):
+        for payload in ({}, None, [], "nonsense"):
+            record = emit_trace.normalize(payload)
+            self.assertIn("event_type", record)
+            self.assertEqual(record["correlation_id"], "unknown")
+
+    def test_unknown_outcome_is_labelled_not_dropped(self):
+        record = emit_trace.normalize(
+            {"event_type": "request_complete", "correlation_id": "c-1", "outcome": "weird"}
+        )
+        self.assertEqual(record["outcome"], "other:weird")
+
+    def test_rejected_is_a_known_outcome(self):
+        record = emit_trace.normalize(
+            {"event_type": "request_complete", "correlation_id": "c-1", "outcome": "rejected"}
+        )
+        self.assertEqual(record["outcome"], "rejected")
+
+    def test_long_errors_are_truncated(self):
+        record = emit_trace.normalize(
+            {"event_type": "request_complete", "correlation_id": "c-1", "error": "x" * 5000}
+        )
+        self.assertLessEqual(len(record["error"]), 1001)
+
+    def test_handler_reports_when_no_log_group_is_configured(self):
+        os.environ.pop("TRACE_LOG_GROUP", None)
+        result = emit_trace.handler(
+            {"event_type": "loop_bound_exceeded", "correlation_id": "c-1"}
+        )
+        self.assertTrue(result["ok"])
+        self.assertFalse(result["delivered"])
 
 
 if __name__ == "__main__":

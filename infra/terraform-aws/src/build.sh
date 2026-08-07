@@ -16,7 +16,7 @@ ROOT_DIR="$(cd "${SRC_DIR}/.." && pwd)"
 BUILD_DIR="${ROOT_DIR}/build"
 STAGE_DIR="${BUILD_DIR}/.stage"
 
-PACKAGES=(retrieve process_refund approval_validator approval_executor)
+PACKAGES=(retrieve process_refund approval_validator approval_executor emit_trace)
 
 rm -rf "${STAGE_DIR}"
 mkdir -p "${BUILD_DIR}" "${STAGE_DIR}"

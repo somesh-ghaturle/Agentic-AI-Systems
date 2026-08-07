@@ -66,6 +66,20 @@ variable "approval_executor" {
   })
 }
 
+variable "trace_emitter" {
+  description = "The function the orchestrator invokes to write its own trace records. Null leaves the loop-bound and cost filters watching a log group the state machine cannot write to. Source: src/emit_trace."
+
+  type = object({
+    handler         = string
+    runtime         = string
+    package_path    = string
+    timeout_seconds = optional(number, 10)
+    memory_mb       = optional(number, 256)
+  })
+
+  default = null
+}
+
 variable "alarm_topic_arns" {
   description = "SNS topics notified when an alarm fires."
   type        = list(string)

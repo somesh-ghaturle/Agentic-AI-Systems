@@ -135,6 +135,12 @@ module "observability" {
   # Low on purpose. In dev this is a runaway-loop detector, not a budget.
   daily_cost_threshold_usd = 25
 
+  # The orchestrator's own records — terminal outcomes, the loop bound firing — reach the
+  # trace log group through this function. Without it the loop-bound and cost filters
+  # watch a group the state machine cannot write to and sit at zero, which reads as
+  # healthy.
+  trace_emitter = var.trace_emitter
+
   alarm_topic_arns = var.alarm_topic_arns
 
   tags = local.tags
@@ -192,8 +198,21 @@ module "orchestration" {
   source = "../../modules/orchestration"
 
   name_prefix = local.name_prefix
-  definition  = file("${path.module}/state-machine.json")
   kms_key_arn = module.security.kms_key_arn
+
+  # Templated rather than read verbatim. The definition names four ARNs that only exist
+  # after apply; passing the file as-is shipped the literal placeholders straight into the
+  # state machine, where they fail at runtime rather than at plan.
+  definition = templatefile("${path.module}/state-machine.json.tftpl", {
+    retrieve_tool_arn  = module.tools.tool_arns_by_name["retrieve"]
+    validator_arn      = module.approval.validator_arn
+    approval_topic_arn = module.approval.approval_topic_arn
+    trace_emitter_arn  = module.observability.trace_emitter_arn
+
+    # The model step is yours to write; the reference ships no handler for it. Declare a
+    # tool named "reason" in terraform.tfvars and it wires itself.
+    reason_tool_arn = try(module.tools.tool_arns_by_name["reason"], "REASON_TOOL_NOT_CONFIGURED")
+  })
 
   state_table_arn    = module.state.table_arn
   archive_bucket_arn = module.archive.bucket_arn
@@ -202,6 +221,7 @@ module "orchestration" {
   tool_function_arns = concat(
     module.tools.read_tool_arns,
     [module.approval.validator_arn],
+    module.observability.trace_emitter_arn == null ? [] : [module.observability.trace_emitter_arn],
   )
 
   # Safe in dev where payloads are synthetic. Revisit before any real data lands here.

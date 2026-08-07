@@ -14,7 +14,16 @@ retrieve/          read tool  — invoked directly by the orchestrator
 process_refund/    write tool — invocable ONLY by the approval executor
 approval_validator/ deterministic ownership, permission, and limit checks
 approval_executor/ the only principal that invokes write tools
+emit_trace/        the orchestrator's way into the trace log group
 ```
+
+`emit_trace` is not a tool. The model never proposes it and it takes no arguments from the
+model — it exists because the metric filters live on one log group and a state machine
+writes to a different one, so the records produced inside the orchestrator (the terminal
+outcome of a request, the loop bound firing) never reach the filters on their own. Step
+Functions could call `PutLogEvents` directly through the AWS SDK integration and skip the
+Lambda, except the API wants an epoch-millisecond timestamp and ASL has no intrinsic that
+produces one.
 
 ## Build
 
@@ -68,7 +77,8 @@ Terraform injects `APPROVALS_TABLE`, `TOOL_NAME`, and `TOOL_ACCESS`. The rest co
 
 ## The contract between these handlers and the state machine
 
-`envs/*/state-machine.json` reads three fields by path, so their names are load-bearing:
+`envs/*/state-machine.json.tftpl` reads three fields by path, so their names are
+load-bearing:
 
 - `$.decision.Payload.action_type` — `"write"` routes to the approval gate
 - `$.validation.Payload.valid` — `false` routes to rejection without troubling a human

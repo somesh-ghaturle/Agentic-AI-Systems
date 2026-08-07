@@ -108,6 +108,122 @@ locals {
 }
 
 # ---------------------------------------------------------------------------
+# Trace emitter
+#
+# The filters above are attached to this module's log group. Handlers can write to it
+# directly, but the orchestrator cannot: a state machine logs to its own execution log
+# group, so the records produced inside it — the terminal outcome of a request, the loop
+# bound firing — never reach the filters. Two of the four filters above match nothing at
+# all without this function.
+#
+# Step Functions could call PutLogEvents through the AWS SDK integration and skip the
+# Lambda, except that the API wants an epoch-millisecond timestamp and ASL has no
+# intrinsic that produces one.
+#
+# It lives here rather than in modules/tools deliberately. It is not a tool — the model
+# never proposes it, it takes no arguments from the model, and classifying it as a read
+# tool would put a thing that writes an audit record on the liberally-available side of
+# the split.
+# ---------------------------------------------------------------------------
+
+resource "aws_lambda_function" "trace_emitter" {
+  count = var.trace_emitter == null ? 0 : 1
+
+  function_name = "${var.name_prefix}-trace-emitter"
+  role          = aws_iam_role.trace_emitter[0].arn
+  handler       = var.trace_emitter.handler
+  runtime       = var.trace_emitter.runtime
+  filename      = var.trace_emitter.package_path
+
+  source_code_hash = filebase64sha256(var.trace_emitter.package_path)
+
+  timeout     = var.trace_emitter.timeout_seconds
+  memory_size = var.trace_emitter.memory_mb
+
+  environment {
+    variables = {
+      TRACE_LOG_GROUP = aws_cloudwatch_log_group.traces.name
+    }
+  }
+
+  kms_key_arn = var.kms_key_arn
+
+  tags = merge(var.tags, {
+    Component = "trace-emitter"
+    Layer     = "observability"
+  })
+}
+
+resource "aws_cloudwatch_log_group" "trace_emitter" {
+  count = var.trace_emitter == null ? 0 : 1
+
+  name              = "/aws/lambda/${var.name_prefix}-trace-emitter"
+  retention_in_days = var.log_retention_days
+  kms_key_id        = var.kms_key_arn
+
+  tags = var.tags
+}
+
+resource "aws_iam_role" "trace_emitter" {
+  count = var.trace_emitter == null ? 0 : 1
+
+  name = "${var.name_prefix}-trace-emitter"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = var.tags
+}
+
+resource "aws_iam_role_policy_attachment" "trace_emitter_basic" {
+  count = var.trace_emitter == null ? 0 : 1
+
+  role       = aws_iam_role.trace_emitter[0].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# Write to the trace group, and nothing else. This function reports on the system; it has
+# no business reading from it.
+resource "aws_iam_role_policy" "trace_emitter" {
+  count = var.trace_emitter == null ? 0 : 1
+
+  name = "${var.name_prefix}-trace-emitter"
+  role = aws_iam_role.trace_emitter[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = concat(
+      [{
+        Effect   = "Allow"
+        Action   = ["logs:CreateLogStream", "logs:PutLogEvents"]
+        Resource = [aws_cloudwatch_log_group.traces.arn, "${aws_cloudwatch_log_group.traces.arn}:*"]
+      }],
+      var.kms_key_arn == null ? [] : [{
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt", "kms:GenerateDataKey"]
+        Resource = [var.kms_key_arn]
+      }],
+    )
+  })
+}
+
+resource "aws_lambda_permission" "trace_emitter_from_orchestrator" {
+  count = var.trace_emitter == null || var.state_machine_arn == null ? 0 : 1
+
+  statement_id  = "AllowOrchestratorInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.trace_emitter[0].function_name
+  principal     = "states.amazonaws.com"
+  source_arn    = var.state_machine_arn
+}
+
+# ---------------------------------------------------------------------------
 # Alarms — on the failure modes the architecture docs actually name.
 # ---------------------------------------------------------------------------
 

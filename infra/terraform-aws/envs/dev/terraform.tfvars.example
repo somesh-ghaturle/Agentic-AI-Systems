@@ -102,6 +102,20 @@ approval_executor = {
   # WRITE_TOOL_PREFIX and APPROVALS_TABLE are injected by the approval module.
 }
 
+# ---------------------------------------------------------------------------
+# Trace emitter
+#
+# How the state machine's own records reach the trace log group. Two of the four metric
+# filters — the loop bound and the terminal cost record — match nothing without it,
+# because a state machine writes to its execution log group, not to the trace group.
+# ---------------------------------------------------------------------------
+
+trace_emitter = {
+  handler      = "index.handler"
+  runtime      = "python3.12"
+  package_path = "../../build/emit_trace.zip"
+}
+
 # SNS topics for alarms. Empty means alarms fire into the void — set these before
 # anyone depends on the environment.
 alarm_topic_arns = []

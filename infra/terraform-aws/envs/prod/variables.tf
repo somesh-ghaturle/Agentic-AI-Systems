@@ -94,6 +94,22 @@ variable "approval_executor" {
   })
 }
 
+variable "trace_emitter" {
+  description = "The function the orchestrator invokes to write its own trace records. Source: src/emit_trace."
+
+  type = object({
+    handler         = string
+    runtime         = string
+    package_path    = string
+    timeout_seconds = optional(number, 10)
+    memory_mb       = optional(number, 256)
+  })
+
+  # Required in prod. Without it the loop-bound and cost alarms sit permanently at zero
+  # and report nothing, which is indistinguishable from a healthy system.
+  nullable = false
+}
+
 # ---------------------------------------------------------------------------
 # Retention
 # ---------------------------------------------------------------------------

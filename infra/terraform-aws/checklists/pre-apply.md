@@ -94,6 +94,12 @@ This is the property everything else rests on. Check it deliberately.
 - [ ] Traces go to the **shared** trace log group, not each function's `/aws/lambda` group.
       The filters are attached to one group; a handler logging to its own is invisible to
       every alarm while looking perfectly healthy in the console
+- [ ] `trace_emitter` is set. The orchestrator's own records — terminal outcomes, the loop
+      bound firing — cannot reach the trace group without it, and the loop-bound and cost
+      alarms then sit at zero indefinitely
+- [ ] The model step returns `usage` with `total_tokens` and `cost_usd`. The terminal
+      record carries what the model reports and nothing is inferred, so no usage means no
+      cost metric and a daily-cost alarm that can never fire
 - [ ] `correlation_id` threads through every step
 - [ ] `model_version` and `prompt_version` are recorded; results are not reproducible
       without them
@@ -132,5 +138,8 @@ Evidence, not "should work":
 - [ ] `aws lambda get-policy` on a write tool shows the executor as principal
 - [ ] A test execution proposing a write **blocks** in `RUNNING` rather than completing
 - [ ] Approving it executes; denying it records a rejection
-- [ ] A trace appears in the log group with the full field set
+- [ ] A trace appears in **the trace log group** — `/agentic/<prefix>/traces`, not the
+      function's own group — with the full field set
+- [ ] An execution driven past its step budget produces a `loop_bound_exceeded` record
+      there, and the loop-bound alarm leaves INSUFFICIENT_DATA
 - [ ] An alarm fires when deliberately tripped

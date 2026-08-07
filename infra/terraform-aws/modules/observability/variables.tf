@@ -28,9 +28,32 @@ variable "execution_failure_threshold" {
 }
 
 variable "state_machine_arn" {
-  description = "Orchestrator state machine ARN, for execution-level alarms."
+  description = "Orchestrator state machine ARN, for execution-level alarms and for permitting the orchestrator to invoke the trace emitter."
   type        = string
   default     = null
+}
+
+variable "trace_emitter" {
+  description = <<-EOT
+    The function the orchestrator invokes to write its own trace records.
+
+    Null omits it, which leaves the loop-bound and terminal-record filters watching a log
+    group the state machine cannot write to. Those two alarms then sit permanently at
+    zero, which reads as healthy. Supply it unless something else in your system already
+    ships orchestrator-level traces to this group.
+
+    Source: src/emit_trace.
+  EOT
+
+  type = object({
+    handler         = string
+    runtime         = string
+    package_path    = string
+    timeout_seconds = optional(number, 10)
+    memory_mb       = optional(number, 256)
+  })
+
+  default = null
 }
 
 variable "alarm_topic_arns" {

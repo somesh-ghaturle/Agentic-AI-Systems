@@ -14,9 +14,13 @@ output "trace_log_group_name" {
       total_tokens     on the terminal record
       cost_usd         on the terminal record
       latency_ms       per step and end-to-end
-      outcome          success | failure | abandoned | escalated
+      outcome          success | failure | abandoned | rejected | escalated
 
     Emitting these is application work. The filters match nothing without them.
+
+    Handlers write here directly. The orchestrator cannot — a state machine logs to its
+    own execution group — so its records come through the trace_emitter function in this
+    module. Two of the four filters below depend entirely on it.
   EOT
   value       = aws_cloudwatch_log_group.traces.name
 }
@@ -24,6 +28,16 @@ output "trace_log_group_name" {
 output "trace_log_group_arn" {
   description = "Trace log group ARN, for granting write access."
   value       = aws_cloudwatch_log_group.traces.arn
+}
+
+output "trace_emitter_arn" {
+  description = "Trace emitter ARN. Pass to the orchestration module's tool_function_arns so the state machine may invoke it, and reference it from the terminal states of your definition."
+  value       = try(aws_lambda_function.trace_emitter[0].arn, null)
+}
+
+output "trace_emitter_function_name" {
+  description = "Trace emitter function name, for the state machine definition."
+  value       = try(aws_lambda_function.trace_emitter[0].function_name, null)
 }
 
 output "metric_namespace" {

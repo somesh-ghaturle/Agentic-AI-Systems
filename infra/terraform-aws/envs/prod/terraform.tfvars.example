@@ -98,6 +98,15 @@ approval_executor = {
   reserved_concurrency = 5
 }
 
+# How the state machine's own records reach the trace log group. Required in prod: the
+# loop-bound and cost filters match nothing without it, and an alarm that cannot fire is
+# indistinguishable from a system that is behaving.
+trace_emitter = {
+  handler      = "index.handler"
+  runtime      = "python3.12"
+  package_path = "../../build/emit_trace.zip"
+}
+
 # ---------------------------------------------------------------------------
 # Retention
 # ---------------------------------------------------------------------------
