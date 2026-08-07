@@ -1,0 +1,129 @@
+# Copy to terraform.tfvars and fill in. Do not commit terraform.tfvars.
+#
+# Before the first prod apply, work through checklists/pre-apply.md. Several settings
+# here cannot be changed later without recreating resources.
+
+project             = "acme-agent"
+region              = "us-east-1"
+data_classification = "confidential"
+
+# ---------------------------------------------------------------------------
+# Network — the knowledge collection is VPC-only in prod, so these are required
+# ---------------------------------------------------------------------------
+
+vpc_id             = "vpc-0123456789abcdef0"
+subnet_ids         = ["subnet-0123456789abcdef0", "subnet-0123456789abcdef1"]
+security_group_ids = ["sg-0123456789abcdef0"]
+
+# ---------------------------------------------------------------------------
+# Tools
+#
+# `access` is the load-bearing field: "write" means only the approval executor can
+# invoke it. Classify by what the handler does. When unsure, classify as write — the
+# cost of an unnecessary gate is an extra click; the cost of a missing one is an
+# irreversible action nobody authorized.
+# ---------------------------------------------------------------------------
+
+tools = {
+  retrieve = {
+    access          = "read"
+    handler         = "index.handler"
+    runtime         = "python3.12"
+    package_path    = "../../build/retrieve.zip"
+    timeout_seconds = 30
+
+    environment = {
+      KNOWLEDGE_INDEX    = "knowledge"
+      EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
+
+      # Tighter than the default in prod: retrieved text is the largest and least
+      # predictable input to the context window.
+      MAX_DOCUMENT_CHARS = "1500"
+    }
+
+    policy_json = <<-JSON
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": ["aoss:APIAccessAll"],
+            "Resource": "*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": ["aoss:BatchGetCollection"],
+            "Resource": "*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": ["bedrock:InvokeModel"],
+            "Resource": "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0"
+          }
+        ]
+      }
+    JSON
+  }
+
+  process_refund = {
+    access               = "write"
+    handler              = "index.handler"
+    runtime              = "python3.12"
+    package_path         = "../../build/process_refund.zip"
+    timeout_seconds      = 60
+    reserved_concurrency = 5
+
+    environment = {
+      MAX_REFUND_CENTS = "50000"
+    }
+  }
+}
+
+approval_validator = {
+  handler         = "validator.handler"
+  runtime         = "python3.12"
+  package_path    = "../../build/approval_validator.zip"
+  timeout_seconds = 30
+
+  environment = {
+    POLICY_MAX_REFUND_CENTS = "50000"
+  }
+}
+
+approval_executor = {
+  handler              = "executor.handler"
+  runtime              = "python3.12"
+  package_path         = "../../build/approval_executor.zip"
+  timeout_seconds      = 60
+  reserved_concurrency = 5
+}
+
+# ---------------------------------------------------------------------------
+# Retention
+# ---------------------------------------------------------------------------
+
+log_retention_days          = 365
+approval_log_retention_days = 2555 # 7 years
+
+# Null retains traces indefinitely. Set from your records policy.
+archive_expiration_days = null
+
+# Object Lock: decide BEFORE the first apply. It cannot be enabled on an existing
+# bucket, and COMPLIANCE mode cannot be shortened by anyone once set.
+archive_object_lock_days = null
+
+# ---------------------------------------------------------------------------
+# Security and alarms
+# ---------------------------------------------------------------------------
+
+create_guardrail = false
+
+pii_entities = [
+  # { type = "EMAIL", action = "ANONYMIZE" },
+  # { type = "CREDIT_DEBIT_CARD_NUMBER", action = "BLOCK" },
+]
+
+daily_cost_threshold_usd = 500
+
+# Required. An alarm nobody receives is not monitoring.
+alarm_topic_arns = ["arn:aws:sns:us-east-1:123456789012:agentic-alerts"]

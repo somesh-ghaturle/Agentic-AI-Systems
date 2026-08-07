@@ -1,0 +1,306 @@
+# Tests for the handler logic that does not need AWS.
+#
+# boto3 ships in the Lambda runtime but is not a build dependency here, so it is stubbed
+# rather than installed. What is worth testing is the part that is pure logic anyway: the
+# filters that keep retrieval scoped, the error contracts the model reads, the validator's
+# checks, and the rule that cost appears only on terminal trace records.
+
+import importlib.util
+import os
+import sys
+import types
+import unittest
+
+SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+# ---------------------------------------------------------------------------
+# Stubs, installed before any handler is imported
+# ---------------------------------------------------------------------------
+
+
+class _ClientError(Exception):
+    def __init__(self, response=None, operation_name=""):
+        super().__init__(operation_name)
+        self.response = response or {"Error": {"Code": "Stub"}}
+
+
+def _install_stubs():
+    boto3 = types.ModuleType("boto3")
+    boto3.client = lambda *a, **k: types.SimpleNamespace()
+    boto3.resource = lambda *a, **k: types.SimpleNamespace(Table=lambda name: None)
+    boto3.Session = lambda *a, **k: types.SimpleNamespace(get_credentials=lambda: None)
+    sys.modules.setdefault("boto3", boto3)
+
+    botocore = types.ModuleType("botocore")
+    auth = types.ModuleType("botocore.auth")
+    auth.SigV4Auth = object
+    awsrequest = types.ModuleType("botocore.awsrequest")
+    awsrequest.AWSRequest = object
+    exceptions = types.ModuleType("botocore.exceptions")
+    exceptions.ClientError = _ClientError
+
+    botocore.auth = auth
+    botocore.awsrequest = awsrequest
+    botocore.exceptions = exceptions
+    sys.modules.setdefault("botocore", botocore)
+    sys.modules.setdefault("botocore.auth", auth)
+    sys.modules.setdefault("botocore.awsrequest", awsrequest)
+    sys.modules.setdefault("botocore.exceptions", exceptions)
+
+
+def _load(package, filename, alias):
+    """Loads a handler under a unique name.
+
+    Two packages both contain index.py, which is exactly what the build produces and
+    exactly what a plain import cannot express.
+    """
+    path = os.path.join(SRC, package, filename)
+    spec = importlib.util.spec_from_file_location(alias, path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[alias] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_install_stubs()
+sys.path.insert(0, os.path.join(SRC, "shared"))
+
+contracts = _load("shared", "contracts.py", "contracts")
+agentic_trace = _load("shared", "agentic_trace.py", "agentic_trace")
+retrieve = _load("retrieve", "index.py", "handler_retrieve")
+refund = _load("process_refund", "index.py", "handler_refund")
+validator = _load("approval_validator", "validator.py", "handler_validator")
+executor = _load("approval_executor", "executor.py", "handler_executor")
+
+
+class TestContracts(unittest.TestCase):
+    def test_fingerprint_ignores_key_order(self):
+        self.assertEqual(
+            contracts.fingerprint({"a": 1, "b": 2}),
+            contracts.fingerprint({"b": 2, "a": 1}),
+        )
+
+    def test_fingerprint_changes_with_value(self):
+        self.assertNotEqual(
+            contracts.fingerprint({"amount_cents": 5000}),
+            contracts.fingerprint({"amount_cents": 500000}),
+        )
+
+    def test_positive_int_rejects_zero_and_over_maximum(self):
+        self.assertIsNotNone(contracts.positive_int(0, "amount")[1])
+        self.assertIsNotNone(contracts.positive_int(11, "amount", maximum=10)[1])
+        self.assertEqual(contracts.positive_int("9", "amount")[0], 9)
+
+    def test_error_truncates_echoed_input(self):
+        payload = contracts.error("bad", received="x" * 500)
+        self.assertLess(len(payload["received"]), 250)
+
+
+class TestTrace(unittest.TestCase):
+    def test_cost_is_dropped_from_non_terminal_events(self):
+        tracer = agentic_trace.Tracer("corr-1")
+        record = tracer.emit("step_complete", cost_usd=0.5, total_tokens=100)
+        self.assertNotIn("cost_usd", record)
+        self.assertNotIn("total_tokens", record)
+        self.assertEqual(record["_dropped_terminal_fields"], ["cost_usd", "total_tokens"])
+
+    def test_cost_survives_on_terminal_record(self):
+        tracer = agentic_trace.Tracer("corr-1")
+        record = tracer.terminal(outcome="success", cost_usd=0.5, total_tokens=100)
+        self.assertEqual(record["event_type"], "request_complete")
+        self.assertEqual(record["cost_usd"], 0.5)
+
+    def test_flush_without_a_log_group_does_not_raise(self):
+        tracer = agentic_trace.Tracer("corr-1", log_group=None)
+        tracer.emit("step_complete")
+        self.assertFalse(tracer.flush())
+
+
+class TestRetrieve(unittest.TestCase):
+    def test_tenant_filter_is_required(self):
+        result = retrieve.handler(
+            {"correlation_id": "c1", "request": {"query": "refund policy", "actor": {}}}
+        )
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["error"], "missing_tenant_context")
+
+    def test_missing_query_is_a_teaching_error(self):
+        result = retrieve.handler(
+            {"correlation_id": "c1", "request": {"actor": {"tenant_id": "t1"}}}
+        )
+        self.assertEqual(result["error"], "missing_query")
+        self.assertIn("expected", result)
+
+    def test_filters_restrict_the_candidate_set_before_scoring(self):
+        filters = retrieve._metadata_filters(
+            {"tenant_id": "t1", "clearances": ["public"]}, {"document_type": "policy"}
+        )
+        body = retrieve.build_query([0.1, 0.2], filters, limit=5)
+        clauses = body["query"]["bool"]["filter"]
+        self.assertIn({"term": {"tenant_id": "t1"}}, clauses)
+        self.assertIn({"terms": {"classification": ["public"]}}, clauses)
+        self.assertIn({"term": {"document_type": "policy"}}, clauses)
+        self.assertEqual(body["size"], 5)
+        self.assertEqual(body["query"]["bool"]["must"][0]["knn"]["embedding"]["k"], 5)
+
+    def test_clearances_default_when_the_actor_has_none(self):
+        filters = retrieve._metadata_filters({"tenant_id": "t1"}, {})
+        self.assertEqual(filters["classification"], list(retrieve.DEFAULT_CLEARANCES))
+
+    def test_result_count_is_bounded(self):
+        self.assertEqual(retrieve._bounded_limit(10_000), retrieve.HARD_MAX_DOCUMENTS)
+        self.assertEqual(retrieve._bounded_limit(0), 1)
+        self.assertEqual(retrieve._bounded_limit(None), retrieve.DEFAULT_MAX_DOCUMENTS)
+
+    def test_documents_are_truncated_and_marked_untrusted(self):
+        response = {"hits": {"hits": [{"_id": "d1", "_score": 1.0, "_source": {"text": "y" * 50}}]}}
+        docs = retrieve.shape_documents(response, max_chars=10)
+        self.assertEqual(len(docs[0]["text"]), 10)
+        self.assertTrue(docs[0]["text_truncated"])
+        self.assertEqual(docs[0]["trust"], "untrusted")
+
+
+class TestProcessRefund(unittest.TestCase):
+    def _event(self, **overrides):
+        arguments = {
+            "order_id": "o-1",
+            "amount_cents": 2500,
+            "currency": "USD",
+            "reason": "damaged",
+        }
+        arguments.update(overrides.pop("arguments", {}))
+        event = {
+            "approval_id": "a-1",
+            "idempotency_key": "a-1",
+            "correlation_id": "c1",
+            "arguments": arguments,
+        }
+        event.update(overrides)
+        return event
+
+    def test_refuses_invocation_without_an_approval(self):
+        event = self._event()
+        del event["approval_id"]
+        result = refund.handler(event)
+        self.assertEqual(result["error"], "missing_required_fields")
+        self.assertIn("approval_id", result["missing"])
+
+    def test_enforces_its_own_ceiling(self):
+        result = refund.handler(self._event(arguments={"amount_cents": 10_000_000}))
+        self.assertEqual(result["error"], "value_out_of_range")
+
+    def test_rejects_unsupported_currency(self):
+        result = refund.handler(self._event(arguments={"currency": "XYZ"}))
+        self.assertEqual(result["error"], "unsupported_currency")
+
+    def test_the_stub_refuses_rather_than_pretending(self):
+        with self.assertRaises(NotImplementedError):
+            refund.handler(self._event())
+
+
+class TestValidator(unittest.TestCase):
+    ACTOR = {"user_id": "u-1", "tenant_id": "t-1", "roles": ["refund_agent"]}
+
+    def _codes(self, checks):
+        return {check["code"]: check["passed"] for check in checks}
+
+    def test_unknown_action_is_not_approvable(self):
+        checks = validator.validate({"action": "delete_everything", "arguments": {}}, self.ACTOR)
+        self.assertFalse(self._codes(checks)["known_action"])
+
+    def test_actor_must_be_identified(self):
+        checks = validator.validate(
+            {"action": "process_refund", "arguments": {}}, {"roles": ["refund_agent"]}
+        )
+        self.assertFalse(self._codes(checks)["actor_identified"])
+
+    def test_role_is_required(self):
+        actor = dict(self.ACTOR, roles=[])
+        checks = validator.validate(
+            {"action": "process_refund", "arguments": {"order_id": "o-1", "amount_cents": 100}},
+            actor,
+        )
+        self.assertFalse(self._codes(checks)["actor_permitted"])
+
+    def test_limit_is_enforced(self):
+        checks = validator.validate(
+            {
+                "action": "process_refund",
+                "arguments": {"order_id": "o-1", "amount_cents": 10_000_000},
+            },
+            self.ACTOR,
+        )
+        self.assertFalse(self._codes(checks)["within_limits"])
+
+    def test_ownership_fails_closed_when_it_cannot_be_verified(self):
+        checks = validator.validate(
+            {"action": "process_refund", "arguments": {"order_id": "o-1", "amount_cents": 100}},
+            self.ACTOR,
+        )
+        codes = self._codes(checks)
+        self.assertTrue(codes["actor_permitted"])
+        self.assertTrue(codes["within_limits"])
+        self.assertFalse(codes["actor_owns_resource"])
+
+    def test_approval_id_is_stable_for_the_same_proposal(self):
+        decision = {"action": "process_refund", "arguments": {"order_id": "o-1"}}
+        first = validator._approval_id("corr-1", decision)
+        second = validator._approval_id("corr-1", dict(decision))
+        self.assertEqual(first, second)
+        changed = validator._approval_id(
+            "corr-1", {"action": "process_refund", "arguments": {"order_id": "o-2"}}
+        )
+        self.assertNotEqual(first, changed)
+
+    def test_decision_payload_is_unwrapped(self):
+        self.assertEqual(validator._unwrap({"Payload": {"action": "x"}}), {"action": "x"})
+        self.assertEqual(validator._unwrap({"action": "x"}), {"action": "x"})
+        self.assertEqual(validator._unwrap(None), {})
+
+
+class TestExecutor(unittest.TestCase):
+    def test_malformed_callback_is_rejected_before_any_write(self):
+        result = executor.handler({"approval_id": "a-1", "decision": "approve"})
+        self.assertEqual(result["error"], "missing_required_fields")
+        self.assertIn("task_token", result["missing"])
+
+    def test_only_approve_or_reject_are_accepted(self):
+        result = executor.handler(
+            {
+                "approval_id": "a-1",
+                "created_at": "2026-01-01T00:00:00Z",
+                "task_token": "tok",
+                "decision": "maybe",
+            }
+        )
+        self.assertEqual(result["error"], "invalid_decision")
+
+    def test_write_tool_name_comes_from_the_configured_prefix(self):
+        os.environ["WRITE_TOOL_PREFIX"] = "acme-dev-tool-"
+        try:
+            self.assertEqual(
+                executor._write_tool_function("process_refund"),
+                "acme-dev-tool-process_refund",
+            )
+        finally:
+            del os.environ["WRITE_TOOL_PREFIX"]
+
+    def test_missing_prefix_fails_loudly(self):
+        os.environ.pop("WRITE_TOOL_PREFIX", None)
+        with self.assertRaises(RuntimeError):
+            executor._write_tool_function("process_refund")
+
+    def test_dynamodb_decimals_are_normalized(self):
+        import decimal
+
+        plain = executor._plain(
+            {"amount": decimal.Decimal("2500"), "rate": decimal.Decimal("0.5")}
+        )
+        self.assertEqual(plain["amount"], 2500)
+        self.assertIsInstance(plain["amount"], int)
+        self.assertEqual(plain["rate"], 0.5)
+
+
+if __name__ == "__main__":
+    unittest.main()

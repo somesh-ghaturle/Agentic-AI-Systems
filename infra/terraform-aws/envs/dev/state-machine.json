@@ -1,0 +1,259 @@
+{
+  "Comment": "Reference agentic workflow. Demonstrates the four non-negotiables from BUILDING-BLOCKS.md section 4: bounded loops, resumable steps, traceable execution, designed failure paths. Replace the Lambda ARNs and step logic with your own; keep the structure.",
+  "StartAt": "InitializeTrace",
+  "TimeoutSeconds": 3600,
+  "States": {
+    "InitializeTrace": {
+      "Comment": "Establishes the correlation ID and the step counter. Every downstream state carries both: the ID makes the request traceable end to end, the counter makes the loop bounded.",
+      "Type": "Pass",
+      "Parameters": {
+        "correlation_id.$": "$$.Execution.Name",
+        "step_count": 0,
+        "max_steps": 12,
+        "request.$": "$"
+      },
+      "Next": "Retrieve"
+    },
+    "Retrieve": {
+      "Comment": "Knowledge retrieval. A read tool, invoked directly by the orchestrator. Retrieved documents are UNTRUSTED \u2014 they may contain text phrased as instructions. See AGENT-SECURITY.md.",
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "REPLACE_WITH_RETRIEVE_TOOL_ARN",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.retrieval",
+      "TimeoutSeconds": 30,
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.TooManyRequestsException",
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "ReasonWithoutContext"
+        }
+      ],
+      "Next": "Reason"
+    },
+    "ReasonWithoutContext": {
+      "Comment": "Degraded path: retrieval failed, continue without it rather than failing the request.",
+      "Type": "Pass",
+      "Parameters": {
+        "correlation_id.$": "$.correlation_id",
+        "step_count.$": "$.step_count",
+        "max_steps.$": "$.max_steps",
+        "request.$": "$.request",
+        "retrieval": {
+          "documents": [],
+          "degraded": true
+        }
+      },
+      "Next": "Reason"
+    },
+    "Reason": {
+      "Comment": "The model step. Returns a structured contract, never free-form text \u2014 a typed object either validates or does not, and the failure is caught here rather than three steps downstream.",
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "REPLACE_WITH_REASON_TOOL_ARN",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.decision",
+      "TimeoutSeconds": 120,
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 3,
+          "BackoffRate": 2.0,
+          "JitterStrategy": "FULL"
+        },
+        {
+          "ErrorEquals": [
+            "SchemaValidationError"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 1,
+          "BackoffRate": 1.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "RecordFailure"
+        }
+      ],
+      "Next": "IncrementStep"
+    },
+    "IncrementStep": {
+      "Comment": "The loop bound. Without this the agent can loop until the wall-clock timeout, which is a billing incident rather than a workflow.",
+      "Type": "Pass",
+      "Parameters": {
+        "correlation_id.$": "$.correlation_id",
+        "step_count.$": "States.MathAdd($.step_count, 1)",
+        "max_steps.$": "$.max_steps",
+        "request.$": "$.request",
+        "retrieval.$": "$.retrieval",
+        "decision.$": "$.decision"
+      },
+      "Next": "CheckLoopBound"
+    },
+    "CheckLoopBound": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.step_count",
+          "NumericGreaterThanEqualsPath": "$.max_steps",
+          "Next": "LoopBoundExceeded"
+        },
+        {
+          "Variable": "$.decision.Payload.action_type",
+          "StringEquals": "write",
+          "Next": "ValidateProposal"
+        },
+        {
+          "Variable": "$.decision.Payload.action_type",
+          "StringEquals": "continue",
+          "Next": "Retrieve"
+        }
+      ],
+      "Default": "Complete"
+    },
+    "LoopBoundExceeded": {
+      "Type": "Pass",
+      "Parameters": {
+        "event_type": "loop_bound_exceeded",
+        "correlation_id.$": "$.correlation_id",
+        "step_count.$": "$.step_count"
+      },
+      "Next": "RecordFailure"
+    },
+    "ValidateProposal": {
+      "Comment": "Application code decides, deterministically: ownership, permissions, limits. The model proposed; this validates. Collapsing these two steps is how systems take actions nobody intended.",
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "REPLACE_WITH_VALIDATOR_ARN",
+        "Payload.$": "$"
+      },
+      "ResultPath": "$.validation",
+      "TimeoutSeconds": 30,
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "RecordFailure"
+        }
+      ],
+      "Next": "ValidationOutcome"
+    },
+    "ValidationOutcome": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.validation.Payload.valid",
+          "BooleanEquals": false,
+          "Next": "RecordRejection"
+        }
+      ],
+      "Default": "AwaitHumanApproval"
+    },
+    "AwaitHumanApproval": {
+      "Comment": "waitForTaskToken blocks this execution until someone calls SendTaskSuccess or SendTaskFailure. No token resolution, no write. This is what makes the human step real rather than advisory. Requires a STANDARD state machine.",
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish.waitForTaskToken",
+      "Parameters": {
+        "TopicArn": "REPLACE_WITH_APPROVAL_TOPIC_ARN",
+        "Message": {
+          "task_token.$": "$$.Task.Token",
+          "correlation_id.$": "$.correlation_id",
+          "proposed_action.$": "$.decision.Payload.action",
+          "arguments.$": "$.decision.Payload.arguments",
+          "rationale.$": "$.decision.Payload.rationale",
+          "validation.$": "$.validation.Payload"
+        }
+      },
+      "ResultPath": "$.approval",
+      "TimeoutSeconds": 86400,
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.error",
+          "Next": "RecordRejection"
+        }
+      ],
+      "Next": "RecordSuccess"
+    },
+    "RecordSuccess": {
+      "Comment": "Terminal trace record. Carries the fields the observability metric filters match on.",
+      "Type": "Pass",
+      "Parameters": {
+        "event_type": "request_complete",
+        "outcome": "success",
+        "correlation_id.$": "$.correlation_id",
+        "step_count.$": "$.step_count",
+        "result.$": "$.approval"
+      },
+      "End": true
+    },
+    "RecordRejection": {
+      "Type": "Pass",
+      "Parameters": {
+        "event_type": "request_complete",
+        "outcome": "rejected",
+        "correlation_id.$": "$.correlation_id",
+        "step_count.$": "$.step_count"
+      },
+      "End": true
+    },
+    "RecordFailure": {
+      "Type": "Pass",
+      "Parameters": {
+        "event_type": "request_complete",
+        "outcome": "failure",
+        "correlation_id.$": "$.correlation_id",
+        "step_count.$": "$.step_count",
+        "error.$": "$.error"
+      },
+      "Next": "FailExecution"
+    },
+    "FailExecution": {
+      "Type": "Fail",
+      "Comment": "Surfaces as ExecutionsFailed, which the orchestrator-failures alarm watches."
+    },
+    "Complete": {
+      "Type": "Pass",
+      "Parameters": {
+        "event_type": "request_complete",
+        "outcome": "success",
+        "correlation_id.$": "$.correlation_id",
+        "step_count.$": "$.step_count",
+        "result.$": "$.decision.Payload"
+      },
+      "End": true
+    }
+  }
+}

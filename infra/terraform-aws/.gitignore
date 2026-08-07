@@ -1,0 +1,23 @@
+# Terraform state — may contain secrets in plaintext, and belongs in the remote backend.
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Real variable values. Only the .example files are committed.
+terraform.tfvars
+*.auto.tfvars
+
+# Plan output — can contain sensitive values.
+*.tfplan
+
+# Built Lambda packages.
+build/
+*.zip
+
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

@@ -1,0 +1,107 @@
+# Copy to terraform.tfvars and fill in. Do not commit terraform.tfvars.
+
+project = "acme-agent"
+region  = "us-east-1"
+
+# ---------------------------------------------------------------------------
+# Tools
+#
+# `access` decides the invocation path and nothing else in this file matters more:
+#
+#   read  → orchestrator invokes directly
+#   write → ONLY the approval executor can invoke; the orchestrator cannot reach it
+#
+# Classify by what the handler DOES, not by what it is called. A tool named
+# "lookup_account" that also writes an audit row is a write tool.
+# ---------------------------------------------------------------------------
+
+tools = {
+  # A read tool: retrieval over the knowledge corpus. Source in ../../src/retrieve.
+  retrieve = {
+    access          = "read"
+    handler         = "index.handler"
+    runtime         = "python3.12"
+    package_path    = "../../build/retrieve.zip"
+    timeout_seconds = 30
+
+    environment = {
+      KNOWLEDGE_INDEX = "knowledge"
+
+      # Without this the handler refuses rather than guessing at an embedding model.
+      EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
+    }
+
+    policy_json = <<-JSON
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": ["aoss:APIAccessAll"],
+            "Resource": "*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": ["aoss:BatchGetCollection"],
+            "Resource": "*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": ["bedrock:InvokeModel"],
+            "Resource": "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0"
+          }
+        ]
+      }
+    JSON
+  }
+
+  # A write tool: moves money, so it is irreversible and customer-visible. Gated.
+  # Source in ../../src/process_refund.
+  process_refund = {
+    access          = "write"
+    handler         = "index.handler"
+    runtime         = "python3.12"
+    package_path    = "../../build/process_refund.zip"
+    timeout_seconds = 60
+
+    # The tool's own ceiling, checked independently of the validator's policy limit.
+    environment = {
+      MAX_REFUND_CENTS = "50000"
+    }
+
+    # Agents retry. A refund handler must be idempotent on its key, and bounding
+    # concurrency limits the blast radius of a retry storm.
+    reserved_concurrency = 5
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Approval gate
+# ---------------------------------------------------------------------------
+
+approval_validator = {
+  handler         = "validator.handler"
+  runtime         = "python3.12"
+  package_path    = "../../build/approval_validator.zip"
+  timeout_seconds = 30
+
+  # The limit checked in code before a human is ever asked. Raising it is a policy
+  # change, which is why it lives here rather than in a prompt.
+  environment = {
+    POLICY_MAX_REFUND_CENTS = "50000"
+  }
+}
+
+approval_executor = {
+  handler              = "executor.handler"
+  runtime              = "python3.12"
+  package_path         = "../../build/approval_executor.zip"
+  timeout_seconds      = 60
+  reserved_concurrency = 5
+
+  # WRITE_TOOL_PREFIX and APPROVALS_TABLE are injected by the approval module.
+}
+
+# SNS topics for alarms. Empty means alarms fire into the void — set these before
+# anyone depends on the environment.
+alarm_topic_arns = []

@@ -26,6 +26,7 @@ That framing is the thesis of this folder.
 | [PRODUCTION-PRINCIPLES.md](PRODUCTION-PRINCIPLES.md) | Reliability, cost and latency, context and RAG design, observability, security and privacy |
 | [checklists/design-review.md](checklists/design-review.md) | A design review to run before building, and again before shipping |
 | [REFERENCES.md](REFERENCES.md) | Sourcing and provenance — which claims are measured, which are directional |
+| [infra/terraform-aws/](../../infra/terraform-aws/README.md) | This architecture as Terraform on AWS — one module per building block |
 
 ---
 
