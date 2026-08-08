@@ -12,11 +12,18 @@ shared/            copied into every package at build time
   ddb.py           float/Decimal marshalling — DynamoDB has no float, boto3 raises
   aoss.py          SigV4-signed OpenSearch Serverless client, no third-party deps
 retrieve/          read tool  — invoked directly by the orchestrator
+reason/            read tool  — the model step; proposes, never executes
 process_refund/    write tool — invocable ONLY by the approval executor
 approval_validator/ deterministic ownership, permission, and limit checks
 approval_executor/ the only principal that invokes write tools
 emit_trace/        the orchestrator's way into the trace log group
 ```
+
+`reason` is classified `read` because it only ever proposes: its `action_type: "write"`
+routes a proposal into validation and human approval, and it has no path to a write tool
+of its own. It is also the one package with a dependency — the Anthropic SDK, declared in
+its own `requirements.txt` and installed only into its zip. Everything else runs on what
+the Lambda runtime already ships.
 
 `emit_trace` is not a tool. The model never proposes it and it takes no arguments from the
 model — it exists because the metric filters live on one log group and a state machine
@@ -34,6 +41,12 @@ produces one.
 
 Run it before `terraform plan`. The modules read the zips with `filebase64sha256` at plan
 time, so a missing package fails immediately rather than halfway through an apply.
+
+Packages with a `requirements.txt` get their dependencies installed into the zip, with
+wheels resolved for the **Lambda** platform rather than the build machine's — building on
+a Mac and shipping native wheels to Amazon Linux is the classic way to get an
+`ImportError` that only appears after deploy. Override `LAMBDA_PLATFORM`,
+`LAMBDA_PYTHON`, or `PYTHON` if your runtime differs.
 
 ## Test
 
@@ -56,6 +69,12 @@ default would be actively dangerous:
 | `_submit_refund` | `process_refund/index.py` | your payment provider, passing the idempotency key |
 | `_embed` | `retrieve/index.py` | set `EMBEDDING_MODEL_ID` — it works once you do |
 
+The model step is not among them: `reason/` is a working handler. What it needs from you
+is the cost rates (`INPUT_COST_PER_MTOK` / `OUTPUT_COST_PER_MTOK`), because Bedrock is
+partner-operated and prices separately from the first-party API. Leave them unset and
+traces carry token counts with no cost — which leaves the daily-cost alarm nothing to
+count, but is more honest than a figure derived from the wrong price list.
+
 A reference implementation that returns "yes, they own it" so the demo runs is how a stub
 reaches production. Ownership checks fail closed; the refund stub refuses rather than
 pretending to move money.
@@ -72,9 +91,15 @@ Terraform injects `APPROVALS_TABLE`, `TOOL_NAME`, and `TOOL_ACCESS`. The rest co
 | `KNOWLEDGE_INDEX` | retrieve | Defaults to `knowledge`. |
 | `EMBEDDING_MODEL_ID` | retrieve | Needs `bedrock:InvokeModel` in the tool's `policy_json`. |
 | `MAX_DOCUMENT_CHARS` | retrieve | Per-document truncation, default 2000. |
+| `MODEL_ID` | reason | Bedrock model id — note the `anthropic.` prefix. Defaults to `anthropic.claude-opus-5`. |
+| `MODEL_EFFORT` | reason | `low`–`max`, default `high`. `xhigh` is the recommended setting for agentic work. |
+| `MAX_TOKENS` | reason | Caps thinking **and** response together, default 16000. |
+| `INPUT_COST_PER_MTOK` | reason | From the **Bedrock** price list, not Anthropic's. Unset means no `cost_usd` on traces. |
+| `OUTPUT_COST_PER_MTOK` | reason | Same. |
 | `MAX_REFUND_CENTS` | process_refund | The tool's own ceiling, independent of the validator's. |
 | `POLICY_MAX_REFUND_CENTS` | approval_validator | The policy limit checked before a human is asked. |
 | `WRITE_TOOL_PREFIX` | approval_executor | Wired by the env root modules. |
+| `STALE_CLAIM_SECONDS` | approval_executor | How long an `executing` claim may sit before another executor may take it over, default 900. Must exceed the write tool's timeout plus retries. |
 
 ## The contract between these handlers and the state machine
 

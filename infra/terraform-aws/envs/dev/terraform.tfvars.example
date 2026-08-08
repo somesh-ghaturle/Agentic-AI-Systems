@@ -55,6 +55,49 @@ tools = {
     JSON
   }
 
+  # The model step. Classified `read` because it proposes and never executes — the
+  # proposal reaches a write tool only through validation and human approval.
+  # Source in ../../src/reason.
+  reason = {
+    access          = "read"
+    handler         = "index.handler"
+    runtime         = "python3.12"
+    package_path    = "../../build/reason.zip"
+    timeout_seconds = 120
+
+    # Larger than the default: this is the one package that bundles a dependency, and
+    # import time on a cold start scales with memory.
+    memory_mb = 1024
+
+    environment = {
+      MODEL_ID     = "anthropic.claude-opus-5"
+      MODEL_EFFORT = "high"
+
+      # Bedrock is partner-operated and prices separately from the first-party API —
+      # take these from the Bedrock pricing page for your region, not from Anthropic's.
+      # Leave them unset and traces report tokens with no cost, which leaves the
+      # daily-cost alarm with nothing to count.
+      INPUT_COST_PER_MTOK  = "5.00"
+      OUTPUT_COST_PER_MTOK = "25.00"
+    }
+
+    policy_json = <<-JSON
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "bedrock:InvokeModel",
+              "bedrock:InvokeModelWithResponseStream"
+            ],
+            "Resource": "arn:aws:bedrock:*::foundation-model/anthropic.claude-opus-5"
+          }
+        ]
+      }
+    JSON
+  }
+
   # A write tool: moves money, so it is irreversible and customer-visible. Gated.
   # Source in ../../src/process_refund.
   process_refund = {

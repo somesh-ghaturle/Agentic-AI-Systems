@@ -75,9 +75,20 @@ def _approve(key, task_token, approver, tracer):
     # The claim is the concurrency control and the replay guard in one call. Only a record
     # still `pending` can be claimed, so a double-clicked approve button, a redelivered
     # SNS message, and a retried Lambda all collapse into one execution.
-    record = _claim(key, "executing", task_token, approver)
+    record, previous_status = _claim(key, "executing", task_token, approver)
     if record is None:
         return _already_resolved(key, tracer)
+
+    if previous_status == "executing":
+        # A previous executor claimed this and died before resolving the token. Worth its
+        # own event: without one, the recovery is invisible and the incident reads as a
+        # slow approver rather than a crashed executor.
+        tracer.emit(
+            "approval_claim_reclaimed",
+            outcome="reclaimed",
+            approval_id=key["approval_id"],
+            previous_claimed_at=record.get("claimed_at"),
+        )
 
     action = record.get("action")
     arguments = from_item(record.get("arguments") or {})
@@ -124,7 +135,7 @@ def _approve(key, task_token, approver, tracer):
 
 
 def _reject(key, task_token, approver, comment, tracer):
-    record = _claim(key, "rejected", task_token, approver, comment=comment)
+    record, _ = _claim(key, "rejected", task_token, approver, comment=comment)
     if record is None:
         return _already_resolved(key, tracer)
 
@@ -135,21 +146,38 @@ def _reject(key, task_token, approver, comment, tracer):
 
 
 def _claim(key, new_status, task_token, approver, comment=None):
-    """Moves a pending record to `new_status`, or returns None if it was not pending.
+    """Claims a record for this callback. Returns (previous_record, previous_status),
+    or (None, None) if the record could not be claimed.
 
     Stamping the task token here is what ties the record to one execution: a second
     callback carrying a different token for the same approval finds the record already
     claimed and does nothing.
+
+    A record is claimable in two cases. The ordinary one is `pending`. The other is an
+    `executing` record whose claim has gone stale — an executor that died between
+    claiming and resolving the token, which would otherwise leave the execution blocked
+    until the approval window closes. Reclaiming it is safe precisely because the write
+    tool is idempotent on the approval ID: re-invoking with the same key returns the
+    original result rather than acting twice. That property is what this recovery is
+    built on, so a write tool that ignores its idempotency key breaks it.
+
+    Reading ALL_OLD rather than ALL_NEW: the fields the executor needs (action,
+    arguments, fingerprint, correlation ID) are written once by the validator and never
+    revised, and the pre-update status is what tells the caller a reclaim happened.
     """
+    now = _now_iso()
     expression = (
-        "SET #s = :new, task_token = :token, approver = :approver, resolved_at = :now"
+        "SET #s = :new, task_token = :token, approver = :approver, "
+        "claimed_at = :now, resolved_at = :now"
     )
     values = {
         ":new": new_status,
         ":token": task_token,
         ":approver": to_item(approver),
-        ":now": _now_iso(),
+        ":now": now,
         ":pending": "pending",
+        ":executing": "executing",
+        ":stale": _iso_seconds_ago(_stale_claim_seconds()),
     }
     if comment is not None:
         expression += ", approver_comment = :comment"
@@ -159,15 +187,23 @@ def _claim(key, new_status, task_token, approver, comment=None):
         response = _table().update_item(
             Key=key,
             UpdateExpression=expression,
-            ConditionExpression="attribute_exists(approval_id) AND #s = :pending",
+            # ISO-8601 UTC sorts lexicographically in timestamp order, so a string
+            # comparison is a time comparison. A record with no claimed_at at all is not
+            # reclaimable — fail-safe, and only reachable for records written before this
+            # field existed.
+            ConditionExpression=(
+                "attribute_exists(approval_id) AND "
+                "(#s = :pending OR (#s = :executing AND claimed_at < :stale))"
+            ),
             ExpressionAttributeNames={"#s": "status"},
             ExpressionAttributeValues=values,
-            ReturnValues="ALL_NEW",
+            ReturnValues="ALL_OLD",
         )
-        return response.get("Attributes")
+        previous = response.get("Attributes") or {}
+        return previous, previous.get("status")
     except ClientError as exc:
         if exc.response["Error"]["Code"] == "ConditionalCheckFailedException":
-            return None
+            return None, None
         raise
 
 
@@ -245,6 +281,23 @@ def _states_client():
     if _states is None:
         _states = boto3.client("stepfunctions")
     return _states
+
+
+def _stale_claim_seconds():
+    """How long an `executing` claim may sit before another executor may take it over.
+
+    Must exceed the write tool's own timeout plus its retries, or a slow-but-alive
+    execution gets a second executor running alongside it. The idempotency key makes that
+    survivable rather than catastrophic, but it is still not what you want.
+    """
+    try:
+        return int(os.environ.get("STALE_CLAIM_SECONDS", 900))
+    except ValueError:
+        return 900
+
+
+def _iso_seconds_ago(seconds):
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - seconds))
 
 
 def _now_iso():

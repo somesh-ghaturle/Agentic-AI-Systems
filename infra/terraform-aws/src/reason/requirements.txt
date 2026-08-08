@@ -1,0 +1,7 @@
+# The only package in this tree with a dependency. Everything else runs on what the
+# Lambda runtime already ships; the model step needs the Anthropic SDK, and hand-rolling
+# a Bedrock Messages API client would mean owning SigV4, streaming, and retries.
+#
+# boto3/botocore are deliberately absent — the runtime provides them, and bundling a
+# second copy is how a package silently diverges from the runtime's version.
+anthropic>=0.116.0

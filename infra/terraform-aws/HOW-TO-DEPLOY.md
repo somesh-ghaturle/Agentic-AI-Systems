@@ -98,32 +98,30 @@ authorized.
 
 ### The model step
 
-The state machine's `Reason` state is the model call, and the reference ships no handler
-for it — what you send a model and how you parse the response is the part of this system
-that is actually yours. Declare it as a read tool named `reason` and the definition wires
-itself:
+The state machine's `Reason` state is the model call. It ships as a working handler in
+[src/reason/](src/README.md), calling Claude on Bedrock through the Anthropic SDK, and it
+is classified `read` — it proposes actions and has no path to executing one.
 
-```hcl
-reason = {
-  access          = "read"
-  handler         = "index.handler"
-  runtime         = "python3.12"
-  package_path    = "../../build/reason.zip"
-  timeout_seconds = 120
-}
-```
+Declare it as a tool named `reason` and the definition wires itself; the tfvars examples
+have the full block, including the `bedrock:InvokeModel` grant it needs.
 
-Two things it must return, because states downstream read them by path:
+Two things it returns, because states downstream read them by path:
 
 - `action_type` — `"write"` routes into the approval gate, `"continue"` loops, anything
-  else completes
-- `usage` — `{"total_tokens": …, "cost_usd": …}`, which is where the terminal trace record
-  gets the numbers the cost alarm counts. No usage, no cost metric; the reference does not
-  invent one
+  else completes. It is enforced by a JSON schema rather than parsed out of prose, so the
+  routing decision cannot be a formatting accident
+- `usage` — token counts, plus `cost_usd` when you supply the per-token rates. This is
+  where the terminal trace record gets the numbers the cost alarm counts, and the
+  reference reports what the model reports rather than inventing a figure
 
-Leave `reason` undeclared and the definition renders with `REASON_TOOL_NOT_CONFIGURED` in
-place of the ARN. The state machine still deploys, and fails at that step — visibly,
-down the `RecordFailure` path, rather than silently.
+Set `INPUT_COST_PER_MTOK` and `OUTPUT_COST_PER_MTOK` from the **Bedrock** pricing page for
+your region — Bedrock is partner-operated and prices separately from the first-party API.
+Leave them unset and traces carry tokens with no cost, which leaves the daily-cost alarm
+with nothing to count.
+
+Leave `reason` undeclared entirely and the definition renders with
+`REASON_TOOL_NOT_CONFIGURED` in place of the ARN. The state machine still deploys, and
+fails at that step — visibly, down the `RecordFailure` path, rather than silently.
 
 ### The state machine definition
 
