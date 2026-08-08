@@ -5,7 +5,7 @@ output "trace_log_group_name" {
 
       correlation_id   tying every step of one request together
       event_type       "step_complete" | "request_complete" | "schema_validation_failed"
-                       | "loop_bound_exceeded"
+                       | "loop_bound_exceeded" | "approval_abandoned"
       step             step name or index
       model_version    without this, results are not reproducible
       prompt_version   same

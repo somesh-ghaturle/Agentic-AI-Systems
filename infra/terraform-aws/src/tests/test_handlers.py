@@ -140,12 +140,24 @@ class TestRetrieve(unittest.TestCase):
             {"tenant_id": "t1", "clearances": ["public"]}, {"document_type": "policy"}
         )
         body = retrieve.build_query([0.1, 0.2], filters, limit=5)
-        clauses = body["query"]["bool"]["filter"]
+        clauses = body["query"]["knn"]["embedding"]["filter"]["bool"]["filter"]
         self.assertIn({"term": {"tenant_id": "t1"}}, clauses)
         self.assertIn({"terms": {"classification": ["public"]}}, clauses)
         self.assertIn({"term": {"document_type": "policy"}}, clauses)
         self.assertEqual(body["size"], 5)
-        self.assertEqual(body["query"]["bool"]["must"][0]["knn"]["embedding"]["k"], 5)
+        self.assertEqual(body["query"]["knn"]["embedding"]["k"], 5)
+
+    def test_filter_is_inside_the_knn_clause_not_beside_it(self):
+        """The bool-wrapped form post-filters, which defeats tenant isolation.
+
+        Guarding the shape rather than the behaviour, because the two forms return the
+        same thing on a single-tenant fixture and diverge only under load with a
+        populated multi-tenant index — the case a test cannot cheaply reach.
+        """
+        body = retrieve.build_query([0.1], {"tenant_id": "t1"}, limit=3)
+        self.assertIn("knn", body["query"])
+        self.assertNotIn("bool", body["query"])
+        self.assertIn("filter", body["query"]["knn"]["embedding"])
 
     def test_clearances_default_when_the_actor_has_none(self):
         filters = retrieve._metadata_filters({"tenant_id": "t1"}, {})
@@ -415,6 +427,17 @@ class TestEmitTrace(unittest.TestCase):
             record = emit_trace.normalize(payload)
             self.assertIn("event_type", record)
             self.assertEqual(record["correlation_id"], "unknown")
+
+    def test_abandoned_approval_record_matches_its_metric_filter(self):
+        record = emit_trace.normalize(
+            {
+                "event_type": "approval_abandoned",
+                "correlation_id": "c-1",
+                "step_count": 3,
+            }
+        )
+        self.assertEqual(record["event_type"], "approval_abandoned")
+        self.assertEqual(record["correlation_id"], "c-1")
 
     def test_unknown_outcome_is_labelled_not_dropped(self):
         record = emit_trace.normalize(

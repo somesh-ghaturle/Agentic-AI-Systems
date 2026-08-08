@@ -1,7 +1,7 @@
 {
   "Comment": "Reference agentic workflow. Demonstrates the four non-negotiables from BUILDING-BLOCKS.md section 4: bounded loops, resumable steps, traceable execution, designed failure paths. Replace the Lambda ARNs and step logic with your own; keep the structure.",
   "StartAt": "InitializeTrace",
-  "TimeoutSeconds": 3600,
+  "TimeoutSeconds": 90000,
   "States": {
     "InitializeTrace": {
       "Comment": "Establishes the correlation ID and the step counter. Every downstream state carries both: the ID makes the request traceable end to end, the counter makes the loop bounded.",
@@ -228,6 +228,13 @@
       "Catch": [
         {
           "ErrorEquals": [
+            "States.Timeout"
+          ],
+          "ResultPath": "$.error",
+          "Next": "ApprovalAbandoned"
+        },
+        {
+          "ErrorEquals": [
             "States.ALL"
           ],
           "ResultPath": "$.error",
@@ -432,6 +439,43 @@
     "TraceEmissionFailed": {
       "Comment": "A trace that could not be written must not fail the request it describes. The execution succeeded; only the record of it was lost, and the emitter's own log group says why.",
       "Type": "Succeed"
+    },
+    "ApprovalAbandoned": {
+      "Comment": "The approval window closed with no answer. Distinct from a rejection: a rejection means the gate worked, this means nobody was reached.",
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${trace_emitter_arn}",
+        "Payload": {
+          "event_type": "approval_abandoned",
+          "correlation_id.$": "$.correlation_id",
+          "step_count.$": "$.step_count"
+        }
+      },
+      "ResultPath": null,
+      "TimeoutSeconds": 15,
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.TooManyRequestsException",
+            "States.TaskFailed"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.trace_error",
+          "Next": "RecordAbandoned"
+        }
+      ],
+      "Next": "RecordAbandoned"
     },
     "FailExecution": {
       "Type": "Fail",

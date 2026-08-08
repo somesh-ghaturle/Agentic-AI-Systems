@@ -59,6 +59,13 @@ This is the property everything else rests on. Check it deliberately.
       drops messages and executions sit until timeout
 - [ ] Approval timeout is short enough that a stale approval fails rather than executing
       against changed state
+- [ ] The state machine's `TimeoutSeconds` **exceeds** the approval task's. The execution
+      budget caps everything inside it, so an approval window longer than the execution
+      budget is decorative — the execution dies first and the configured window never
+      applies
+- [ ] An abandoned approval is distinguishable from a rejected one. Catching
+      `States.Timeout` under `States.ALL` records "nobody answered" as "a human declined",
+      which hides gate fatigue inside the rejection count
 - [ ] Someone is actually on the receiving end, and knows they are
 
 ## Reliability
@@ -81,7 +88,13 @@ This is the property everything else rests on. Check it deliberately.
       documents
 - [ ] `log_execution_data = false` in prod, or payloads are provably masked
 - [ ] Retrieval applies **metadata filtering before semantic search** — this is what
-      prevents cross-tenant leakage
+      prevents cross-tenant leakage. Specifically, the filter belongs **inside** the `knn`
+      clause. Beside it in a `bool` looks equivalent and post-filters: the search ranks
+      every tenant's documents and discards the ones it may not return, so isolation is
+      concealed rather than enforced
+- [ ] The OpenSearch data access policy names the **retrieval tool's role**. Data access is
+      a separate grant from IAM and from network reachability; `aoss:APIAccessAll` alone
+      still returns 403
 - [ ] Retrieved content cannot directly trigger a write
 - [ ] Each tool role has only the permissions that tool needs
 - [ ] Every role whose function has KMS-encrypted environment variables can `kms:Decrypt`

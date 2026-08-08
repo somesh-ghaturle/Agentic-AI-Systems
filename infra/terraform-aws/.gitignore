@@ -15,6 +15,12 @@ terraform.tfvars
 build/
 *.zip
 
+# Python bytecode. Committing it churns the diff on every test run and ships stale
+# artifacts into a zip if the build ever stops staging from a clean directory.
+__pycache__/
+*.py[cod]
+.venv/
+
 crash.log
 crash.*.log
 override.tf

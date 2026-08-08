@@ -114,19 +114,34 @@ def _retrieve(event, tracer):
 def build_query(vector, filters, limit):
     """A kNN query whose candidate set is restricted by metadata first.
 
-    The filter clause of a bool query does not contribute to scoring — it decides what is
-    eligible to be scored at all. That ordering is the whole point: post-filtering a
-    similarity search means the search already saw documents the caller may not read.
+    The filter goes INSIDE the knn clause, which is the part that is easy to get wrong.
+    Wrapping a knn query in a bool and putting the filter beside it looks equivalent and
+    is not: that form post-filters, so OpenSearch finds the k nearest neighbours across
+    the whole collection and only then discards the ones the caller may not read. Two
+    consequences, both bad —
+
+      the search ranked another tenant's documents to decide they were closest, and
+      a caller whose k nearest are all someone else's gets an empty result rather than
+      their own next-best match.
+
+    Filtered kNN restricts the candidate set during the search instead, which is what
+    "metadata filtering before semantic search" has to mean to prevent cross-tenant
+    leakage rather than merely conceal it.
     """
+    clauses = [
+        {"terms": {field: value}} if isinstance(value, list) else {"term": {field: value}}
+        for field, value in filters.items()
+    ]
+
     return {
         "size": limit,
         "query": {
-            "bool": {
-                "filter": [{"term": {field: value}} for field, value in filters.items()
-                           if not isinstance(value, list)]
-                + [{"terms": {field: value}} for field, value in filters.items()
-                   if isinstance(value, list)],
-                "must": [{"knn": {"embedding": {"vector": vector, "k": limit}}}],
+            "knn": {
+                "embedding": {
+                    "vector": vector,
+                    "k": limit,
+                    "filter": {"bool": {"filter": clauses}},
+                }
             }
         },
         "_source": [

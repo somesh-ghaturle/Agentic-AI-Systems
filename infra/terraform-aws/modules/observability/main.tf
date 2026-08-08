@@ -103,6 +103,25 @@ resource "aws_cloudwatch_log_metric_filter" "loop_bound_hit" {
   }
 }
 
+resource "aws_cloudwatch_log_metric_filter" "approval_abandoned" {
+  name           = "${var.name_prefix}-approval-abandoned"
+  log_group_name = aws_cloudwatch_log_group.traces.name
+
+  # An approval window that closed with no answer. Distinct from a rejection, which means
+  # the gate worked — this means nobody was reached, or reviewers have stopped reading.
+  # It cannot be measured as an execution timeout: the state machine catches it and ends
+  # cleanly, so AWS/States reports a successful execution.
+  pattern = "{ $.event_type = \"approval_abandoned\" }"
+
+  metric_transformation {
+    name          = "ApprovalsAbandoned"
+    namespace     = local.metric_namespace
+    value         = "1"
+    unit          = "Count"
+    default_value = "0"
+  }
+}
+
 locals {
   metric_namespace = "Agentic/${var.name_prefix}"
 }
@@ -312,10 +331,34 @@ resource "aws_cloudwatch_metric_alarm" "orchestrator_failures" {
 # A workflow blocked on a human is invisible in ordinary failure metrics — it is not
 # failing, it is waiting. Long waits are their own failure mode, and gate fatigue starts
 # here. BUILDING-BLOCKS.md §6.
-resource "aws_cloudwatch_metric_alarm" "approvals_timing_out" {
+#
+# This watches the trace record rather than AWS/States: the state machine catches its own
+# approval timeout and ends the execution cleanly, so ExecutionsTimedOut never sees it.
+resource "aws_cloudwatch_metric_alarm" "approvals_abandoned" {
+  alarm_name  = "${var.name_prefix}-approvals-abandoned"
+  namespace   = local.metric_namespace
+  metric_name = "ApprovalsAbandoned"
+  statistic   = "Sum"
+  period      = 3600
+
+  comparison_operator = "GreaterThanThreshold"
+  threshold           = 0
+  evaluation_periods  = 1
+
+  alarm_description  = "An approval window closed with nobody answering. Check that notifications are being delivered and that reviewers are still reading them — this is where gate fatigue shows up first."
+  alarm_actions      = var.alarm_topic_arns
+  treat_missing_data = "notBreaching"
+
+  tags = var.tags
+}
+
+# The execution budget itself. With the approval wait now bounded inside it, an execution
+# hitting this ceiling means something ran long that was not the human — a retry storm, a
+# slow tool, or a loop the step bound did not catch.
+resource "aws_cloudwatch_metric_alarm" "executions_timing_out" {
   count = var.state_machine_arn == null ? 0 : 1
 
-  alarm_name  = "${var.name_prefix}-approvals-timing-out"
+  alarm_name  = "${var.name_prefix}-executions-timing-out"
   namespace   = "AWS/States"
   metric_name = "ExecutionsTimedOut"
   statistic   = "Sum"
@@ -329,7 +372,7 @@ resource "aws_cloudwatch_metric_alarm" "approvals_timing_out" {
   threshold           = 0
   evaluation_periods  = 1
 
-  alarm_description  = "Executions timing out — commonly approval requests nobody acted on. Check whether reviewers are receiving and reading them."
+  alarm_description  = "Executions exceeding their overall time budget. The approval wait is bounded inside this, so it is not a slow reviewer — look for a slow tool or a retry storm."
   alarm_actions      = var.alarm_topic_arns
   treat_missing_data = "notBreaching"
 

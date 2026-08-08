@@ -122,7 +122,12 @@ module "knowledge" {
   subnet_ids          = var.subnet_ids
   security_group_ids  = var.security_group_ids
 
-  access_principal_arns = [module.orchestration.role_arn]
+  # The retrieve tool's role, not the orchestrator's. Data access in OpenSearch Serverless
+  # is a separate grant from IAM and from network reachability, and it names the principal
+  # that actually issues the query — which is the tool Lambda. The orchestrator only
+  # invokes that Lambda; it never touches the collection, so granting it here authorizes
+  # nobody and every retrieval comes back 403.
+  access_principal_arns = [module.tools.tool_role_arns_by_name["retrieve"]]
 
   tags = local.tags
 }

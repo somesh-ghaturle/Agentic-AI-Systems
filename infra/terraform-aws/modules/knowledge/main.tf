@@ -87,9 +87,11 @@ resource "aws_opensearchserverless_vpc_endpoint" "knowledge" {
   }
 }
 
-# Data access is separate from network reachability in OpenSearch Serverless: reaching the
-# collection does not grant reading it. This grants the orchestrator and tool roles the
-# document and index permissions they need, and nothing else.
+# Data access is separate from network reachability in OpenSearch Serverless, and separate
+# again from IAM: reaching the collection does not grant reading it, and neither does
+# aoss:APIAccessAll on its own. Name the roles that actually issue queries — the retrieval
+# tool's role, not the orchestrator's, which only invokes that Lambda and never touches
+# the collection.
 resource "aws_opensearchserverless_access_policy" "knowledge" {
   name = "${var.name_prefix}-knowledge-access"
   type = "data"
