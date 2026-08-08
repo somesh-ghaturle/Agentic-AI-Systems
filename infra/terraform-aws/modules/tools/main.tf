@@ -137,6 +137,29 @@ resource "aws_iam_role_policy" "tool_traces" {
   })
 }
 
+# Every tool function encrypts its environment variables with the customer-managed key,
+# and Lambda decrypts them using the function's own execution role — not a service
+# principal. Without this the function never reaches its handler:
+#
+#   Lambda was unable to decrypt the environment variables because KMS access was denied.
+#
+# Every other module that encrypts a Lambda grants this; this one did not.
+resource "aws_iam_role_policy" "tool_kms" {
+  for_each = var.kms_key_arn == null ? {} : var.tools
+
+  name = "${var.name_prefix}-tool-${each.key}-kms"
+  role = aws_iam_role.tool[each.key].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["kms:Decrypt", "kms:GenerateDataKey"]
+      Resource = [var.kms_key_arn]
+    }]
+  })
+}
+
 # The caller supplies each tool's data-plane permissions as a policy document. There is no
 # sensible default here — the whole point is that permissions are specific to the tool.
 resource "aws_iam_role_policy" "tool" {

@@ -25,6 +25,7 @@ from botocore.exceptions import ClientError
 
 from agentic_trace import tracer_for
 from contracts import fingerprint, require
+from ddb import from_item, to_item
 
 _dynamodb = None
 _lambda = None
@@ -79,7 +80,7 @@ def _approve(key, task_token, approver, tracer):
         return _already_resolved(key, tracer)
 
     action = record.get("action")
-    arguments = _plain(record.get("arguments") or {})
+    arguments = from_item(record.get("arguments") or {})
 
     # Belt and braces: the fingerprint the validator computed over the arguments a human
     # was shown must still describe the arguments about to run.
@@ -146,7 +147,7 @@ def _claim(key, new_status, task_token, approver, comment=None):
     values = {
         ":new": new_status,
         ":token": task_token,
-        ":approver": approver,
+        ":approver": to_item(approver),
         ":now": _now_iso(),
         ":pending": "pending",
     }
@@ -198,7 +199,8 @@ def _record_outcome(key, status, result):
         ExpressionAttributeNames={"#s": "status"},
         ExpressionAttributeValues={
             ":status": status,
-            ":outcome": _plain(result),
+            # The write tool's response is parsed JSON, so any decimal in it is a float.
+            ":outcome": to_item(result),
             ":now": _now_iso(),
         },
     )
@@ -243,18 +245,6 @@ def _states_client():
     if _states is None:
         _states = boto3.client("stepfunctions")
     return _states
-
-
-def _plain(value):
-    """DynamoDB returns numbers as Decimal, which json.dumps refuses. Normalize once."""
-    if isinstance(value, list):
-        return [_plain(v) for v in value]
-    if isinstance(value, dict):
-        return {k: _plain(v) for k, v in value.items()}
-    if hasattr(value, "as_tuple"):  # decimal.Decimal
-        as_int = int(value)
-        return as_int if as_int == value else float(value)
-    return value
 
 
 def _now_iso():

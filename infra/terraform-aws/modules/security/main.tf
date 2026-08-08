@@ -63,6 +63,15 @@ data "aws_iam_policy_document" "key" {
   }
 
   # AWS services encrypting on the system's behalf.
+  #
+  # sns.amazonaws.com is load-bearing rather than routine: the approval topics are
+  # encrypted with this key, and SNS needs its own grant to decrypt a message for
+  # delivery. Without it the publish succeeds and the notification never arrives, which
+  # is the failure mode where an approval request silently reaches nobody and the
+  # execution sits blocked until it times out.
+  #
+  # Lambda is deliberately absent. Environment-variable decryption runs under each
+  # function's execution role, so those grants live with the roles, not here.
   statement {
     sid    = "AllowServiceUse"
     effect = "Allow"
@@ -72,6 +81,7 @@ data "aws_iam_policy_document" "key" {
         "logs.${data.aws_region.current.name}.amazonaws.com",
         "s3.amazonaws.com",
         "dynamodb.amazonaws.com",
+        "sns.amazonaws.com",
       ]
     }
     actions = [

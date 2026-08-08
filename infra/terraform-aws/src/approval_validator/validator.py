@@ -21,6 +21,7 @@ import boto3
 
 from agentic_trace import tracer_for
 from contracts import fingerprint, positive_int
+from ddb import to_item
 
 # Namespace for deterministic approval IDs. A retried validation produces the same
 # approval_id, so the audit table shows one decision with revisions rather than two
@@ -193,7 +194,9 @@ def _write_record(record):
     global _table
     if _table is None:
         _table = boto3.resource("dynamodb").Table(os.environ["APPROVALS_TABLE"])
-    _table.put_item(Item=record)
+    # The arguments came from the model and can carry any JSON number. DynamoDB has no
+    # float, so an unnormalized write raises and loses the proposal entirely.
+    _table.put_item(Item=to_item(record))
 
 
 def _approval_id(correlation_id, decision):

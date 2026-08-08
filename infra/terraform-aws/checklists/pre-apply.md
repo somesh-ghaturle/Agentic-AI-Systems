@@ -84,6 +84,12 @@ This is the property everything else rests on. Check it deliberately.
       prevents cross-tenant leakage
 - [ ] Retrieved content cannot directly trigger a write
 - [ ] Each tool role has only the permissions that tool needs
+- [ ] Every role whose function has KMS-encrypted environment variables can `kms:Decrypt`
+      the key. Lambda decrypts under the execution role, not a service principal, so a
+      missing grant fails the function before it reaches its handler
+- [ ] The KMS key policy grants `sns.amazonaws.com`. The approval topics are encrypted
+      with it, and without the grant a publish succeeds while the notification reaches
+      nobody
 - [ ] Third-party MCP servers or tool packages vetted like CI plugins — they run with your
       agent's permissions
 

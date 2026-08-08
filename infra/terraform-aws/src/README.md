@@ -9,6 +9,7 @@ the thing they are writing to*.
 shared/            copied into every package at build time
   agentic_trace.py trace records that the observability metric filters actually match
   contracts.py     structured results and errors the model can act on
+  ddb.py           float/Decimal marshalling — DynamoDB has no float, boto3 raises
   aoss.py          SigV4-signed OpenSearch Serverless client, no third-party deps
 retrieve/          read tool  — invoked directly by the orchestrator
 process_refund/    write tool — invocable ONLY by the approval executor

@@ -6,6 +6,7 @@
 # checks, and the rule that cost appears only on terminal trace records.
 
 import importlib.util
+import json
 import os
 import sys
 import types
@@ -67,6 +68,7 @@ _install_stubs()
 sys.path.insert(0, os.path.join(SRC, "shared"))
 
 contracts = _load("shared", "contracts.py", "contracts")
+ddb = _load("shared", "ddb.py", "ddb")
 agentic_trace = _load("shared", "agentic_trace.py", "agentic_trace")
 retrieve = _load("retrieve", "index.py", "handler_retrieve")
 refund = _load("process_refund", "index.py", "handler_refund")
@@ -292,15 +294,64 @@ class TestExecutor(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             executor._write_tool_function("process_refund")
 
-    def test_dynamodb_decimals_are_normalized(self):
+
+class TestDynamoMarshalling(unittest.TestCase):
+    """DynamoDB has no float, and boto3 raises rather than coercing.
+
+    Everything written to the approvals table originates outside our control — the
+    arguments a model proposed, the JSON a write tool returned — so any of it can carry a
+    decimal. Unnormalized, the write raises and the approval record is lost, which is the
+    one record the system cannot afford to lose.
+    """
+
+    def _boto3_would_accept(self, value):
+        """boto3's TypeSerializer rule: reject float anywhere in the structure."""
+        if isinstance(value, bool):
+            return True
+        if isinstance(value, float):
+            return False
+        if isinstance(value, dict):
+            return all(self._boto3_would_accept(v) for v in value.values())
+        if isinstance(value, (list, tuple)):
+            return all(self._boto3_would_accept(v) for v in value)
+        return True
+
+    def test_raw_model_arguments_would_be_rejected(self):
+        proposal = json.loads('{"order_id":"o-1","amount_cents":2500,"refund_rate":0.15}')
+        self.assertFalse(self._boto3_would_accept(proposal))
+
+    def test_normalized_arguments_are_accepted(self):
+        proposal = json.loads('{"order_id":"o-1","amount_cents":2500,"refund_rate":0.15}')
+        self.assertTrue(self._boto3_would_accept(ddb.to_item(proposal)))
+
+    def test_nested_floats_are_reached(self):
+        record = {"validation": {"checks": [{"detail": {"rate": 0.5}}]}}
+        self.assertTrue(self._boto3_would_accept(ddb.to_item(record)))
+
+    def test_conversion_avoids_binary_float_artifacts(self):
+        self.assertEqual(str(ddb.to_item(0.1)), "0.1")
+
+    def test_booleans_survive_as_booleans(self):
+        item = ddb.to_item({"valid": True, "degraded": False})
+        self.assertIs(item["valid"], True)
+        self.assertIs(item["degraded"], False)
+
+    def test_non_finite_values_do_not_block_the_write(self):
+        item = ddb.to_item({"rate": float("nan"), "limit": float("inf")})
+        self.assertTrue(self._boto3_would_accept(item))
+        self.assertIsInstance(item["rate"], str)
+
+    def test_round_trip_restores_plain_types(self):
+        original = {"amount_cents": 2500, "rate": 0.25, "ok": True, "tags": ["a"]}
+        restored = ddb.from_item(ddb.to_item(original))
+        self.assertEqual(restored, original)
+        self.assertIsInstance(restored["amount_cents"], int)
+
+    def test_from_item_makes_records_json_serializable(self):
         import decimal
 
-        plain = executor._plain(
-            {"amount": decimal.Decimal("2500"), "rate": decimal.Decimal("0.5")}
-        )
-        self.assertEqual(plain["amount"], 2500)
-        self.assertIsInstance(plain["amount"], int)
-        self.assertEqual(plain["rate"], 0.5)
+        record = {"amount": decimal.Decimal("2500"), "rate": decimal.Decimal("0.5")}
+        self.assertEqual(json.loads(json.dumps(ddb.from_item(record))), {"amount": 2500, "rate": 0.5})
 
 
 class TestEmitTrace(unittest.TestCase):
