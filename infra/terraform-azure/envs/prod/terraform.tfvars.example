@@ -1,0 +1,3 @@
+# Example variables for prod environment
+location = "eastus"
+# tenant_id = "<YOUR_TENANT_ID>"
