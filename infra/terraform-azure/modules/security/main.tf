@@ -5,8 +5,8 @@ resource "azurerm_key_vault" "kv" {
   resource_group_name         = var.resource_group_name
   tenant_id                   = var.tenant_id
   sku_name                    = "standard"
-  soft_delete_enabled         = true
   purge_protection_enabled    = false
+  rbac_authorization_enabled  = false
 }
 
 # Grant access to a service principal when provided
@@ -16,7 +16,7 @@ resource "azurerm_key_vault_access_policy" "sp_policy" {
   tenant_id           = var.tenant_id
   object_id           = var.service_principal_object_id
 
-  secret_permissions = ["get", "list", "set", "delete"]
+  secret_permissions = ["Get", "List", "Set", "Delete"]
 }
 
 # Optional: create a Key Vault secret to hold a model API key (value passed in securely)

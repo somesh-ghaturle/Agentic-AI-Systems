@@ -4,16 +4,10 @@ resource "azuread_application" "app" {
 }
 
 resource "azuread_service_principal" "sp" {
-  application_id = azuread_application.app.application_id
+  client_id = azuread_application.app.client_id
 }
 
 resource "azuread_service_principal_password" "sp_pwd" {
   service_principal_id = azuread_service_principal.sp.object_id
-  value                 = random_password.pwd.result
   end_date_relative     = "8760h" # 1 year
-}
-
-resource "random_password" "pwd" {
-  length  = 32
-  special = true
 }
