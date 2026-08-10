@@ -313,6 +313,24 @@ def _usage(message):
 
 
 def _bedrock():
+    """Why Bedrock, given `create_guardrail` says the model layer is provider-neutral.
+
+    The reason is authentication: on Bedrock this Lambda authenticates with its own
+    execution role, so there is no API key to put in Secrets Manager, encrypt, rotate, or
+    account for in a blast-radius analysis. In an architecture whose whole argument is
+    about constraining what a compromised component can reach, not introducing a
+    long-lived credential is worth a good deal.
+
+    The cost is real and should be understood before extending this: Bedrock is
+    partner-operated, so it carries a feature subset (no automatic prompt caching, no
+    Files/Models/Batches API, no MCP connector) and prices separately from the
+    first-party API — which is why cost rates are environment-supplied rather than known.
+
+    Claude Platform on AWS is the option to weigh on revisit: Anthropic-operated, same
+    SigV4/IAM auth and therefore the same no-stored-credential property, with same-day
+    parity and first-party pricing. It would cost the Bedrock guardrail in
+    modules/security, which only applies when the model layer is on Bedrock.
+    """
     global _client
     if _client is None:
         _client = AnthropicBedrockMantle(
