@@ -1,8 +1,21 @@
 terraform {
-  required_version = ">= 1.3.0"
+  required_version = ">= 1.6"
+
   required_providers {
-    azurerm = { source = "hashicorp/azurerm" }
-    azuread = { source = "hashicorp/azuread" }
-    random  = { source = "hashicorp/random" }
+    # Pinned to a major. The previous unconstrained `source`-only blocks meant two people
+    # running `terraform init` a month apart could resolve different majors and produce
+    # different plans from identical code.
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 5.0"
+    }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 3.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 }

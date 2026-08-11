@@ -1,3 +1,105 @@
-# Example variables for prod environment
-location = "eastus"
-# tenant_id = "<YOUR_TENANT_ID>"
+# Copy to terraform.tfvars and fill in. Do not commit terraform.tfvars.
+#
+# ---------------------------------------------------------------------------
+# Before this plans: the handler packages must exist
+#
+# Every package_path below is checked with fileexists() at plan time, because the zip is
+# read to compute its deployment hash. There is no Azure handler source tree in this repo
+# yet — infra/terraform-aws/src holds the AWS handlers, and they are written against
+# boto3, DynamoDB, and Step Functions task tokens. They will not run on Functions
+# unmodified. See ARCHITECTURE.md § Remaining work.
+#
+# Until that source exists, this environment validates but does not plan.
+#
+# Prod additionally requires: a remote backend configured in main.tf (local state has no
+# lock), and an Azure OpenAI endpoint provisioned out of band.
+# ---------------------------------------------------------------------------
+
+project         = "acme-agent"
+subscription_id = "00000000-0000-0000-0000-000000000000"
+location        = "eastus"
+
+# ---------------------------------------------------------------------------
+# Tools
+#
+# `access` decides the invocation path and nothing else in this file matters more:
+#
+#   read  → the orchestrator holds the invoke app role and calls it directly
+#   write → ONLY the approval executor holds it; the orchestrator cannot obtain a token
+#
+# Classify by what the handler DOES, not by what it is called. A tool named
+# "lookup_account" that also writes an audit row is a write tool.
+# ---------------------------------------------------------------------------
+
+tools = {
+  # Retrieval over the knowledge corpus.
+  retrieve = {
+    access       = "read"
+    package_path = "../../build/retrieve.zip"
+
+    environment = {
+      KNOWLEDGE_INDEX = "knowledge"
+
+      # Without this the handler refuses rather than guessing at an embedding model.
+      EMBEDDING_DEPLOYMENT = "text-embedding-3-large"
+    }
+  }
+
+  # The model step. Classified `read` because it proposes and never executes — a proposal
+  # reaches a write tool only through validation and human approval.
+  reason = {
+    access       = "read"
+    package_path = "../../build/reason.zip"
+
+    environment = {
+      MODEL_DEPLOYMENT = "gpt-4o"
+    }
+  }
+
+  # A write tool: moves money, so it is irreversible and customer-visible. Gated.
+  process_refund = {
+    access       = "write"
+    package_path = "../../build/process_refund.zip"
+
+    # The tool's own ceiling, checked independently of the validator's policy limit.
+    environment = {
+      MAX_REFUND_CENTS = "50000"
+    }
+
+    # Agents retry. Bounding scale-out limits the blast radius of a retry storm.
+    max_instances = 5
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Approval gate
+# ---------------------------------------------------------------------------
+
+approval_validator = {
+  package_path = "../../build/approval_validator.zip"
+
+  # The limit checked in code before a human is ever asked. Raising it is a policy
+  # change, which is why it lives here rather than in a prompt.
+  environment = {
+    POLICY_MAX_REFUND_CENTS = "50000"
+  }
+}
+
+approval_executor = {
+  package_path = "../../build/approval_executor.zip"
+
+  environment = {
+    # How long a claimed-but-unfinished record waits before the reaper may reclaim it.
+    STALE_CLAIM_SECONDS = "900"
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Model layer
+#
+# Create the Azure OpenAI account out of band — provisioning one requires tenant-level
+# enrollment that Terraform cannot request — then paste its endpoint here.
+# ---------------------------------------------------------------------------
+
+azure_openai_endpoint = ""
+model_deployment_name = ""

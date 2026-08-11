@@ -1,28 +1,38 @@
-variable "resource_group_name" {
+variable "name_prefix" {
+  description = "Prefix for resource names, e.g. agentic-dev."
   type        = string
-  description = "Name of the resource group to create"
+}
+
+variable "resource_group_name" {
+  description = "Name of the resource group to create. Everything else in this stack is placed inside it."
+  type        = string
 }
 
 variable "location" {
+  description = "Azure region."
   type        = string
-  description = "Azure region"
-  default     = "eastus"
-}
-
-variable "name_prefix" {
-  type        = string
-  description = "Prefix for resources"
-  default     = "agentic"
 }
 
 variable "address_space" {
+  description = "VNet address space."
   type        = string
-  description = "VNet address space"
   default     = "10.0.0.0/16"
 }
 
 variable "subnet_prefix" {
+  description = <<-DESC
+    Subnet for private endpoints and Function App VNet integration.
+
+    Nothing joins it yet — the Consumption (Y1) plan cannot integrate with a VNet, so
+    every private-endpoint variable in this stack stays open until prod moves to an
+    Elastic Premium plan. See ARCHITECTURE.md § Remaining work.
+  DESC
   type        = string
-  description = "Subnet address prefix"
   default     = "10.0.1.0/24"
+}
+
+variable "tags" {
+  description = "Tags applied to every resource in this module."
+  type        = map(string)
+  default     = {}
 }

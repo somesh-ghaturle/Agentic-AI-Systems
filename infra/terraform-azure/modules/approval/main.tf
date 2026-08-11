@@ -1,19 +1,274 @@
-resource "azurerm_servicebus_namespace" "sb" {
-  name                = "${var.name_prefix}-sb-namespace"
+# Approval — the gate, and the only principal that may invoke a write tool
+#
+# What this module previously created: a Service Bus namespace, a topic, and a
+# subscription. Nothing published to them, nothing consumed them, and nothing prevented a
+# write tool from being invoked. The HOW-TO said it "handles gates". It did not.
+#
+# The gate is four things working together, and removing any one of them opens it:
+#
+#   1. The validator checks ownership, permission, and limits deterministically, in code,
+#      and rejects invalid proposals BEFORE a human is asked. This is what keeps approval
+#      requests meaningful — a reviewer shown mostly junk stops reading, and gate fatigue
+#      is how a gate fails while still appearing to work.
+#   2. The approval record is written before anyone is notified, carrying a fingerprint of
+#      the exact arguments a human will be shown.
+#   3. The orchestrator's run is SUSPENDED on a callback URL. Not polling, not sleeping —
+#      genuinely parked until someone resolves it.
+#   4. The executor claims the record with an ETag-conditional write, re-checks the
+#      fingerprint, invokes the write tool with an idempotency key, and only then resolves
+#      the callback.
+#
+# The executor is also the sole holder of the invoke app role on write tools — granted
+# over in modules/tools, which takes this module's executor principal ID as input.
+
+data "azurerm_subscription" "current" {}
+
+# ---------------------------------------------------------------------------
+# Approval records
+#
+# Cosmos rather than Table Storage, for one reason that matters: the claim in step 4 is a
+# conditional write. Cosmos gives ETag/If-Match optimistic concurrency, which is the
+# direct analogue of DynamoDB's ConditionExpression. Without it, a double-clicked approve
+# button executes twice.
+# ---------------------------------------------------------------------------
+
+resource "azurerm_cosmosdb_account" "approvals" {
+  name                = "${var.name_prefix}-approvals"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  offer_type          = "Standard"
+  kind                = "GlobalDocumentDB"
+
+  # Serverless: this is an audit trail with human-paced write volume, not a hot path.
+  # Provisioned throughput here would bill continuously for capacity nobody uses.
+  capabilities {
+    name = "EnableServerless"
+  }
+
+  consistency_policy {
+    # Strong, deliberately. The claim in step 4 reads its own write back; under eventual
+    # consistency a second executor can read a stale "pending" and claim an already-
+    # claimed record, which is the exact double-execution this gate exists to prevent.
+    consistency_level = "Strong"
+  }
+
+  geo_location {
+    location          = var.location
+    failover_priority = 0
+  }
+
+  # PITR on the approval trail. This is the record of who authorized what, so losing it
+  # to a bad deploy is a compliance problem rather than an inconvenience.
+  dynamic "backup" {
+    for_each = var.enable_continuous_backup ? [1] : []
+    content {
+      type = "Continuous"
+      tier = "Continuous7Days"
+    }
+  }
+
+  public_network_access_enabled     = var.cosmos_public_network_access_enabled
+  is_virtual_network_filter_enabled = var.cosmos_public_network_access_enabled == false
+
+  # Key-based auth to Cosmos should be off — every caller here uses its managed identity
+  # via the SQL role assignments below, so the account keys grant a path nothing
+  # legitimate needs. The provider attribute that did this is deprecated and its
+  # replacement is not pinned in this repo's provider version, so it is deliberately not
+  # set here rather than guessed at. Enforce it with Azure Policy
+  # ("Cosmos DB database accounts should have local authentication methods disabled")
+  # until this is re-pinned. Tracked in ARCHITECTURE.md § Remaining work.
+
+  tags = var.tags
+}
+
+resource "azurerm_cosmosdb_sql_database" "agentic" {
+  name                = "agentic"
+  resource_group_name = var.resource_group_name
+  account_name        = azurerm_cosmosdb_account.approvals.name
+}
+
+resource "azurerm_cosmosdb_sql_container" "approvals" {
+  name                  = "approvals"
+  resource_group_name   = var.resource_group_name
+  account_name          = azurerm_cosmosdb_account.approvals.name
+  database_name         = azurerm_cosmosdb_sql_database.agentic.name
+  partition_key_paths   = ["/approval_id"]
+  partition_key_version = 2
+
+  # Never expire approval records by default. This is the audit trail; a TTL on it is a
+  # decision about record retention, not a storage optimization, so it is set explicitly
+  # from the environment or not at all.
+  default_ttl = var.approval_record_ttl_seconds
+}
+
+# ---------------------------------------------------------------------------
+# Notification
+# ---------------------------------------------------------------------------
+
+resource "azurerm_servicebus_namespace" "approval" {
+  name                = "${var.name_prefix}-approval-sb"
   location            = var.location
   resource_group_name = var.resource_group_name
-  sku                 = "Standard"
+  sku                 = var.servicebus_sku
+  capacity            = var.servicebus_sku == "Premium" ? var.servicebus_capacity : 0
+
+  # Managed identity everywhere else means nothing needs a SAS connection string here.
+  local_auth_enabled = var.servicebus_local_auth_enabled
+
+  minimum_tls_version = "1.2"
+
+  public_network_access_enabled = var.servicebus_public_network_access_enabled
 
   tags = var.tags
 }
 
 resource "azurerm_servicebus_topic" "approval" {
   name         = "approval-requests"
-  namespace_id = azurerm_servicebus_namespace.sb.id
+  namespace_id = azurerm_servicebus_namespace.approval.id
 }
 
-resource "azurerm_servicebus_subscription" "approval_sub" {
+resource "azurerm_servicebus_subscription" "approval" {
   name               = "approval-sub"
   topic_id           = azurerm_servicebus_topic.approval.id
   max_delivery_count = 10
+
+  # Undeliverable approval requests must not vanish. A silently dropped message is an
+  # execution that hangs until its window closes with nobody knowing why.
+  dead_lettering_on_message_expiration = true
+}
+
+# ---------------------------------------------------------------------------
+# Validator and executor
+# ---------------------------------------------------------------------------
+
+resource "azurerm_storage_account" "approval" {
+  name                = replace("${var.name_prefix}approvalsa", "-", "")
+  resource_group_name = var.resource_group_name
+  location            = var.location
+
+  account_tier             = "Standard"
+  account_replication_type = var.storage_replication_type
+
+  min_tls_version                 = "TLS1_2"
+  https_traffic_only_enabled      = true
+  allow_nested_items_to_be_public = false
+  shared_access_key_enabled       = var.storage_shared_access_key_enabled
+  public_network_access_enabled   = var.storage_public_network_access_enabled
+
+  tags = var.tags
+}
+
+resource "azurerm_service_plan" "approval" {
+  name                = "${var.name_prefix}-approval-plan"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  os_type             = "Linux"
+  sku_name            = var.service_plan_sku
+
+  tags = var.tags
+}
+
+locals {
+  functions = {
+    validator = {
+      identity     = var.validator_identity
+      package_path = var.validator_package_path
+      settings     = var.validator_environment
+    }
+    executor = {
+      identity     = var.executor_identity
+      package_path = var.executor_package_path
+      settings     = var.executor_environment
+    }
+  }
+
+  cosmos_data_contributor_role_id = "${azurerm_cosmosdb_account.approvals.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002"
+}
+
+resource "azurerm_linux_function_app" "approval" {
+  for_each = local.functions
+
+  name                = "${var.name_prefix}-approval-${each.key}"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  service_plan_id     = azurerm_service_plan.approval.id
+
+  storage_account_name          = azurerm_storage_account.approval.name
+  storage_uses_managed_identity = true
+
+  https_only = true
+
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [each.value.identity.id]
+  }
+
+  key_vault_reference_identity_id = each.value.identity.id
+
+  site_config {
+    application_stack {
+      python_version = var.python_version
+    }
+
+    ftps_state          = "Disabled"
+    minimum_tls_version = "1.2"
+  }
+
+  app_settings = merge(
+    var.common_environment,
+    each.value.settings,
+    {
+      "FUNCTIONS_WORKER_RUNTIME"         = "python"
+      "AzureWebJobsStorage__accountName" = azurerm_storage_account.approval.name
+
+      # See the same settings in modules/tools: storage_uses_managed_identity points the
+      # runtime at a system-assigned identity these apps do not have. Naming the
+      # credential type and client ID is what makes the user-assigned identity apply.
+      "AzureWebJobsStorage__credential" = "managedidentity"
+      "AzureWebJobsStorage__clientId"   = each.value.identity.client_id
+
+      "AZURE_CLIENT_ID"      = each.value.identity.client_id
+      "COSMOS_ENDPOINT"      = azurerm_cosmosdb_account.approvals.endpoint
+      "COSMOS_DATABASE"      = azurerm_cosmosdb_sql_database.agentic.name
+      "APPROVALS_CONTAINER"  = azurerm_cosmosdb_sql_container.approvals.name
+      "SERVICEBUS_NAMESPACE" = azurerm_servicebus_namespace.approval.name
+      "APPROVAL_TOPIC"       = azurerm_servicebus_topic.approval.name
+    },
+  )
+
+  zip_deploy_file = each.value.package_path
+
+  tags = var.tags
+}
+
+# ---------------------------------------------------------------------------
+# What each of them may touch
+# ---------------------------------------------------------------------------
+
+resource "azurerm_role_assignment" "approval_storage" {
+  for_each = local.functions
+
+  scope                = azurerm_storage_account.approval.id
+  role_definition_name = "Storage Blob Data Owner"
+  principal_id         = each.value.identity.principal_id
+}
+
+# Both read and write approval records: the validator creates them, the executor claims
+# and resolves them.
+resource "azurerm_cosmosdb_sql_role_assignment" "approval_data" {
+  for_each = local.functions
+
+  resource_group_name = var.resource_group_name
+  account_name        = azurerm_cosmosdb_account.approvals.name
+  role_definition_id  = local.cosmos_data_contributor_role_id
+  principal_id        = each.value.identity.principal_id
+  scope               = azurerm_cosmosdb_account.approvals.id
+}
+
+# Only the validator publishes approval requests. The executor has no send rights — it
+# consumes decisions, it does not manufacture them.
+resource "azurerm_role_assignment" "validator_topic_send" {
+  scope                = azurerm_servicebus_topic.approval.id
+  role_definition_name = "Azure Service Bus Data Sender"
+  principal_id         = var.validator_identity.principal_id
 }

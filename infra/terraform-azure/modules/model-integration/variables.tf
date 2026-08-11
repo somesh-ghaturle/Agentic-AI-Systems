@@ -1,13 +1,13 @@
 variable "azure_openai_endpoint" {
-  type = string
+  type        = string
   description = "Optional Azure OpenAI endpoint to use (e.g. https://my-openai.openai.azure.com/)"
-  default = ""
+  default     = ""
 }
 
 variable "azure_openai_key_secret_name" {
-  type = string
+  type        = string
   description = "Name of secret in KeyVault where API key is stored"
-  default = ""
+  default     = ""
 }
 
 variable "model_deployment_name" {

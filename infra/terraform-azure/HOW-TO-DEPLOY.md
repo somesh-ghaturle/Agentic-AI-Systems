@@ -2,6 +2,8 @@
 
 A walkthrough from an empty Azure subscription to a working dev environment, then what changes for prod.
 
+> **This environment does not plan yet.** Every function package path is checked with `fileexists()` at plan time, and there is no Azure handler source tree in this repo. `infra/terraform-aws/src` holds the AWS handlers, and they are written against boto3, DynamoDB, and Step Functions task tokens — they will not run on Azure Functions unmodified. `terraform validate` passes; `terraform plan` will stop on the first missing zip. See [Remaining work](#remaining-work).
+
 ---
 
 ## Before you start
@@ -12,59 +14,70 @@ A walkthrough from an empty Azure subscription to a working dev environment, the
   az login
   az account set --subscription <SUBSCRIPTION_ID>
   ```
-- Terraform ≥ 1.3.0
-- Permissions to create Resource Groups, Storage Accounts, Key Vaults, Service Principals, Log Analytics Workspaces, Service Bus Namespaces, Search Services, and Logic Apps in the target subscription.
+- Terraform ≥ 1.6
+- Permissions to create Resource Groups, Storage Accounts, Key Vaults, Cosmos DB accounts, Log Analytics Workspaces, Service Bus Namespaces, Search Services, Function Apps, and Logic Apps in the target subscription.
+- **Entra permissions to create app registrations and grant app roles.** This is the one that surprises people. The read/write tool split is enforced by Entra app roles, so `terraform apply` registers one application per tool and assigns roles to managed identities. A subscription Contributor without directory permissions cannot do this — you need at least the *Application Developer* directory role, plus the ability to create app role assignments.
 
 **Decide before the first apply:**
-- `name_prefix` (defaults to `agentic-dev` / `agentic-prod`) — changing this later will recreate most resources.
+- `project` — combined with the environment into the prefix on every resource name. Changing it later recreates almost everything. Keep it short: Azure caps Cosmos accounts and storage accounts at 24 characters, and the variable validation enforces a limit that keeps the longest generated name inside it.
 
 ---
 
 ## 1 · Remote state
 
-For team environments, use a remote backend. In Azure, this uses a Storage Container:
+Local state has no lock. Two people applying at once corrupt each other's work, and nothing stops them. Set this up before a second person touches the environment, and before any prod apply.
 
 ```bash
-# Create Resource Group for state
 az group create --name agentic-tfstate-rg --location eastus
 
-# Create Storage Account
-az storage account create --name agentictfstatesa --resource-group agentic-tfstate-rg --location eastus --sku Standard_LRS
+az storage account create \
+  --name agentictfstatesa \
+  --resource-group agentic-tfstate-rg \
+  --location eastus \
+  --sku Standard_LRS \
+  --allow-shared-key-access false
 
-# Create Blob Container
-az storage container create --name tfstate --account-name agentictfstatesa
+az storage container create \
+  --name tfstate \
+  --account-name agentictfstatesa \
+  --auth-mode login
 ```
 
-Then, configure the backend in `envs/dev/main.tf` and `envs/prod/main.tf` by updating the `backend` block:
-```hcl
-terraform {
-  backend "azurerm" {
-    resource_group_name  = "agentic-tfstate-rg"
-    storage_account_name = "agentictfstatesa"
-    container_name       = "tfstate"
-    key                  = "dev.terraform.tfstate"
-  }
-}
-```
+Then replace the `backend "local" {}` block in `envs/dev/main.tf` (and `envs/prod/main.tf`) with the commented-out `backend "azurerm"` block directly above it, filling in the names you just created.
+
+`use_azuread_auth = true` in that block is deliberate: it authenticates to the state container as you rather than with a storage account key, which is the same posture the rest of this stack takes.
 
 ---
 
-## 2 · Configure
+## 2 · Build the function packages
 
-Copy the example variables file:
+**Not yet possible.** This is the step that blocks a real deployment — see the note at the top. When the Azure handler source exists, this section becomes a call to its build script, producing the zips that `terraform.tfvars` points at.
+
+---
+
+## 3 · Configure
 
 ```bash
 cd envs/dev
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Edit `terraform.tfvars` with your project variables, tenant ID, and custom settings.
+Fill in at minimum `project` and `subscription_id`. `subscription_id` is required as of azurerm 4.x — the provider no longer infers it from your CLI context, and leaving it out fails at plan with a message that does not mention it.
+
+Then read the `tools` block carefully. The `access` field on each tool decides its invocation path and nothing else in that file matters more:
+
+| `access` | Who may invoke it |
+|---|---|
+| `read` | The orchestrator holds the invoke app role and calls it directly |
+| `write` | **Only** the approval executor holds it — the orchestrator cannot obtain a token |
+
+Classify by what the handler *does*, not by what it is called. A tool named `lookup_account` that also writes an audit row is a write tool. When unsure, classify as write: the cost of an unnecessary gate is one extra click, the cost of a missing one is an irreversible action nobody authorized.
+
+`terraform.tfvars` is gitignored. Keep it that way.
 
 ---
 
-## 3 · Apply
-
-Initialize and validate the environment:
+## 4 · Apply
 
 ```bash
 terraform init
@@ -73,20 +86,71 @@ terraform plan
 terraform apply
 ```
 
+Entra propagation is eventually consistent. If the first apply fails on an app role assignment or a Key Vault secret with a 403, re-running usually succeeds — the assignment existed but the data plane had not seen it yet.
+
 ---
 
-## 4 · Component Mapping details
+## 5 · What prod does differently
 
-- **State** (`modules/state`): Stores workflow state in an Azure Storage Table (`executionstate`).
-- **Archive** (`modules/archive`): Stores trace logs in an Azure Blob Container (`trace-archive`) with tiering and deletion policies configured via Lifecycle Management.
-- **Knowledge** (`modules/knowledge`): Configures Azure AI Search (`azurerm_search_service`) for semantic search vector databases.
-- **Tools** (`modules/tools`): Packages functions into a serverless Linux Function App (`azurerm_linux_function_app`).
-- **Approval** (`modules/approval`): Handles gates via Service Bus Topics/Subscriptions.
-- **Orchestration** (`modules/orchestration`): Deploys an Azure Logic App workflow to coordinate actions.
+Same modules, same wiring, same order. Every difference is a variable value:
+
+| | dev | prod |
+|---|---|---|
+| Function plans | Consumption (`Y1`) | Elastic Premium (`EP1`) |
+| Service Bus | Standard | Premium, local auth off |
+| Approval records | no PITR | continuous backup on |
+| Key Vault | purge protection off, 7-day retention | purge protection **on**, 90-day retention |
+| Storage shared keys | enabled | disabled |
+| Storage replication | LRS | ZRS (state, tools, approval), GRS (archive) |
+| Log retention | 30 days | 365 days |
+| Trace archive | expires at 90 days | tiers to archive, expires at 7 years |
+
+The `EP1` plan in prod is not about performance. Consumption plans cannot join a VNet, so every private-endpoint variable in this stack is unusable on `Y1`. Prod pays for Elastic Premium to keep that door open.
+
+---
+
+## 6 · Component mapping
+
+| Module | Azure services | AWS analogue |
+|---|---|---|
+| `networking` | Resource Group, VNet, subnet | VPC |
+| `identity` | User-assigned managed identities | IAM roles |
+| `security` | Key Vault with RBAC authorization | KMS + IAM |
+| `state` | Storage Table (`executionstate`) | DynamoDB |
+| `archive` | Blob container with lifecycle policy | S3 + lifecycle rules |
+| `knowledge` | Azure AI Search | OpenSearch Serverless |
+| `tools` | One Function App per tool, one Entra app registration each | Lambda per tool |
+| `approval` | Cosmos DB + Service Bus + validator/executor Function Apps | DynamoDB + SQS + Lambda |
+| `orchestration` | Logic App workflow | Step Functions |
+| `observability` | Log Analytics workspace | CloudWatch |
+
+Two mappings are worth explaining because the obvious choice was rejected:
+
+**Cosmos DB, not Table Storage, for approval records.** The executor claims a pending approval with a conditional write, so that a double-clicked approve button cannot execute twice. Cosmos provides ETag/If-Match optimistic concurrency — the direct analogue of DynamoDB's `ConditionExpression`. Table Storage has no equivalent. The account is also set to Strong consistency deliberately: under eventual consistency a second executor can read a stale `pending` and claim an already-claimed record, which is the exact double-execution the gate exists to prevent.
+
+**Managed identities, not a service principal with a password.** An earlier version of the identity module created a service principal password with a one-year expiry. It lived in Terraform state in plaintext, had to be rotated by hand, and would have taken the system down silently on its first birthday. Azure holds a managed identity's credential, rotates it, and never shows it to you or to the workload.
+
+---
+
+## Remaining work
+
+Before this can be applied to a real subscription:
+
+1. **Azure handler source.** No `src/` tree exists. The AWS handlers are boto3-based and need porting to the Azure SDK and the Functions programming model.
+2. **The Logic App workflow definition.** `modules/orchestration` creates the workflow and attaches the orchestrator identity, but the workflow body — call retrieve, call the model step, call the validator, suspend on the approval callback — is not written. Without it there is no orchestrator, only the identity one would run as.
+3. **Diagnostic settings and alerts.** `modules/observability` creates the workspace but nothing routes into it, and no alert rules exist. The AWS side has metric filters and alarms for abandoned approvals, timed-out executions, and daily cost.
+4. **Globally unique resource names.** Key Vault, Cosmos, and every storage account name in this stack is derived deterministically from `project`. Those namespaces are global to Azure, not scoped to your subscription, so two teams using the same `project` value collide at apply time.
+5. **Private endpoints.** Every `*_public_network_access_enabled` variable defaults to `true` and cannot be closed until private endpoints exist and the function plans can join the VNet.
+6. **Cosmos local auth.** Account keys should be disabled. The provider attribute that did this is deprecated and its replacement is not pinned in this repo's provider version, so it is deliberately left unset rather than guessed at. Enforce it with the Azure Policy *"Cosmos DB database accounts should have local authentication methods disabled"* in the meantime.
 
 ---
 
 ## Troubleshooting
 
-- **Storage Account Name Limits**: Azure Storage Account names must be globally unique, lowercase, alphanumeric, and between 3 and 24 characters. If validation fails on storage account creation, modify `name_prefix` to be shorter.
-- **Service Principal Credentials**: When using the identity module, the client secret is marked sensitive. Retrieve it from outputs using `terraform output -raw client_secret`.
+**`Insufficient privileges to complete the operation`** during apply — you have subscription rights but not directory rights. The tools module registers Entra applications. See [Before you start](#before-you-start).
+
+**Storage account name errors** — Azure storage account names are globally unique, lowercase, alphanumeric, 3–24 characters. Shorten `project`.
+
+**`403` from Key Vault on the first apply** — RBAC role assignments are eventually consistent, and Terraform considers one created before Key Vault's data plane has seen it. Re-run.
+
+**Function App fails to start with a storage connection error** — check that `AzureWebJobsStorage__credential` and `AzureWebJobsStorage__clientId` are present in its app settings. `storage_uses_managed_identity` alone points the runtime at a *system*-assigned identity, which these apps do not have.
