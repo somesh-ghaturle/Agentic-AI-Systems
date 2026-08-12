@@ -10,11 +10,12 @@ What differs is the machinery. Azure has no equivalent of a Lambda resource poli
 the boundary is drawn with Entra app roles instead. That substitution is not free, and
 §2 is explicit about where it is weaker than the AWS original.
 
-> **Implementation status.** The modules and both environment roots validate. The Logic
-> App workflow definition, the archive immutability policy, and the observability wiring
-> are now built. Two things are still absent and are marked **not yet built** where they
-> appear below: the Azure handler source (`src/`), and the Azure Policy guard described in
-> §2. Read those marks as literal — everything else in the diagrams exists in Terraform.
+> **Implementation status.** Three roots validate: `envs/dev`, `envs/prod`, and
+> `envs/tenant`. The Logic App workflow definition, the archive immutability policy, the
+> observability wiring, and the write-boundary guards in §2 are built. One thing is still
+> absent and is marked **not yet built** where it appears: the Azure handler source
+> (`src/`). Read that mark as literal — everything else in the diagrams exists in
+> Terraform.
 
 ---
 
@@ -132,9 +133,42 @@ and the split becomes decorative while every diagram, output, and role assignmen
 looks correct. It is called out in the module comment for that reason, and it is the
 first thing to check in any review of this tree.
 
-The honest mitigation is not another Terraform resource — it is Azure Policy denying
+An earlier draft of this document prescribed Azure Policy for that: a rule denying
 `app_role_assignment_required = false` on these applications, evaluated outside the
-Terraform run that would be the thing making the mistake. That is not yet configured.
+Terraform run that would be the thing making the mistake. **That cannot be built**, and
+the reason generalises past this one control.
+
+Azure Policy evaluates resources represented in Azure Resource Manager — the
+documentation is explicit that only resources at subscription or resource group scope are
+evaluated. Entra app registrations and service principals are Microsoft Graph objects.
+They have no ARM representation, no resource group, and therefore no policy alias to
+write a rule against. The plan was plausible because Azure Policy governs so much of
+Azure that the boundary of what it reaches is easy to miss, and identity is on the far
+side of it.
+
+What is buildable is a pair of controls covering the two paths a change can arrive by:
+
+| Path | Control | Kind |
+|---|---|---|
+| Through the repo | `tests/test_write_boundary.py` — parses every `azuread_service_principal` block and fails if one is missing `app_role_assignment_required = true` or sets it false. Runs in CI with no Azure credentials | **Preventive** — the change never merges |
+| Through the portal, CLI, or Graph | `modules/entra-audit` — routes Entra `AuditLogs` to the workspace and alerts at severity 0 on an `Update service principal` record whose `modifiedProperties` sets `AppRoleAssignmentRequired` to false | **Detective** — the change lands, and is loud |
+
+The pair is weaker than the Azure Policy rule would have been, and the gap is worth
+naming rather than glossing: nothing here *prevents* an out-of-band flip. A tenant admin
+can still open the boundary in the portal. What they cannot do is open it quietly.
+
+The detective half lives in `envs/tenant` rather than in dev and prod, because
+`azurerm_monitor_aad_diagnostic_setting` is tenant-scoped and there is one Entra tenant
+behind both environments — two roots managing it would revert each other on every apply.
+It also needs Contributor at `/providers/Microsoft.aadiam`, granted by a root-scope User
+Access Administrator, plus Entra ID P1 or P2. Requiring all three to deploy dev would be
+a bad trade, so that root is applied separately, by someone who already holds them.
+
+One caveat on the alert, stated because it is the kind of thing that reads as working
+when it is not: without P1/P2, the diagnostic setting can be accepted and simply never
+deliver records. The alert then sits at zero and looks healthy. The `verification_query`
+output exists to check that, and the control should be rehearsed once against a throwaway
+app registration — an alert nobody has seen fire is a hypothesis, not a control.
 
 ---
 
@@ -404,6 +438,7 @@ everything with a principal depends on it — which is the only reason it exists
 | `state` | Storage Table `executionstate` | ZRS in prod |
 | `knowledge` | Azure AI Search service | Data-plane access is separate from control-plane RBAC, same trap as OpenSearch on AWS |
 | `archive` | Blob container, immutability policy, versioning, lifecycle policy | Tiers to cool then archive, 7-year expiry in prod. `locked = true` in prod is irreversible — retention can be extended, never shortened |
+| `entra-audit` | Tenant-scoped Entra diagnostic setting, severity-0 alert on the write boundary being disabled | Applied from `envs/tenant`, not dev or prod. Tenant-scoped, so two roots managing it would revert each other. See §2 |
 | `networking` | Resource group, VNet, subnet | Nothing joins the subnet yet — Consumption plans cannot |
 | `model-integration` | Nothing, deliberately | Azure OpenAI needs tenant enrollment Terraform cannot request |
 
@@ -416,7 +451,7 @@ Azure handler source — which does not exist yet — is written correctly.
 
 | Property | Enforced by | If it breaks |
 |---|---|---|
-| Write tools unreachable without approval | **Entra** — app role assignment required | Cannot break by editing a prompt. Can break by one Terraform attribute — see §2 |
+| Write tools unreachable without approval | **Entra** — app role assignment required | Cannot break by editing a prompt. Can break by one attribute — CI blocks that arriving through the repo, and the §2 alert catches it arriving any other way |
 | Approved arguments are what execute | **Code** — fingerprint re-check in the executor | Executes something nobody approved |
 | Caller owns the resource | **Code** — ownership check in the validator | Approves a cross-tenant action |
 | Retrieval is tenant-scoped | **Code** — filter inside the vector query, not applied after it | Ranks other tenants' documents first, then hides them |
@@ -438,7 +473,7 @@ Where the two trees are not equivalent, and why.
 
 | Concern | AWS | Azure | Equivalent? |
 |---|---|---|---|
-| Write tool authorization | Identity policy **and** resource policy, independently | Entra app role only | **No** — one lock instead of two. §2 |
+| Write tool authorization | Identity policy **and** resource policy, independently | Entra app role, plus a CI check and an audit alert guarding it | **No** — still one lock. The guards make it hard to move quietly, not impossible to move. §2 |
 | Suspended execution | `waitForTaskToken` | Logic App webhook callback | Yes |
 | Conditional claim | DynamoDB `ConditionExpression` | Cosmos ETag `If-Match` | Yes |
 | Approval notification | SNS + KMS | Service Bus topic + subscription | Yes, with dead-lettering added |
@@ -448,9 +483,18 @@ Where the two trees are not equivalent, and why.
 | Observability | 4 metric filters, 5 alarms | 4 KQL query rules + 1 metric alert | Yes |
 | Handler source | `src/` with tests | None | **No** — not yet ported |
 
-Two `No`s remain. The handler source is the larger one: without it the deployed Function
-Apps have no code, so this tree stands up a correct boundary around an empty room. The
-encryption difference is real but bounded — platform-managed keys still encrypt at rest,
+Three `No`s remain, and they are not equally serious.
+
+The handler source is the largest: without it the deployed Function Apps have no code, so
+this tree currently stands up a correct boundary around an empty room.
+
+The single lock is structural. Azure has no Function resource policy and no way to govern
+Entra objects with Azure Policy, so the second independent lock AWS gets for free is not
+available at any price here. The guards in §2 narrow the window rather than closing it,
+and that is the honest description.
+
+The encryption difference is the mildest — platform-managed keys still encrypt at rest,
 they just are not the customer's to revoke.
 
-Neither is visible from a `terraform validate`, which is the reason this table exists.
+None of the three is visible from a `terraform validate`, which is the reason this table
+exists.
