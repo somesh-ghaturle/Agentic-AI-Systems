@@ -1,0 +1,164 @@
+# Copy to terraform.tfvars and fill in. Do not commit terraform.tfvars.
+#
+# ---------------------------------------------------------------------------
+# Before this plans: the handler packages must exist
+#
+# Every package_path below is read at plan time to compute its deployment hash, so a
+# missing zip is a plan-time error rather than an apply-time one. There is no GCP handler
+# source tree in this repo yet — infra/terraform-aws/src holds the AWS handlers, and they
+# are written against boto3, DynamoDB, OpenSearch, and Step Functions task tokens. They
+# will not run on Cloud Functions unmodified.
+#
+# Until that source exists, this environment validates but does not plan. See
+# ARCHITECTURE.md § Remaining work.
+#
+# ---------------------------------------------------------------------------
+# Before this applies: three manual pre-steps
+#
+#   1. Accept the Anthropic Model Garden terms for `model_id` in this project. There is no
+#      Terraform resource for it, and without it every model call returns 403.
+#   2. Enable the APIs this root does not manage: cloudfunctions, run, workflows,
+#      firestore, cloudkms, storage, pubsub, logging, monitoring. Only aiplatform is
+#      enabled here, via modules/model-integration.
+#   3. Confirm your principal can create IAM Deny policies
+#      (roles/iam.denyAdmin at the project or organization level). Without it the apply
+#      fails at the very last resource, after everything else exists.
+#
+# See HOW-TO-DEPLOY.md.
+# ---------------------------------------------------------------------------
+
+# 3-12 characters. The ceiling is the 30-character service account ID limit: this root
+# derives IDs as "<project>-dev-<tool name>", and `process_refund` is 14 characters.
+project = "acme-agent"
+
+project_id = "acme-agent-dev"
+
+# One region for everything regional. KMS keys can only encrypt resources co-located with
+# them, so splitting this into several values is how you discover that at bucket-create
+# time.
+region = "us-central1"
+
+# Immutable after creation. `nam5` is a multi-region; a plain region like `us-central1` is
+# cheaper and has a single point of failure.
+firestore_location = "nam5"
+
+# Not `region`. Anthropic model availability on Vertex AI is region-specific — us-east5
+# and europe-west1 carry the broadest selection.
+vertex_location = "us-east5"
+model_id        = "claude-opus-4-5@20251101"
+
+# ---------------------------------------------------------------------------
+# Tools
+#
+# `access` decides the invocation path and nothing else in this file matters more:
+#
+#   read  → the orchestrator holds run.invoker and calls the function directly
+#   write → ONLY the approval executor holds it, and the orchestrator is separately denied
+#           it by an IAM Deny policy
+#
+# Classify by what the handler DOES, not by what it is called. A tool named
+# "lookup_account" that also writes an audit row is a write tool. Terraform cannot check
+# this for you — it is a property of your handler code.
+# ---------------------------------------------------------------------------
+
+tools = {
+  # Retrieval over the Vector Search corpus.
+  retrieve = {
+    access          = "read"
+    entry_point     = "handler"
+    runtime         = "python312"
+    package_path    = "../../build/retrieve.zip"
+    timeout_seconds = 30
+    max_instances   = 20
+
+    environment = {
+      # Tenant scoping is applied as a namespace restrict inside the query, not as a
+      # post-filter. Filtering after the fact means the neighbours were already chosen
+      # across tenants and the result set is short rather than wrong-tenant — which looks
+      # like poor recall.
+      TENANT_NAMESPACE = "tenant_id"
+    }
+  }
+
+  # The model step. Classified `read` because it proposes and never executes — a proposal
+  # reaches a write tool only through validation and human approval.
+  reason = {
+    access          = "read"
+    entry_point     = "handler"
+    runtime         = "python312"
+    package_path    = "../../build/reason.zip"
+    timeout_seconds = 120
+    max_instances   = 10
+  }
+
+  # A write tool: moves money, so it is irreversible and customer-visible. Gated.
+  process_refund = {
+    access          = "write"
+    entry_point     = "handler"
+    runtime         = "python312"
+    package_path    = "../../build/process_refund.zip"
+
+    # Must be under the executor's timeout, or the refund completes and the executor is
+    # killed before recording that it did.
+    timeout_seconds = 60
+
+    # Agents retry. Bounding scale-out limits the blast radius of a retry storm against a
+    # path that moves money.
+    max_instances = 5
+
+    environment = {
+      # The tool's own ceiling, checked independently of the validator's policy limit.
+      # Two checks in two places, because the validator can be bypassed by a bug and the
+      # tool cannot.
+      MAX_REFUND_CENTS = "50000"
+    }
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Approval gate
+# ---------------------------------------------------------------------------
+
+approval_validator = {
+  package_path = "../../build/approval_validator.zip"
+
+  environment = {
+    # The limit checked in code before a human is ever asked. Raising it is a policy
+    # change, which is why it lives here rather than in a prompt.
+    POLICY_MAX_REFUND_CENTS = "50000"
+  }
+}
+
+approval_executor = {
+  package_path = "../../build/approval_executor.zip"
+
+  environment = {
+    # How long a claimed-but-unfinished record waits before another executor may reclaim
+    # it. Safe only because write tools are idempotent on the approval ID.
+    STALE_CLAIM_SECONDS = "900"
+  }
+}
+
+trace_emitter = {
+  package_path = "../../build/emit_trace.zip"
+}
+
+# ---------------------------------------------------------------------------
+# People
+#
+# Empty `approver_members` means nobody can approve anything. That is safe, and it is also
+# a system where every gated action sits until its window closes.
+# ---------------------------------------------------------------------------
+
+approver_members = {
+  # oncall = "group:agent-approvers@example.com"
+}
+
+# Whoever starts executions. No workload in this tree holds it.
+caller_members = {
+  # api = "serviceAccount:gateway@acme-agent-dev.iam.gserviceaccount.com"
+}
+
+alert_email_receivers = {
+  # oncall = "agent-oncall@example.com"
+}

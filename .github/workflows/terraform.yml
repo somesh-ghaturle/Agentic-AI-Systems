@@ -1,0 +1,95 @@
+# Static checks on the Terraform trees under infra/.
+#
+# This repo is reference material: the configurations here are read and copied far more
+# often than they are applied. That inverts the usual reason for CI. Production infra
+# tells you it is broken at apply time, loudly. A teaching repo stays quietly wrong until
+# someone copies the HCL and cannot work out why it will not plan — and assumes the
+# mistake is theirs. `terraform validate` is the only thing that notices.
+#
+# Everything here runs without cloud credentials. That is a constraint worth keeping:
+# a check that needs a subscription is a check that gets disabled the first time a
+# secret expires.
+
+name: terraform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform.yml"
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/terraform.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      # One pass over both trees — formatting has no per-root component.
+      - name: fmt
+        run: terraform fmt -recursive -check -diff infra/
+
+  validate:
+    name: validate
+    runs-on: ubuntu-latest
+    strategy:
+      # Report every broken root, not just the first. A learner fixing one wants to
+      # know whether the others are also affected.
+      fail-fast: false
+      matrix:
+        root:
+          - infra/terraform-aws/envs/dev
+          - infra/terraform-aws/envs/prod
+          - infra/terraform-azure/envs/dev
+          - infra/terraform-azure/envs/prod
+          - infra/terraform-azure/envs/tenant
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+          terraform_wrapper: false
+
+      # Each root separately: they have different backends and different provider sets,
+      # and a module that only one root uses would otherwise go unchecked.
+      # -backend=false so no remote state and no credentials are needed.
+      - name: init
+        run: terraform -chdir="${{ matrix.root }}" init -backend=false -input=false -no-color
+
+      - name: validate
+        run: terraform -chdir="${{ matrix.root }}" validate -no-color
+
+  write-boundary:
+    name: write boundary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Azure-only, and deliberately not mirrored on the AWS side: it guards an Entra
+      # attribute that has no AWS counterpart. `terraform validate` is perfectly happy
+      # with `app_role_assignment_required = false` — it is a valid boolean in a valid
+      # attribute. Only this test notices that it is also the whole security model.
+      #
+      # No dependencies on purpose — stdlib unittest, reading .tf files as text.
+      # See infra/terraform-azure/tests/test_write_boundary.py for why this exists
+      # rather than an Azure Policy definition.
+      - name: Assert app_role_assignment_required is true everywhere
+        run: python3 -m unittest discover -s infra/terraform-azure/tests -v
