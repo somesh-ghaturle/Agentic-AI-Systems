@@ -8,6 +8,11 @@ output "log_analytics_workspace_id" {
   value       = module.observability.log_analytics_workspace_id
 }
 
+output "action_group_id" {
+  description = "Action group every alert notifies. Kept parallel with prod; envs/tenant should point at prod's, not this one."
+  value       = module.observability.action_group_id
+}
+
 output "key_vault_uri" {
   description = "Vault URI. Workloads build Key Vault references from this."
   value       = module.security.keyvault_uri

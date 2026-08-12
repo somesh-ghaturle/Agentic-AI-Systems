@@ -1,0 +1,41 @@
+# Tenant root — copy to terraform.tfvars and fill in.
+#
+# Apply this AFTER prod, not before. Every value below except subscription_id comes from
+# prod's outputs, and prod has to exist to have them:
+#
+#   terraform -chdir=../prod output -raw resource_group_name
+#   terraform -chdir=../prod output -raw log_analytics_workspace_id
+#   terraform -chdir=../prod output -raw action_group_id
+#
+# Before the first apply, confirm the identity running Terraform has:
+#
+#   - Contributor at /providers/Microsoft.aadiam
+#   - granted by someone holding User Access Administrator at root scope
+#   - Entra ID P1 or P2 on the tenant
+#
+# Without the first two, apply fails with an authorization error that names the aadiam
+# provider. Without P1/P2 it can fail at apply or accept the setting and never deliver
+# records, which is the worse outcome — an alert that reads healthy because its table is
+# empty. Verify with the verification_query output rather than assuming.
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Must match prod's computed prefix exactly: "<project>-prod".
+# A wrong value here fails silently — the query simply never matches.
+name_prefix = "agentic-prod"
+
+resource_group_name = "agentic-prod-rg"
+location            = "eastus"
+
+log_analytics_workspace_id = "/subscriptions/.../resourceGroups/agentic-prod-rg/providers/Microsoft.OperationalInsights/workspaces/agentic-prod-law"
+action_group_id            = "/subscriptions/.../resourceGroups/agentic-prod-rg/providers/Microsoft.Insights/actionGroups/agentic-prod-alerts"
+
+# Sign-in logs for service principals. Off by default on volume and cost. Turn it on if
+# you want to be able to answer "what did it do while the boundary was open" — the alert
+# tells you the gate opened, this tells you what walked through.
+capture_service_principal_signins = false
+
+tags = {
+  project = "agentic-ai-systems"
+  env     = "tenant"
+}

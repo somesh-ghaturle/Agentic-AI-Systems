@@ -4,8 +4,13 @@ output "resource_group_name" {
 }
 
 output "log_analytics_workspace_id" {
-  description = "Workspace diagnostic settings should point at."
+  description = "Workspace diagnostic settings should point at. Also the input envs/tenant needs — Entra audit records are tenant-wide and belong in the workspace someone actually watches."
   value       = module.observability.log_analytics_workspace_id
+}
+
+output "action_group_id" {
+  description = "Action group every alert notifies. Exported so envs/tenant reuses it rather than standing up a parallel notification path that reaches a different set of people."
+  value       = module.observability.action_group_id
 }
 
 output "key_vault_uri" {

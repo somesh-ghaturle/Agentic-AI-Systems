@@ -2,10 +2,11 @@
 #
 # Structurally identical to dev — same modules, same wiring, same order. Every difference
 # is a variable value, and they are all in one direction: longer retention, backups on,
-# shared keys off, Premium tiers where Premium is what buys network isolation.
+# shared keys off, WORM locked, Premium tiers where Premium is what buys network
+# isolation.
 #
-# See envs/dev/main.tf for why the identity module exists and how it breaks the
-# tools ↔ approval dependency cycle. The reasoning is the same here and is not repeated.
+# See envs/dev/main.tf for how the two dependency cycles are broken. The reasoning is the
+# same here and is not repeated.
 
 terraform {
   # Local state is not acceptable for prod. Two operators applying at once corrupt each
@@ -31,14 +32,17 @@ provider "azuread" {}
 data "azurerm_client_config" "current" {}
 
 locals {
-  name_prefix = "${var.project}-prod"
+  name_prefix         = "${var.project}-prod"
+  resource_group_name = "${var.project}-prod-rg"
 
   tool_identity_names = { for name in keys(var.tools) : name => "tool-${replace(name, "_", "-")}" }
 
   identity_names = toset(concat(
-    ["orchestrator", "approval-validator", "approval-executor"],
+    ["orchestrator", "approval-validator", "approval-executor", "trace-emitter"],
     values(local.tool_identity_names),
   ))
+
+  logic_app_id = "/subscriptions/${var.subscription_id}/resourceGroups/${local.resource_group_name}/providers/Microsoft.Logic/workflows/${local.name_prefix}-orchestrator"
 
   tags = {
     Project     = var.project
@@ -52,7 +56,7 @@ module "networking" {
   source = "../../modules/networking"
 
   name_prefix         = local.name_prefix
-  resource_group_name = "${local.name_prefix}-rg"
+  resource_group_name = local.resource_group_name
   location            = var.location
 
   tags = local.tags
@@ -65,20 +69,6 @@ module "identity" {
   resource_group_name = module.networking.resource_group_name
   location            = var.location
   identities          = local.identity_names
-
-  tags = local.tags
-}
-
-module "observability" {
-  source = "../../modules/observability"
-
-  name_prefix         = local.name_prefix
-  resource_group_name = module.networking.resource_group_name
-  location            = var.location
-
-  # A year. Long enough to answer "who approved this, and on what evidence" during an
-  # audit that starts months after the fact.
-  log_retention_days = 365
 
   tags = local.tags
 }
@@ -129,10 +119,21 @@ module "archive" {
 
   # Geo-redundant, and kept for seven years. This is the trace archive — the evidence
   # trail behind every decision the system made.
-  account_replication_type = "GRS"
-  transition_cool_days     = 30
-  transition_archive_days  = 90
-  expiration_days          = 2555
+  account_replication_type  = "GRS"
+  shared_access_key_enabled = false
+  transition_cool_days      = 30
+  transition_archive_days   = 90
+  expiration_days           = 2555
+
+  # WORM, LOCKED. Read modules/archive/variables.tf before changing either line.
+  #
+  # This is what makes the archive evidence rather than logs: while the window is open,
+  # no one — including the subscription owner — can delete or overwrite a trace. The
+  # consequence is that this resource group cannot be destroyed for seven years. That is
+  # the same commitment S3 Object Lock in COMPLIANCE mode makes on the AWS side, and it
+  # is the point rather than a side effect.
+  immutability_period_days = 2555
+  lock_immutability_policy = true
 
   tags = local.tags
 }
@@ -203,9 +204,13 @@ module "approval" {
   name_prefix         = local.name_prefix
   resource_group_name = module.networking.resource_group_name
   location            = var.location
+  tenant_id           = data.azurerm_client_config.current.tenant_id
 
   validator_identity = module.identity.identities["approval-validator"]
   executor_identity  = module.identity.identities["approval-executor"]
+
+  orchestrator_principal_id = module.identity.identities["orchestrator"].principal_id
+  approver_principal_ids    = var.approver_principal_ids
 
   validator_package_path = var.approval_validator.package_path
   executor_package_path  = var.approval_executor.package_path
@@ -242,6 +247,45 @@ module "approval" {
   tags = local.tags
 }
 
+module "observability" {
+  source = "../../modules/observability"
+
+  name_prefix         = local.name_prefix
+  resource_group_name = module.networking.resource_group_name
+  location            = var.location
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+
+  # A year. Long enough to answer "who approved this, and on what evidence" during an
+  # audit that starts months after the fact.
+  log_retention_days = 365
+
+  function_app_ids = merge(
+    module.tools.function_app_ids,
+    module.approval.function_app_ids,
+  )
+
+  logic_app_id = local.logic_app_id
+
+  trace_emitter = {
+    identity                  = module.identity.identities["trace-emitter"]
+    package_path              = var.trace_emitter.package_path
+    orchestrator_principal_id = module.identity.identities["orchestrator"].principal_id
+  }
+
+  service_plan_sku         = "EP1"
+  storage_replication_type = "ZRS"
+
+  # A real budget rather than a loop detector. Tune it to the environment's actual spend
+  # — set far above it and the alarm is decorative.
+  daily_cost_threshold_usd = var.daily_cost_threshold_usd
+  schema_failure_threshold = 0
+
+  alert_email_receivers   = var.alert_email_receivers
+  alert_webhook_receivers = var.alert_webhook_receivers
+
+  tags = local.tags
+}
+
 module "orchestration" {
   source = "../../modules/orchestration"
 
@@ -250,6 +294,23 @@ module "orchestration" {
   location            = var.location
 
   orchestrator_identity = module.identity.identities["orchestrator"]
+
+  read_tool_urls = module.tools.read_tool_urls
+  tool_audiences = module.tools.tool_audiences
+
+  validator_url      = module.approval.validator_url
+  validator_audience = module.approval.validator_audience
+
+  trace_emitter = {
+    url      = module.observability.trace_emitter_url
+    audience = module.observability.trace_emitter_audience
+  }
+
+  # Tighter than dev on both counts. A shorter approval window is deliberate: an approval
+  # nobody answered for four hours is already an incident, and a longer window mostly
+  # delays finding that out.
+  max_steps        = 8
+  approval_timeout = "PT4H"
 
   tags = local.tags
 }

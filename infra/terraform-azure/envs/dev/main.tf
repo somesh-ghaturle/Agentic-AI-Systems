@@ -6,26 +6,31 @@
 #
 # What differs in dev: Consumption plans instead of Elastic Premium, Standard Service Bus
 # instead of Premium, no PITR on the approval records, no purge protection on the vault,
-# and storage shared keys left enabled.
+# no WORM policy on the archive, and storage shared keys left enabled.
 #
 # ---------------------------------------------------------------------------
-# How the cycle is broken, because the wiring looks indirect on purpose
+# How the two cycles are broken, because the wiring looks indirect on purpose
 # ---------------------------------------------------------------------------
 #
-# The enforcement flow is inherently circular: the orchestrator invokes read tools, the
-# executor invokes write tools, and modules/tools needs both callers' principal IDs to
-# scope its app role assignments. Wired literally:
+# **Cycle 1: tools ↔ approval.** modules/tools needs the executor's principal ID to scope
+# its write-tool app role assignment; the executor needs the write tools' addresses to
+# call them.
 #
-#     tools -> approval -> tools
+# On AWS this is broken by computing ARNs in `locals` — resource names are deterministic,
+# so the ARNs are too. That does not work for Azure principals: a managed identity's
+# principal ID is server-assigned and cannot be predicted before creation.
 #
-# On AWS this is broken by computing ARNs in `locals` — the names are deterministic, so
-# the ARNs are too. Azure has no equivalent: a managed identity's principal ID is
-# server-assigned and cannot be predicted before creation.
+# So it is broken by extraction. modules/identity depends on nothing and creates every
+# principal up front; tools, approval, orchestration, and the trace emitter all consume
+# identities from it rather than from each other.
 #
-# So it is broken by extraction instead. modules/identity depends on nothing and creates
-# every principal up front; tools, approval, and orchestration all consume identities
-# from it rather than from each other. That is the only reason an `identity` module
-# exists here when terraform-aws has none.
+# **Cycle 2: orchestration ↔ observability.** The workflow calls the trace emitter, which
+# lives in observability; observability needs the workflow's resource ID for its
+# diagnostic setting and failure alert.
+#
+# This one DOES yield to the AWS trick, because ARM resource IDs — unlike principal IDs —
+# are fully determined by subscription, resource group, and name. `local.logic_app_id`
+# below is that constructed value.
 # ---------------------------------------------------------------------------
 
 terraform {
@@ -53,7 +58,8 @@ provider "azuread" {}
 data "azurerm_client_config" "current" {}
 
 locals {
-  name_prefix = "${var.project}-dev"
+  name_prefix         = "${var.project}-dev"
+  resource_group_name = "${var.project}-dev-rg"
 
   # Managed identity names become Azure resource names, so they are lowercase with
   # hyphens only. Tool names may carry underscores (they are also Python module names),
@@ -64,9 +70,13 @@ locals {
   # in this stack a grant to everything, which is the thing the read/write split exists
   # to prevent.
   identity_names = toset(concat(
-    ["orchestrator", "approval-validator", "approval-executor"],
+    ["orchestrator", "approval-validator", "approval-executor", "trace-emitter"],
     values(local.tool_identity_names),
   ))
+
+  # Cycle-breaker. See the note at the top of this file: this is the ID the workflow will
+  # have, known before it exists because ARM IDs are deterministic.
+  logic_app_id = "/subscriptions/${var.subscription_id}/resourceGroups/${local.resource_group_name}/providers/Microsoft.Logic/workflows/${local.name_prefix}-orchestrator"
 
   tags = {
     Project     = var.project
@@ -80,7 +90,7 @@ module "networking" {
   source = "../../modules/networking"
 
   name_prefix         = local.name_prefix
-  resource_group_name = "${local.name_prefix}-rg"
+  resource_group_name = local.resource_group_name
   location            = var.location
 
   tags = local.tags
@@ -95,19 +105,6 @@ module "identity" {
   resource_group_name = module.networking.resource_group_name
   location            = var.location
   identities          = local.identity_names
-
-  tags = local.tags
-}
-
-module "observability" {
-  source = "../../modules/observability"
-
-  name_prefix         = local.name_prefix
-  resource_group_name = module.networking.resource_group_name
-  location            = var.location
-
-  # The floor Log Analytics accepts. Dev traces are not evidence.
-  log_retention_days = 30
 
   tags = local.tags
 }
@@ -132,8 +129,6 @@ module "security" {
   purge_protection_enabled   = false
   soft_delete_retention_days = 7
 
-  # Unnecessary when the model layer authenticates by managed identity, which is the
-  # intended path. Set this true only if you are wiring a key-based provider.
   create_model_key_secret = false
 
   tags = local.tags
@@ -156,10 +151,12 @@ module "archive" {
   resource_group_name = module.networking.resource_group_name
   location            = var.location
 
-  # Dev traces are not evidence. Expire them.
-  transition_cool_days    = 7
-  transition_archive_days = 30
-  expiration_days         = 90
+  # Dev traces are not evidence. Expire them, and do NOT lock them — a container nobody
+  # can empty is a dev environment nobody can tear down.
+  transition_cool_days     = 7
+  transition_archive_days  = 30
+  expiration_days          = 90
+  immutability_period_days = null
 
   tags = local.tags
 }
@@ -229,9 +226,17 @@ module "approval" {
   name_prefix         = local.name_prefix
   resource_group_name = module.networking.resource_group_name
   location            = var.location
+  tenant_id           = data.azurerm_client_config.current.tenant_id
 
   validator_identity = module.identity.identities["approval-validator"]
   executor_identity  = module.identity.identities["approval-executor"]
+
+  # Opens approvals; never resolves them.
+  orchestrator_principal_id = module.identity.identities["orchestrator"].principal_id
+
+  # Resolves approvals; the only principals that can. Empty means nobody can approve
+  # anything — safe, but every gated action will sit until its window closes.
+  approver_principal_ids = var.approver_principal_ids
 
   validator_package_path = var.approval_validator.package_path
   executor_package_path  = var.approval_executor.package_path
@@ -268,6 +273,43 @@ module "approval" {
   tags = local.tags
 }
 
+# Depends on tools and approval for the apps it must route to. Uses the CONSTRUCTED
+# workflow ID rather than reading it off the orchestration module — see the note at the
+# top of this file.
+module "observability" {
+  source = "../../modules/observability"
+
+  name_prefix         = local.name_prefix
+  resource_group_name = module.networking.resource_group_name
+  location            = var.location
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+
+  # The floor Log Analytics accepts. Dev traces are not evidence.
+  log_retention_days = 30
+
+  # Must be complete. An app missing here drops out of every alert query silently.
+  function_app_ids = merge(
+    module.tools.function_app_ids,
+    module.approval.function_app_ids,
+  )
+
+  logic_app_id = local.logic_app_id
+
+  trace_emitter = {
+    identity                  = module.identity.identities["trace-emitter"]
+    package_path              = var.trace_emitter.package_path
+    orchestrator_principal_id = module.identity.identities["orchestrator"].principal_id
+  }
+
+  # Low on purpose. In dev this is a runaway-loop detector, not a budget.
+  daily_cost_threshold_usd = 25
+  schema_failure_threshold = 5
+
+  alert_email_receivers = var.alert_email_receivers
+
+  tags = local.tags
+}
+
 module "orchestration" {
   source = "../../modules/orchestration"
 
@@ -277,6 +319,23 @@ module "orchestration" {
 
   # Must be the same identity modules/tools granted the read-tool invoke role to, above.
   orchestrator_identity = module.identity.identities["orchestrator"]
+
+  # Read tools only. Write tool URLs are not in this output at all, so the workflow has
+  # no address to call even before Entra refuses it a token.
+  read_tool_urls = module.tools.read_tool_urls
+  tool_audiences = module.tools.tool_audiences
+
+  validator_url      = module.approval.validator_url
+  validator_audience = module.approval.validator_audience
+
+  trace_emitter = {
+    url      = module.observability.trace_emitter_url
+    audience = module.observability.trace_emitter_audience
+  }
+
+  # Generous in dev: a reviewer who is not watching should not fail a test run.
+  max_steps        = 12
+  approval_timeout = "PT24H"
 
   tags = local.tags
 }

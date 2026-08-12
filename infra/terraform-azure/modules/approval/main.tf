@@ -23,6 +23,92 @@
 
 data "azurerm_subscription" "current" {}
 
+data "azuread_client_config" "current" {}
+
+# ---------------------------------------------------------------------------
+# Who may call the gate itself
+#
+# An earlier version of this module left both function apps unauthenticated. That is a
+# hole in the gate rather than a missing nicety: the executor is the sole principal
+# permitted to invoke a write tool, so an open endpoint on it is an open endpoint on
+# every write tool behind it. The claim and fingerprint checks would still reject a
+# forged request, but "the second line of defence holds" is not a reason to leave the
+# first one off.
+#
+# The two are gated differently, and the difference is the point:
+#
+#   validator → applications only. The orchestrator calls it; no human ever should.
+#   executor  → users AND applications. It is resolved by a human clicking approve, so
+#               it must admit people — but only people who have been assigned the role.
+# ---------------------------------------------------------------------------
+
+resource "random_uuid" "validator_role" {}
+resource "random_uuid" "executor_role" {}
+
+resource "azuread_application" "validator" {
+  display_name     = "${var.name_prefix}-approval-validator"
+  owners           = [data.azuread_client_config.current.object_id]
+  sign_in_audience = "AzureADMyOrg"
+
+  app_role {
+    allowed_member_types = ["Application"]
+    description          = "Permits requesting validation and opening an approval. Granted to the orchestrator only."
+    display_name         = "Approval.Request"
+    id                   = random_uuid.validator_role.result
+    value                = "Approval.Request"
+  }
+
+  identifier_uris = ["api://${var.name_prefix}-approval-validator"]
+}
+
+resource "azuread_service_principal" "validator" {
+  client_id = azuread_application.validator.client_id
+  owners    = [data.azuread_client_config.current.object_id]
+
+  app_role_assignment_required = true
+}
+
+resource "azuread_app_role_assignment" "validator_from_orchestrator" {
+  app_role_id         = random_uuid.validator_role.result
+  principal_object_id = var.orchestrator_principal_id
+  resource_object_id  = azuread_service_principal.validator.object_id
+}
+
+resource "azuread_application" "executor" {
+  display_name     = "${var.name_prefix}-approval-executor"
+  owners           = [data.azuread_client_config.current.object_id]
+  sign_in_audience = "AzureADMyOrg"
+
+  app_role {
+    # Users, because a human resolves an approval. This is the one place in the system
+    # where a person is the caller rather than a workload.
+    allowed_member_types = ["User", "Application"]
+    description          = "Permits resolving an approval decision. Granted to designated approvers."
+    display_name         = "Approval.Resolve"
+    id                   = random_uuid.executor_role.result
+    value                = "Approval.Resolve"
+  }
+
+  identifier_uris = ["api://${var.name_prefix}-approval-executor"]
+}
+
+resource "azuread_service_principal" "executor" {
+  client_id = azuread_application.executor.client_id
+  owners    = [data.azuread_client_config.current.object_id]
+
+  # Without this, any authenticated user in the tenant can approve anything. That is not
+  # an approval gate — it is a login page in front of one.
+  app_role_assignment_required = true
+}
+
+resource "azuread_app_role_assignment" "executor_from_approver" {
+  for_each = var.approver_principal_ids
+
+  app_role_id         = random_uuid.executor_role.result
+  principal_object_id = each.value
+  resource_object_id  = azuread_service_principal.executor.object_id
+}
+
 # ---------------------------------------------------------------------------
 # Approval records
 #
@@ -174,11 +260,15 @@ locals {
       identity     = var.validator_identity
       package_path = var.validator_package_path
       settings     = var.validator_environment
+      application  = azuread_application.validator
+      audience     = "api://${var.name_prefix}-approval-validator"
     }
     executor = {
       identity     = var.executor_identity
       package_path = var.executor_package_path
       settings     = var.executor_environment
+      application  = azuread_application.executor
+      audience     = "api://${var.name_prefix}-approval-executor"
     }
   }
 
@@ -235,6 +325,27 @@ resource "azurerm_linux_function_app" "approval" {
       "APPROVAL_TOPIC"       = azurerm_servicebus_topic.approval.name
     },
   )
+
+  # Rejects unauthenticated callers before the handler runs. Paired with
+  # app_role_assignment_required above, this is what stops anyone who can reach the URL
+  # from opening or resolving an approval.
+  auth_settings_v2 {
+    auth_enabled           = true
+    require_authentication = true
+    unauthenticated_action = "Return401"
+    default_provider       = "azureactivedirectory"
+
+    active_directory_v2 {
+      client_id            = each.value.application.client_id
+      tenant_auth_endpoint = "https://login.microsoftonline.com/${var.tenant_id}/v2.0"
+      allowed_audiences = [
+        each.value.audience,
+        each.value.application.client_id,
+      ]
+    }
+
+    login {}
+  }
 
   zip_deploy_file = each.value.package_path
 
