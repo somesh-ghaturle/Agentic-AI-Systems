@@ -10,13 +10,27 @@ output "executor_principal_id" {
 }
 
 output "validator_url" {
-  description = "Validator invocation URL. The orchestrator calls this before any human is asked."
+  description = <<-DESC
+    Validator invocation URL. The orchestrator calls this twice — once with mode
+    `validate` for the deterministic pre-check, then again with mode `request_approval`
+    as the webhook subscribe call that carries the callback URL.
+  DESC
   value       = "https://${azurerm_linux_function_app.approval["validator"].default_hostname}/api/validate"
+}
+
+output "validator_audience" {
+  description = "Audience the orchestrator must request a token for when calling the validator."
+  value       = "api://${var.name_prefix}-approval-validator"
 }
 
 output "executor_url" {
   description = "Executor invocation URL. Called by the approver's action, not by the orchestrator."
   value       = "https://${azurerm_linux_function_app.approval["executor"].default_hostname}/api/execute"
+}
+
+output "executor_audience" {
+  description = "Audience an approver's client must request a token for when resolving an approval."
+  value       = "api://${var.name_prefix}-approval-executor"
 }
 
 output "approval_topic_id" {

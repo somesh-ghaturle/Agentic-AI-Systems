@@ -13,6 +13,39 @@ variable "location" {
   type        = string
 }
 
+variable "tenant_id" {
+  description = "Entra tenant ID, for the validator's and executor's Easy Auth issuer endpoints."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-fA-F-]{36}$", var.tenant_id))
+    error_message = "tenant_id must be a GUID. An empty string produces an issuer URL that validates nothing."
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Who may call the gate
+# ---------------------------------------------------------------------------
+
+variable "orchestrator_principal_id" {
+  description = "Object ID of the orchestrator's managed identity. Receives the app role permitting it to request validation and open an approval."
+  type        = string
+}
+
+variable "approver_principal_ids" {
+  description = <<-DESC
+    Object IDs of the principals permitted to resolve an approval, keyed by a name you
+    choose. Users or groups — a group is usually right, so that adding an approver is a
+    directory change rather than a Terraform apply.
+
+    An empty map means nobody can approve anything, and every gated action will sit until
+    its window closes. That is a safe failure rather than a quiet one, but it is still a
+    failure: set this before anyone depends on the environment.
+  DESC
+  type        = map(string)
+  default     = {}
+}
+
 # ---------------------------------------------------------------------------
 # Identities
 # ---------------------------------------------------------------------------

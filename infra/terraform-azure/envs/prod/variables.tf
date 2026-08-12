@@ -79,6 +79,71 @@ variable "approval_executor" {
   })
 }
 
+variable "approver_principal_ids" {
+  description = <<-DESC
+    Object IDs of the users or groups permitted to resolve an approval, keyed by a name
+    you choose. A group is usually right, so that adding an approver is a directory
+    change rather than a Terraform apply.
+
+    Empty means nobody can approve anything. Every gated action will sit until its window
+    closes and then be recorded as abandoned — a safe failure, but still a failure.
+  DESC
+  type        = map(string)
+  default     = {}
+}
+
+# ---------------------------------------------------------------------------
+# Observability
+# ---------------------------------------------------------------------------
+
+variable "trace_emitter" {
+  description = <<-DESC
+    The function the orchestrator calls to write its own trace records. Source belongs
+    alongside the other handlers.
+
+    Not optional: a workflow's run history lands in a different table with a different
+    shape from handler logs, so without this the loop-bound and daily-cost alerts match
+    nothing — and an alert matching nothing looks exactly like a healthy system.
+  DESC
+
+  type = object({
+    package_path = string
+  })
+}
+
+variable "alert_email_receivers" {
+  description = <<-DESC
+    Map of receiver name to email address for the alert action group.
+
+    Empty means every alert fires into the void: the rules evaluate, the portal shows
+    them firing, and nobody is told. Set this before anyone depends on the environment.
+  DESC
+  type        = map(string)
+  default     = {}
+}
+
+variable "alert_webhook_receivers" {
+  description = "Map of receiver name to webhook URI, for routing alerts into an incident tool. Email alone is not a paging channel."
+  type        = map(string)
+  default     = {}
+}
+
+variable "daily_cost_threshold_usd" {
+  description = <<-DESC
+    Daily spend, in USD, above which the cost alert fires.
+
+    Unlike dev — where the threshold is a runaway-loop detector and can be arbitrarily
+    low — this needs to be tuned to what the environment actually spends. Set far above
+    real spend and the alarm is decorative; set at it and the alarm is noise.
+  DESC
+  type        = number
+
+  validation {
+    condition     = var.daily_cost_threshold_usd > 0
+    error_message = "daily_cost_threshold_usd must be positive. To disable the alert, remove it from the observability module rather than setting a threshold nothing can exceed."
+  }
+}
+
 # ---------------------------------------------------------------------------
 # Model layer
 #
