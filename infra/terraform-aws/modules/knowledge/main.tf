@@ -1,4 +1,4 @@
-# Knowledge memory — BUILDING-BLOCKS.md §3, PRODUCTION-PRINCIPLES.md "Context and RAG design"
+# Knowledge memory — BUILDING-BLOCKS.md section 3, PRODUCTION-PRINCIPLES.md "Context and RAG design"
 #
 # The semantic corpus and its retrieval machinery. A read path with its own latency and
 # cost profile, cacheable independently of the model layer.

@@ -1,4 +1,4 @@
-# Long-term archive — BUILDING-BLOCKS.md §3
+# Long-term archive — BUILDING-BLOCKS.md section 3
 #
 # Full traces, prompt versions, model versions, tool calls with arguments and results,
 # token counts, costs, latency, outcomes. Write-once, read rarely, retained long.

@@ -221,7 +221,7 @@ can both exist.
 
 ### `learnings.md` — solved structurally, not by resolving
 
-If you followed §1 and split by person, this never conflicts. If you did not, you will hit
+If you followed section 1 and split by person, this never conflicts. If you did not, you will hit
 a conflict at line 1 roughly every time two people append in the same week. Go split it.
 
 ---

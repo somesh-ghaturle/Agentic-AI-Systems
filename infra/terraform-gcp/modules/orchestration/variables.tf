@@ -43,6 +43,11 @@ variable "caller_members" {
     Not granted to any workload in this tree. The caller is an API gateway, a scheduler, or
     a person, and it lives outside these modules. Empty means the workflow exists and
     nothing can start it.
+
+    Note that this binds at the *project* level, because the provider exposes no
+    per-workflow IAM resource. Read the comment above the resource in main.tf before
+    using it — leaving this empty and binding out of band with
+    `gcloud workflows add-iam-policy-binding` is the tighter option.
   EOT
 
   type    = map(string)

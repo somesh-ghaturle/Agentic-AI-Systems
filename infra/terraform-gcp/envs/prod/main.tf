@@ -79,8 +79,8 @@ locals {
   #
   # The same names the resources will produce, known before they exist. See the note at
   # the top of this file.
-  workflow_name        = "${local.name_prefix}-orchestrator"
-  archive_bucket_name  = "${local.name_prefix}-archive"
+  workflow_name       = "${local.name_prefix}-orchestrator"
+  archive_bucket_name = "${local.name_prefix}-archive"
 
   # --- service account IDs -------------------------------------------------
   #
@@ -148,9 +148,14 @@ module "security" {
   # a bucket in europe-west1, and the failure surfaces at bucket-create time.
   location = var.region
 
-  # Software keys in dev. HSM costs meaningfully more per version and per operation, and
-  # buys a property dev does not need.
-  protection_level = "SOFTWARE"
+  # HSM-backed. Costs meaningfully more per key version and per cryptographic operation
+  # than SOFTWARE, and buys a key that never exists in software form — which matters here
+  # because this key protects the archive, and the archive is the evidence.
+  #
+  # Rotation is left at the module default of 90 days. Rotation creates a new primary
+  # version; objects stay readable under the version that encrypted them, so this is not
+  # a re-encryption event and does not need a window.
+  protection_level = "HSM"
 
   # No handler in this tree decrypts payloads itself — the service agents do the work, and
   # the module grants them. This stays empty until a handler calls the KMS API directly.
@@ -170,8 +175,14 @@ module "state" {
   name_prefix = local.name_prefix
   location    = var.firestore_location
 
-  enable_point_in_time_recovery = false
-  enable_delete_protection      = false
+  # A rolling recovery window on the execution record. Costs storage; buys the ability to
+  # answer "what did the agent think it was doing" after an incident rather than during.
+  enable_point_in_time_recovery = true
+
+  # Refuses API-level deletion, and makes Terraform abandon rather than destroy the
+  # database. A `terraform destroy` here leaves the database behind on purpose — removing
+  # it is a two-step deliberate act.
+  enable_delete_protection = true
 
   # Tools only. The validator and executor also need datastore.user, and modules/approval
   # grants it to them — `roles/datastore.user` is a project-level role, so granting it
@@ -188,15 +199,29 @@ module "archive" {
   location    = var.region
   kms_key_id  = module.security.kms_key_id
 
-  # Dev traces are not evidence. Expire them, and do not lock anything: a locked retention
-  # policy cannot be undone by anyone, including the project owner, and a dev environment
-  # that cannot be torn down is a dev environment nobody tears down.
-  retention_days        = null
-  lock_retention_policy = false
+  # ---------------------------------------------------------------------------
+  # WORM. This is the irreversible one.
+  #
+  # Seven years, locked. After the first apply the period can only be increased, no object
+  # can be deleted before it ages out, and the bucket cannot be deleted while anything is
+  # still under retention. No principal can undo it.
+  #
+  # This is the GCS equivalent of S3 Object Lock in COMPLIANCE mode, and it is here for the
+  # same reason: a trace archive an operator can quietly prune is not evidence. Shorten the
+  # period if seven years is wrong for your jurisdiction — but decide before the apply, not
+  # after.
+  # ---------------------------------------------------------------------------
+  retention_days        = 2555
+  lock_retention_policy = true
 
-  transition_nearline_days = 7
-  transition_coldline_days = 30
-  expiration_days          = 90
+  transition_nearline_days = 30
+  transition_coldline_days = 90
+
+  # No expiration. Under a locked policy the lifecycle rule could not delete anything
+  # inside the retention window anyway, and setting it to 2555 would mean the archive
+  # empties itself the moment each object becomes deletable — which is the opposite of
+  # what an audit trail is for.
+  expiration_days = null
 
   # The log sink's own service account, not a workload. Until it holds objectCreator the
   # sink exists, reports no error, and delivers nothing.
@@ -220,11 +245,12 @@ module "knowledge" {
   # this and EMBEDDING_MODEL below are one decision written in two places.
   dimensions = 768
 
-  # One replica, no autoscaling. A deployed index has no scale-to-zero, which makes this
-  # the largest standing cost in the tree — in dev, keep it at the floor.
+  # Two replicas minimum, so a single replica restarting does not take retrieval down; up
+  # to five under load. A deployed index has no scale-to-zero, so `min_replica_count` is a
+  # continuous bill rather than a ceiling — this is the largest standing cost in the tree.
   machine_type      = "e2-standard-2"
-  min_replica_count = 1
-  max_replica_count = 1
+  min_replica_count = 2
+  max_replica_count = 5
 
   # The retrieve tool's identity, not the orchestrator's. The orchestrator only invokes
   # that function; it never issues a query, so granting it here would authorize nobody and
@@ -287,11 +313,16 @@ module "observability" {
 
   alert_email_receivers = var.alert_email_receivers
 
-  # Low on purpose. In dev this is a runaway-loop detector, not a budget.
-  daily_cost_threshold_usd = 25
+  # A budget here rather than dev's runaway-loop detector. Set it from what a normal day
+  # actually costs, not from what finance would tolerate — an alert that only fires at the
+  # point of pain fires too late to be useful.
+  daily_cost_threshold_usd = 500
 
-  schema_failure_threshold     = 5
-  abandoned_approval_threshold = 2
+  # Tighter than dev on both counts. Prod prompts and prod models are stable, so a
+  # sustained schema failure rate means something changed underneath; and two unanswered
+  # approvals in an hour is the gate-fatigue signal worth acting on.
+  schema_failure_threshold     = 3
+  abandoned_approval_threshold = 1
 
   # Deterministic — see the cycle note at the top of this file.
   workflow_name = local.workflow_name
@@ -338,8 +369,8 @@ module "tools" {
     # Vector Search coordinates. Passed rather than resolved at cold start because
     # modules/knowledge depends only on modules/identity, so there is no cycle to avoid
     # here — unlike the AWS tree, where tools -> knowledge -> orchestration -> tools.
-    KNOWLEDGE_INDEX_ENDPOINT = module.knowledge.index_endpoint_id
-    KNOWLEDGE_DEPLOYED_INDEX = module.knowledge.deployed_index_id
+    KNOWLEDGE_INDEX_ENDPOINT  = module.knowledge.index_endpoint_id
+    KNOWLEDGE_DEPLOYED_INDEX  = module.knowledge.deployed_index_id
     KNOWLEDGE_ENDPOINT_DOMAIN = module.knowledge.public_endpoint_domain
 
     # The other half of the `dimensions = 768` decision above.
@@ -401,12 +432,14 @@ module "approval" {
 
   trace_log_name = module.observability.trace_log_name
 
-  enable_point_in_time_recovery = false
-  enable_delete_protection      = false
+  # This database is the record of who authorized what. It outlives the executions that
+  # produced it, and it is the first thing anyone asks for after an incident.
+  enable_point_in_time_recovery = true
+  enable_delete_protection      = true
 
-  # No longer than the workflow's approval window: a request that outlives its own window
-  # is noise sitting in a queue looking actionable.
-  message_retention_duration = "3600s"
+  # Matches the 24-hour approval window below. A request that outlives its own window is
+  # noise sitting in a queue looking actionable.
+  message_retention_duration = "86400s"
 
   labels = local.labels
 }
@@ -428,9 +461,21 @@ module "orchestration" {
   validator_url     = module.approval.validator_url
   trace_emitter_url = module.observability.trace_emitter_url
 
-  max_steps                = 10
-  approval_timeout_seconds = 3600
-  call_log_level           = "LOG_ALL_CALLS"
+  max_steps = 10
+
+  # A full working day. An approver who has gone home should still find the request live
+  # in the morning; a request still open after that is one whose context has gone stale,
+  # and re-proposing it is cheaper than approving it blind.
+  approval_timeout_seconds = 86400
+
+  # Turned down from dev's LOG_ALL_CALLS. That setting records every step transition
+  # including call arguments, and in prod those arguments carry customer data — the same
+  # reason envs/prod on the AWS side sets `log_execution_data = false`.
+  #
+  # The cost is real: a stuck execution now has to be reconstructed from the trace log
+  # rather than read off the step history. That is the trade, and the trace log is the
+  # reason it is affordable.
+  call_log_level = "LOG_ERRORS_ONLY"
 
   # LOCK 2. modules/tools already refuses the orchestrator invoke on these services by
   # granting run.invoker only to the executor; this denies it independently, so a later

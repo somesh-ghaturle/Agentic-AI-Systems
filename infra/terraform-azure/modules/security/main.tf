@@ -23,7 +23,7 @@
 #
 # Note on naming: the vault name is global across Azure, not scoped to the subscription.
 # A second team deploying with the same name_prefix collides at apply time. See
-# ARCHITECTURE.md § Remaining work — the same applies to every storage account in this
+# ARCHITECTURE.md section "Remaining work" — the same applies to every storage account in this
 # stack.
 
 data "azurerm_client_config" "current" {}

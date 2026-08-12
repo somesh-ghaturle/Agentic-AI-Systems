@@ -8,7 +8,7 @@ variable "definition" {
     Amazon States Language definition, as JSON.
 
     The flow is the application, so this module does not own it. What the definition must
-    provide, per BUILDING-BLOCKS.md §4 "Non-negotiables":
+    provide, per BUILDING-BLOCKS.md section 4 "Non-negotiables":
 
       - A bounded loop: a step counter checked against a maximum, plus TimeoutSeconds on
         the state machine. An unbounded agent loop is a billing incident.

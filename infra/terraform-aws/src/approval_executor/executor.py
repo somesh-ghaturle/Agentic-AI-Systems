@@ -1,4 +1,4 @@
-# The executor — BUILDING-BLOCKS.md §6, step four of the enforcement flow.
+# The executor — BUILDING-BLOCKS.md section 6, step four of the enforcement flow.
 #
 # This is the only principal in the system permitted to invoke a write tool. It is the
 # component that makes "the model cannot directly cause an irreversible action" a property

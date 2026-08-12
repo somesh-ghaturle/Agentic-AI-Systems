@@ -72,7 +72,7 @@ resource "aws_cloudwatch_log_metric_filter" "schema_validation_failure" {
   log_group_name = aws_cloudwatch_log_group.traces.name
 
   # A structured-output contract violation. Rising counts here usually mean a model or
-  # prompt version changed underneath you — BUILDING-BLOCKS.md §1.
+  # prompt version changed underneath you — BUILDING-BLOCKS.md section 1.
   pattern = "{ $.event_type = \"schema_validation_failed\" }"
 
   metric_transformation {
@@ -330,7 +330,7 @@ resource "aws_cloudwatch_metric_alarm" "orchestrator_failures" {
 
 # A workflow blocked on a human is invisible in ordinary failure metrics — it is not
 # failing, it is waiting. Long waits are their own failure mode, and gate fatigue starts
-# here. BUILDING-BLOCKS.md §6.
+# here. BUILDING-BLOCKS.md section 6.
 #
 # This watches the trace record rather than AWS/States: the state machine catches its own
 # approval timeout and ends the execution cleanly, so ExecutionsTimedOut never sees it.

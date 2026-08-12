@@ -13,7 +13,7 @@
 # ARCHITECTURE.md section "Remaining work".
 #
 # ---------------------------------------------------------------------------
-# Before this applies: three manual pre-steps
+# Before this applies: four manual pre-steps
 #
 #   1. Accept the Anthropic Model Garden terms for `model_id` in this project. There is no
 #      Terraform resource for it, and without it every model call returns 403.
@@ -23,23 +23,26 @@
 #   3. Confirm your principal can create IAM Deny policies
 #      (roles/iam.denyAdmin at the project or organization level). Without it the apply
 #      fails at the very last resource, after everything else exists.
+#   4. Read the archive note in main.tf. This root locks a 7-year retention policy on the
+#      first apply, and nobody can undo that afterwards.
 #
 # See HOW-TO-DEPLOY.md.
 # ---------------------------------------------------------------------------
 
 # 3-10 characters. The ceiling is the 30-character service account ID limit: this root
-# derives IDs as "<project>-dev-<tool name>", and `process_refund` is 14 characters.
+# derives IDs as "<project>-prod-<tool name>", and `process_refund` is 14 characters.
 project = "acme-agent"
 
-project_id = "acme-agent-dev"
+project_id = "acme-agent-prod"
 
 # One region for everything regional. KMS keys can only encrypt resources co-located with
 # them, so splitting this into several values is how you discover that at bucket-create
 # time.
 region = "us-central1"
 
-# Immutable after creation. `nam5` is a multi-region; a plain region like `us-central1` is
-# cheaper and has a single point of failure.
+# Immutable after creation, and the reason to pick the multi-region here even though it
+# costs more than a single region: changing it later means a new database and a data
+# migration, and this one holds the execution record.
 firestore_location = "nam5"
 
 # Not `region`. Anthropic model availability on Vertex AI is region-specific — us-east5
@@ -150,13 +153,18 @@ trace_emitter = {
 # a system where every gated action sits until its window closes.
 # ---------------------------------------------------------------------------
 
+# Fill this in. An empty map in prod means every gated write sits until its 24-hour window
+# closes and is then abandoned — the system stays safe and stops doing anything.
+#
+# Prefer a group over individuals. A named person leaves, and the approval path fails
+# closed at whatever hour that becomes apparent.
 approver_members = {
-  # oncall = "group:agent-approvers@example.com"
+  oncall = "group:agent-approvers@example.com"
 }
 
 # Whoever starts executions. No workload in this tree holds it.
 caller_members = {
-  # api = "serviceAccount:gateway@acme-agent-dev.iam.gserviceaccount.com"
+  # api = "serviceAccount:gateway@acme-agent-prod.iam.gserviceaccount.com"
 }
 
 alert_email_receivers = {

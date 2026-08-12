@@ -1,4 +1,4 @@
-# Tool layer — BUILDING-BLOCKS.md §2
+# Tool layer — BUILDING-BLOCKS.md section 2
 #
 # The read/write split is the reason this module exists. From the doc:
 #

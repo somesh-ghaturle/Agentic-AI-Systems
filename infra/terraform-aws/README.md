@@ -46,12 +46,12 @@ application code decides" rendered as IAM.
 | Path | Building block |
 |---|---|
 | [modules/security/](modules/security/) | KMS key, optional Bedrock guardrail |
-| [modules/state/](modules/state/) | §3 execution state — DynamoDB |
-| [modules/knowledge/](modules/knowledge/) | §3 knowledge memory — OpenSearch Serverless |
-| [modules/archive/](modules/archive/) | §3 long-term archive — S3 |
-| [modules/orchestration/](modules/orchestration/) | §4 orchestration — Step Functions |
-| [modules/tools/](modules/tools/) | §2 tool layer — the read/write split |
-| [modules/approval/](modules/approval/) | §6 approval gates — validator, executor, audit |
+| [modules/state/](modules/state/) | Section 3 execution state — DynamoDB |
+| [modules/knowledge/](modules/knowledge/) | Section 3 knowledge memory — OpenSearch Serverless |
+| [modules/archive/](modules/archive/) | Section 3 long-term archive — S3 |
+| [modules/orchestration/](modules/orchestration/) | Section 4 orchestration — Step Functions |
+| [modules/tools/](modules/tools/) | Section 2 tool layer — the read/write split |
+| [modules/approval/](modules/approval/) | Section 6 approval gates — validator, executor, audit |
 | [modules/observability/](modules/observability/) | Traces, cost and token metrics, alarms |
 | [src/](src/README.md) | Reference handlers — the half of the architecture that only code can enforce |
 | [envs/dev/](envs/dev/) | Cheaper, more permissive, synthetic data |

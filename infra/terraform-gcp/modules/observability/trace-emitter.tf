@@ -6,7 +6,7 @@
 #
 # So the orchestrator's own records — the terminal outcome, the loop bound firing, the
 # cost total — reach the metrics only by calling this function. From
-# terraform-aws/ARCHITECTURE.md §5:
+# terraform-aws/ARCHITECTURE.md section 5:
 #
 #   "Omit that function and the loop-bound and cost alarms sit at zero forever, which
 #    reads exactly like a healthy system."

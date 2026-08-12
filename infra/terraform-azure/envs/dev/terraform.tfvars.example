@@ -7,7 +7,7 @@
 # read to compute its deployment hash. There is no Azure handler source tree in this repo
 # yet — infra/terraform-aws/src holds the AWS handlers, and they are written against
 # boto3, DynamoDB, and Step Functions task tokens. They will not run on Functions
-# unmodified. See ARCHITECTURE.md § Remaining work.
+# unmodified. See ARCHITECTURE.md section "Remaining work".
 #
 # Until that source exists, this environment validates but does not plan.
 # ---------------------------------------------------------------------------

@@ -56,6 +56,8 @@ jobs:
           - infra/terraform-azure/envs/dev
           - infra/terraform-azure/envs/prod
           - infra/terraform-azure/envs/tenant
+          - infra/terraform-gcp/envs/dev
+          - infra/terraform-gcp/envs/prod
     steps:
       - uses: actions/checkout@v4
 
@@ -83,13 +85,27 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Azure-only, and deliberately not mirrored on the AWS side: it guards an Entra
-      # attribute that has no AWS counterpart. `terraform validate` is perfectly happy
-      # with `app_role_assignment_required = false` — it is a valid boolean in a valid
-      # attribute. Only this test notices that it is also the whole security model.
+      # Two suites, one job, and deliberately no AWS counterpart.
       #
-      # No dependencies on purpose — stdlib unittest, reading .tf files as text.
-      # See infra/terraform-azure/tests/test_write_boundary.py for why this exists
-      # rather than an Azure Policy definition.
-      - name: Assert app_role_assignment_required is true everywhere
+      # Both guard mistakes that `terraform validate` is perfectly happy with, because in
+      # each case the wrong value is a valid value in a valid attribute. The AWS tree needs
+      # no equivalent: there the write boundary is a Lambda resource policy, and getting it
+      # wrong is a plan-time error rather than a quiet one.
+      #
+      # No dependencies on purpose — stdlib unittest, reading .tf files as text. A check
+      # that needs cloud credentials is a check that gets disabled the first time a secret
+      # expires.
+      #
+      # Azure: guards `app_role_assignment_required`. Set it false and Entra mints a token
+      # for any principal in the tenant while every diagram and output still looks correct.
+      # See infra/terraform-azure/tests/test_write_boundary.py for why this exists rather
+      # than an Azure Policy definition.
+      - name: Azure — assert app_role_assignment_required is true everywhere
         run: python3 -m unittest discover -s infra/terraform-azure/tests -v
+
+      # GCP: guards both locks and the five ways each fails silently — chiefly
+      # `roles/cloudfunctions.invoker` on a gen2 function, which applies cleanly and
+      # controls nothing, and deny policies written with `serviceAccount:` principals,
+      # which GCP accepts and matches against nothing.
+      - name: GCP — assert the write boundary holds
+        run: python3 -m unittest discover -s infra/terraform-gcp/tests -v

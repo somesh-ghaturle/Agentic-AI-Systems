@@ -14,7 +14,7 @@ output "trace_archive_bucket" {
 }
 
 output "trace_archive_locked" {
-  description = "Whether the archive's retention policy is locked. False here, which is correct for dev and wrong for an audit trail — this is the locked one."
+  description = "Whether the archive's retention policy is locked. Should be true here. False in prod means the trace archive is deletable, which is the one difference from dev that cannot be fixed by re-applying — a policy can be locked later, but objects deleted before it was cannot be recovered."
   value       = module.archive.retention_locked
 }
 

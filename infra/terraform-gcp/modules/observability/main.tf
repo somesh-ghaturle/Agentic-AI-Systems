@@ -1,7 +1,7 @@
 # Observability.
 #
 # Log-based metrics attach to **one** log name, not to each function's default log. From
-# terraform-aws/ARCHITECTURE.md §5:
+# terraform-aws/ARCHITECTURE.md section 5:
 #
 #   "A handler that only prints to stdout looks healthy in the console and is invisible to
 #    every alarm."
@@ -15,7 +15,7 @@
 #
 # Handlers must write structured entries to `TRACE_LOG_NAME` through the Cloud Logging
 # API. That is a code property, not an infrastructure one, and it is listed as such in
-# ARCHITECTURE.md §7.
+# ARCHITECTURE.md section 7.
 
 terraform {
   required_version = ">= 1.6"

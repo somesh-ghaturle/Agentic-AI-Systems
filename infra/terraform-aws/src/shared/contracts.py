@@ -1,4 +1,4 @@
-# Structured results and errors — BUILDING-BLOCKS.md §2, "tools return contracts"
+# Structured results and errors — BUILDING-BLOCKS.md section 2, "tools return contracts"
 #
 # "Return a structured contract, never free-form text." The reason is narrow and
 # practical: a typed object either validates or it does not, and an error the model can
