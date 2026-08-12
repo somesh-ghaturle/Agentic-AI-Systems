@@ -6,7 +6,7 @@
 #
 # The ordering matters and is easy to get backwards: validation happens *before*
 # notification. Invalid proposals never reach a person. From
-# terraform-aws/ARCHITECTURE.md §3:
+# terraform-aws/ARCHITECTURE.md section 3:
 #
 #   "This is what keeps approval requests meaningful — a reviewer who sees mostly junk
 #    stops reading, and gate fatigue is how a gate fails while appearing to work."
@@ -262,7 +262,7 @@ resource "google_cloudfunctions2_function" "executor" {
 
         # How long a claim may sit in `executing` before another executor may reclaim it.
         # Safe only because write tools are idempotent on the approval ID — see
-        # ARCHITECTURE.md §4.
+        # ARCHITECTURE.md section 4.
         STALE_CLAIM_SECONDS = tostring(var.stale_claim_seconds)
       },
       var.trace_log_name == null ? {} : { TRACE_LOG_NAME = var.trace_log_name },

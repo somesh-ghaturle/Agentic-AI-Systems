@@ -8,11 +8,11 @@ The claim this architecture makes is the same one the AWS tree makes:
 
 What differs is the machinery. Azure has no equivalent of a Lambda resource policy, so
 the boundary is drawn with Entra app roles instead. That substitution is not free, and
-§2 is explicit about where it is weaker than the AWS original.
+Section 2 is explicit about where it is weaker than the AWS original.
 
 > **Implementation status.** Three roots validate: `envs/dev`, `envs/prod`, and
 > `envs/tenant`. The Logic App workflow definition, the archive immutability policy, the
-> observability wiring, and the write-boundary guards in §2 are built. One thing is still
+> observability wiring, and the write-boundary guards in section 2 are built. One thing is still
 > absent and is marked **not yet built** where it appears: the Azure handler source
 > (`src/`). Read that mark as literal — everything else in the diagrams exists in
 > Terraform.
@@ -431,14 +431,14 @@ everything with a principal depends on it — which is the only reason it exists
 |---|---|---|
 | `identity` | One user-assigned managed identity per workload | Breaks the `tools ↔ approval` cycle. Azure principal IDs are server-assigned, so the AWS trick of computing ARNs in `locals` is unavailable |
 | `security` | Key Vault with RBAC, per-principal `Key Vault Secrets User` | RBAC not access policies, so grants appear in subscription-wide access reviews. Purge protection on in prod |
-| `tools` | One Function App, Entra app, and service principal per tool | `app_role_assignment_required = true` — see §2. Also `AzureWebJobsStorage__credential`, without which the runtime looks for a system-assigned identity these apps do not have |
+| `tools` | One Function App, Entra app, and service principal per tool | `app_role_assignment_required = true` — see section 2. Also `AzureWebJobsStorage__credential`, without which the runtime looks for a system-assigned identity these apps do not have |
 | `approval` | Cosmos account, Service Bus topic, validator, executor | Strong consistency + ETag claim. Only the validator holds Data Sender |
 | `orchestration` | Logic App workflow + full action definition, orchestrator identity attached | Identity must match the one `tools` granted read roles to, or every call 403s while looking correct in the portal. Every outbound call sets an explicit `audience` — omit it and the platform requests an ARM-scoped token that Easy Auth correctly refuses, which reads as a permissions bug |
 | `observability` | Workspace, diagnostic settings, trace emitter, action group, 5 alert rules | Diagnostic settings are per-resource and `for_each`ed over every Function App. Miss one and it vanishes from every query with no error |
 | `state` | Storage Table `executionstate` | ZRS in prod |
 | `knowledge` | Azure AI Search service | Data-plane access is separate from control-plane RBAC, same trap as OpenSearch on AWS |
 | `archive` | Blob container, immutability policy, versioning, lifecycle policy | Tiers to cool then archive, 7-year expiry in prod. `locked = true` in prod is irreversible — retention can be extended, never shortened |
-| `entra-audit` | Tenant-scoped Entra diagnostic setting, severity-0 alert on the write boundary being disabled | Applied from `envs/tenant`, not dev or prod. Tenant-scoped, so two roots managing it would revert each other. See §2 |
+| `entra-audit` | Tenant-scoped Entra diagnostic setting, severity-0 alert on the write boundary being disabled | Applied from `envs/tenant`, not dev or prod. Tenant-scoped, so two roots managing it would revert each other. See section 2 |
 | `networking` | Resource group, VNet, subnet | Nothing joins the subnet yet — Consumption plans cannot |
 | `model-integration` | Nothing, deliberately | Azure OpenAI needs tenant enrollment Terraform cannot request |
 
@@ -451,7 +451,7 @@ Azure handler source — which does not exist yet — is written correctly.
 
 | Property | Enforced by | If it breaks |
 |---|---|---|
-| Write tools unreachable without approval | **Entra** — app role assignment required | Cannot break by editing a prompt. Can break by one attribute — CI blocks that arriving through the repo, and the §2 alert catches it arriving any other way |
+| Write tools unreachable without approval | **Entra** — app role assignment required | Cannot break by editing a prompt. Can break by one attribute — CI blocks that arriving through the repo, and the section 2 alert catches it arriving any other way |
 | Approved arguments are what execute | **Code** — fingerprint re-check in the executor | Executes something nobody approved |
 | Caller owns the resource | **Code** — ownership check in the validator | Approves a cross-tenant action |
 | Retrieval is tenant-scoped | **Code** — filter inside the vector query, not applied after it | Ranks other tenants' documents first, then hides them |
@@ -473,7 +473,7 @@ Where the two trees are not equivalent, and why.
 
 | Concern | AWS | Azure | Equivalent? |
 |---|---|---|---|
-| Write tool authorization | Identity policy **and** resource policy, independently | Entra app role, plus a CI check and an audit alert guarding it | **No** — still one lock. The guards make it hard to move quietly, not impossible to move. §2 |
+| Write tool authorization | Identity policy **and** resource policy, independently | Entra app role, plus a CI check and an audit alert guarding it | **No** — still one lock. The guards make it hard to move quietly, not impossible to move. Section 2 |
 | Suspended execution | `waitForTaskToken` | Logic App webhook callback | Yes |
 | Conditional claim | DynamoDB `ConditionExpression` | Cosmos ETag `If-Match` | Yes |
 | Approval notification | SNS + KMS | Service Bus topic + subscription | Yes, with dead-lettering added |
@@ -490,7 +490,7 @@ this tree currently stands up a correct boundary around an empty room.
 
 The single lock is structural. Azure has no Function resource policy and no way to govern
 Entra objects with Azure Policy, so the second independent lock AWS gets for free is not
-available at any price here. The guards in §2 narrow the window rather than closing it,
+available at any price here. The guards in section 2 narrow the window rather than closing it,
 and that is the honest description.
 
 The encryption difference is the mildest — platform-managed keys still encrypt at rest,

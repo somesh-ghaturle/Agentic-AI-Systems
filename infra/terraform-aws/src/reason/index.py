@@ -1,4 +1,4 @@
-# The model step — BUILDING-BLOCKS.md §1, the only place a model is actually called.
+# The model step — BUILDING-BLOCKS.md section 1, the only place a model is actually called.
 #
 # Everything else in this system exists to constrain what happens here. This handler
 # turns a request plus retrieved context into a *structured proposal*, and it is the

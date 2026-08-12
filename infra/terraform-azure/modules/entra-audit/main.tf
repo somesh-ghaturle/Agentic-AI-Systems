@@ -1,6 +1,6 @@
 # Entra audit — the detective control on the write boundary.
 #
-# ARCHITECTURE.md §2 used to prescribe Azure Policy for this, denying
+# ARCHITECTURE.md section 2 used to prescribe Azure Policy for this, denying
 # `app_role_assignment_required = false` on these applications. That is not buildable.
 # Azure Policy evaluates resources represented in Azure Resource Manager; Entra app
 # registrations and service principals are Microsoft Graph objects with no ARM
@@ -81,7 +81,7 @@ resource "azurerm_monitor_scheduled_query_rules_alert_v2" "role_assignment_disab
     "The write boundary is open: Entra will now issue tokens for that API to any principal",
     "in the tenant. This did not come through Terraform — the repo test blocks that path —",
     "so it was done in the portal, the CLI, or directly against Graph.",
-    "Treat as an active incident. ARCHITECTURE.md §2.",
+    "Treat as an active incident. ARCHITECTURE.md section 2.",
   ])
 
   criteria {

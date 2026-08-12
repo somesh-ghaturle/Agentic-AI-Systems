@@ -4,7 +4,7 @@
 # works; it is that retrieval is tenant-scoped, and that the scoping happens *during* the
 # search rather than after it.
 #
-# From terraform-aws/ARCHITECTURE.md §7:
+# From terraform-aws/ARCHITECTURE.md section 7:
 #
 #   "Retrieval is tenant-scoped — enforced by CODE: filter inside the kNN clause, not
 #    beside it. If it breaks: ranks other tenants' documents first, then hides them."

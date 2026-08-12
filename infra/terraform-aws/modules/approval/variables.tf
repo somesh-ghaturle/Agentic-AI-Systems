@@ -7,7 +7,7 @@ variable "validator" {
   description = <<-EOT
     The validator function: deterministic checks that run before any human sees a proposal.
 
-    What belongs in this handler, per BUILDING-BLOCKS.md §6:
+    What belongs in this handler, per BUILDING-BLOCKS.md section 6:
       - Ownership: does the requesting user own the resource being acted on?
       - Permissions: is this actor allowed to take this action at all?
       - Limits: is the amount, count, or scope within policy?

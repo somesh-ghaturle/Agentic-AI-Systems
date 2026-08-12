@@ -1,4 +1,4 @@
-# Orchestration control layer — BUILDING-BLOCKS.md §4
+# Orchestration control layer — BUILDING-BLOCKS.md section 4
 #
 # Step Functions implements the four non-negotiables the doc names directly:
 #

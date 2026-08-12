@@ -4,7 +4,7 @@
 #
 #     app_role_assignment_required = true
 #
-# ARCHITECTURE.md §2 explains why that single line is load-bearing in a way no single
+# ARCHITECTURE.md section 2 explains why that single line is load-bearing in a way no single
 # line is on the AWS side. Flip it to false and Entra will mint a token for any principal
 # in the tenant, while every diagram, output, and role assignment still looks correct.
 # Nothing in `terraform validate` notices, and nothing in a plan diff draws attention to
@@ -133,7 +133,7 @@ class TestWriteBoundary(unittest.TestCase):
             "Service principals without %s = true:\n  %s\n\n"
             "This is the write boundary. Without it Entra issues a token for these APIs "
             "to any principal in the tenant, and the orchestrator can invoke write tools "
-            "directly. See ARCHITECTURE.md §2." % (REQUIRED, "\n  ".join(missing)),
+            "directly. See ARCHITECTURE.md section 2." % (REQUIRED, "\n  ".join(missing)),
         )
 
     def test_attribute_is_never_set_false_anywhere(self):

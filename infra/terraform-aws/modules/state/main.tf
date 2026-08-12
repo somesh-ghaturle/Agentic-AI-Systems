@@ -1,4 +1,4 @@
-# Execution state — BUILDING-BLOCKS.md §3
+# Execution state — BUILDING-BLOCKS.md section 3
 #
 # The working memory of an in-flight request: current step, accumulated parameters,
 # tool results, approval status, retry counts, correlation ID.
@@ -27,7 +27,7 @@ resource "aws_dynamodb_table" "execution_state" {
   hash_key     = "correlation_id"
 
   # The correlation ID is the single key tying execution state to traces and to the
-  # archive. One ID from request to response — BUILDING-BLOCKS.md §4 "Non-negotiables".
+  # archive. One ID from request to response — BUILDING-BLOCKS.md section 4 "Non-negotiables".
   attribute {
     name = "correlation_id"
     type = "S"

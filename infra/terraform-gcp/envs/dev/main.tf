@@ -68,8 +68,8 @@ locals {
   #
   # The same names the resources will produce, known before they exist. See the note at
   # the top of this file.
-  workflow_name        = "${local.name_prefix}-orchestrator"
-  archive_bucket_name  = "${local.name_prefix}-archive"
+  workflow_name       = "${local.name_prefix}-orchestrator"
+  archive_bucket_name = "${local.name_prefix}-archive"
 
   # --- service account IDs -------------------------------------------------
   #
@@ -327,8 +327,8 @@ module "tools" {
     # Vector Search coordinates. Passed rather than resolved at cold start because
     # modules/knowledge depends only on modules/identity, so there is no cycle to avoid
     # here — unlike the AWS tree, where tools -> knowledge -> orchestration -> tools.
-    KNOWLEDGE_INDEX_ENDPOINT = module.knowledge.index_endpoint_id
-    KNOWLEDGE_DEPLOYED_INDEX = module.knowledge.deployed_index_id
+    KNOWLEDGE_INDEX_ENDPOINT  = module.knowledge.index_endpoint_id
+    KNOWLEDGE_DEPLOYED_INDEX  = module.knowledge.deployed_index_id
     KNOWLEDGE_ENDPOINT_DOMAIN = module.knowledge.public_endpoint_domain
 
     # The other half of the `dimensions = 768` decision above.

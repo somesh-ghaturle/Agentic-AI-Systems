@@ -162,7 +162,7 @@ resource "azurerm_cosmosdb_account" "approvals" {
   # replacement is not pinned in this repo's provider version, so it is deliberately not
   # set here rather than guessed at. Enforce it with Azure Policy
   # ("Cosmos DB database accounts should have local authentication methods disabled")
-  # until this is re-pinned. Tracked in ARCHITECTURE.md § Remaining work.
+  # until this is re-pinned. Tracked in ARCHITECTURE.md section "Remaining work".
 
   tags = var.tags
 }

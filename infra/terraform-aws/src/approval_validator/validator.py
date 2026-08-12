@@ -1,4 +1,4 @@
-# The validator — BUILDING-BLOCKS.md §6, step two of the enforcement flow.
+# The validator — BUILDING-BLOCKS.md section 6, step two of the enforcement flow.
 #
 #   The model proposes.  ← orchestrator, already happened
 #   Application code decides.  ← here

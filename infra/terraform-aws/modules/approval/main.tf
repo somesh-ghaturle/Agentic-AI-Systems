@@ -1,4 +1,4 @@
-# Approval gates — BUILDING-BLOCKS.md §6
+# Approval gates — BUILDING-BLOCKS.md section 6
 #
 # The enforcement flow, and the components that own each step:
 #

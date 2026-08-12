@@ -68,15 +68,44 @@ resource "google_workflows_workflow" "orchestrator" {
 
 # Whoever starts executions. Not granted to any workload in this tree — the caller is
 # outside it.
-resource "google_workflows_workflow_iam_member" "invoker" {
+#
+# ---------------------------------------------------------------------------
+# This grant is coarser than its AWS and Azure counterparts, and not by choice
+# ---------------------------------------------------------------------------
+#
+# The Workflows API supports a per-workflow IAM policy. The Terraform provider does not
+# expose it: there is no `google_workflows_workflow_iam_member`, and there never has been
+# — every other IAM-bearing resource in this tree has one, which makes the absence easy to
+# assume away rather than notice.
+#
+# So this is a project-level binding. `roles/workflows.invoker` here lets the caller start
+# *any* workflow in the project, not just this one. That is broader than the AWS tree's
+# resource-scoped `states:StartExecution`.
+#
+# Two things keep the practical difference at zero:
+#
+#   1. This tree assumes one project per environment, and one orchestrator per
+#      environment. The set "workflows in this project" and the set "this workflow" have
+#      the same single member.
+#   2. The caller is an external front door, not a workload — it holds no other grant in
+#      this tree, and nothing else here holds workflows.invoker.
+#
+# Both of those are assumptions rather than enforced properties. If you add a second
+# workflow to this project, this binding widens silently and nothing fails. To scope it
+# properly, drop `caller_members` and bind out of band instead:
+#
+#   gcloud workflows add-iam-policy-binding NAME \
+#     --location=REGION --member=MEMBER --role=roles/workflows.invoker
+#
+# which writes the per-workflow policy the provider cannot.
+# ---------------------------------------------------------------------------
+
+resource "google_project_iam_member" "workflow_invoker" {
   for_each = var.caller_members
 
-  project  = var.project_id
-  location = var.location
-  workflow = google_workflows_workflow.orchestrator.name
-
-  role   = "roles/workflows.invoker"
-  member = each.value
+  project = var.project_id
+  role    = "roles/workflows.invoker"
+  member  = each.value
 }
 
 # The workflow writes its own execution logs.
@@ -101,7 +130,7 @@ resource "google_project_iam_member" "orchestrator_log_writer" {
 #
 # Between them they reproduce the AWS property: remove either and the other still refuses.
 # Azure has no equivalent of the second lock at all, which is why
-# terraform-azure/ARCHITECTURE.md §2 describes one lock and two mitigations.
+# terraform-azure/ARCHITECTURE.md section 2 describes one lock and two mitigations.
 #
 # ---------------------------------------------------------------------------
 # Two things about this that are worth knowing before relying on it

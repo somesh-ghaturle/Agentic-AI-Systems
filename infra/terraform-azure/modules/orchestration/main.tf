@@ -164,7 +164,7 @@ resource "azurerm_logic_app_action_custom" "reason" {
 # The bound, the gate, and everything downstream of them
 #
 # Nested because Logic App branch actions carry their children in their own body. Read
-# this as the flowchart in ARCHITECTURE.md §3.
+# this as the flowchart in ARCHITECTURE.md section 3.
 # ---------------------------------------------------------------------------
 
 resource "azurerm_logic_app_action_custom" "check_loop_bound" {

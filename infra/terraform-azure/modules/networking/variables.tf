@@ -25,7 +25,7 @@ variable "subnet_prefix" {
 
     Nothing joins it yet — the Consumption (Y1) plan cannot integrate with a VNet, so
     every private-endpoint variable in this stack stays open until prod moves to an
-    Elastic Premium plan. See ARCHITECTURE.md § Remaining work.
+    Elastic Premium plan. See ARCHITECTURE.md section "Remaining work".
   DESC
   type        = string
   default     = "10.0.1.0/24"

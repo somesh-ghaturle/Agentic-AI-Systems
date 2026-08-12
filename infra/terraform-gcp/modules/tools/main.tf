@@ -1,4 +1,4 @@
-# Tool layer — BUILDING-BLOCKS.md §2
+# Tool layer — BUILDING-BLOCKS.md section 2
 #
 # The read/write split is the reason this module exists. From the doc:
 #
@@ -15,7 +15,7 @@
 # naming who may invoke it, independent of what the caller's own policy permits.
 #
 # Azure has no equivalent for Functions, so terraform-azure/modules/tools substitutes an
-# Entra app role, and terraform-azure/ARCHITECTURE.md §2 is explicit that this leaves one
+# Entra app role, and terraform-azure/ARCHITECTURE.md section 2 is explicit that this leaves one
 # load-bearing line where AWS has two independent locks.
 #
 # GCP has the resource policy. A Cloud Run service — which is what a gen2 function is
