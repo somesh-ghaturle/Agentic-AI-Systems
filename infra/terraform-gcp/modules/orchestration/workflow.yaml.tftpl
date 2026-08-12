@@ -1,0 +1,259 @@
+
+# Orchestrator workflow.
+#
+# ---------------------------------------------------------------------------
+# A note on $${...}
+#
+# Workflows uses $${...} for its own expressions. So does Terraform's templatefile().
+# Every Workflows expression in this file is therefore written $${...} — the doubled
+# dollar escapes it, and Terraform emits a single $ into the rendered YAML.
+#
+# Get this wrong and the failure is not a syntax error. Terraform tries to resolve the
+# Workflows expression as a template variable and fails at plan time with "There is no
+# variable named ...", which points at this file but describes the wrong problem.
+# ---------------------------------------------------------------------------
+
+main:
+  params: [input]
+  steps:
+    - initialize:
+        assign:
+          - execution_id: $${sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
+          - step_count: 0
+          - context: ""
+          - tenant_id: $${input.tenant_id}
+
+    - initialize_trace:
+        call: emit_trace
+        args:
+          event: "execution_started"
+          payload:
+            execution_id: $${execution_id}
+            tenant_id: $${tenant_id}
+
+    # --- read path ---------------------------------------------------------
+
+    - retrieve:
+        try:
+          call: http.post
+          args:
+            url: ${retrieve_url}
+            auth:
+              type: OIDC
+              audience: ${retrieve_url}
+            body:
+              query: $${input.query}
+              tenant_id: $${tenant_id}
+          result: retrieval
+        except:
+          # Retrieval failure is degraded, not fatal. Reasoning without context produces a
+          # worse answer; refusing to reason produces none. The trace records which
+          # happened so the two are distinguishable after the fact.
+          as: e
+          steps:
+            - record_degraded:
+                call: emit_trace
+                args:
+                  event: "retrieval_failed"
+                  payload:
+                    execution_id: $${execution_id}
+                    error: $${e.message}
+            - continue_without_context:
+                assign:
+                  - context: ""
+                next: reason
+
+    - extract_context:
+        assign:
+          - context: $${retrieval.body.context}
+
+    - reason:
+        try:
+          call: http.post
+          args:
+            url: ${reason_url}
+            auth:
+              type: OIDC
+              audience: ${reason_url}
+            body:
+              query: $${input.query}
+              context: $${context}
+              tenant_id: $${tenant_id}
+              step: $${step_count}
+          result: reasoning
+        except:
+          as: e
+          steps:
+            - record_failure:
+                call: emit_trace
+                args:
+                  event: "reason_failed"
+                  payload:
+                    execution_id: $${execution_id}
+                    error: $${e.message}
+            - fail_execution:
+                raise:
+                  message: "reason step failed"
+                  details: $${e}
+
+    - increment_step:
+        assign:
+          - step_count: $${step_count + 1}
+
+    # --- loop bound, checked before routing --------------------------------
+    #
+    # An agent that loops is an agent spending money. Exceeding the bound is a failure,
+    # not a quiet stop: a run that silently truncates looks like a short answer.
+
+    - check_loop_bound:
+        switch:
+          - condition: $${step_count > ${max_steps}}
+            steps:
+              - record_loop_bound:
+                  call: emit_trace
+                  args:
+                    event: "loop_bound_exceeded"
+                    payload:
+                      execution_id: $${execution_id}
+                      steps: $${step_count}
+              - abandon:
+                  raise:
+                    message: "loop bound exceeded"
+          - condition: $${reasoning.body.action_type == "write"}
+            next: validate_proposal
+          - condition: $${reasoning.body.action_type == "continue"}
+            next: retrieve
+        next: complete
+
+    # --- write path --------------------------------------------------------
+
+    - validate_proposal:
+        call: http.post
+        args:
+          url: ${validator_url}
+          auth:
+            type: OIDC
+            audience: ${validator_url}
+          body:
+            execution_id: $${execution_id}
+            tenant_id: $${tenant_id}
+            proposal: $${reasoning.body.proposal}
+        result: validation
+
+    # Invalid proposals never reach a human. A reviewer who sees mostly junk stops
+    # reading, and gate fatigue is how a gate fails while appearing to work.
+    - validation_outcome:
+        switch:
+          - condition: $${not validation.body.valid}
+            steps:
+              - record_rejection:
+                  call: emit_trace
+                  args:
+                    event: "proposal_rejected"
+                    payload:
+                      execution_id: $${execution_id}
+                      reason: $${validation.body.reason}
+              - end_rejected:
+                  return:
+                    status: "rejected"
+                    reason: $${validation.body.reason}
+
+    - create_callback:
+        call: events.create_callback_endpoint
+        args:
+          http_callback_method: "POST"
+        result: callback_details
+
+    - publish_request:
+        call: http.post
+        args:
+          url: ${validator_url}
+          auth:
+            type: OIDC
+            audience: ${validator_url}
+          body:
+            action: "notify"
+            execution_id: $${execution_id}
+            approval_id: $${validation.body.approval_id}
+            callback_url: $${callback_details.url}
+
+    # The execution is genuinely suspended here — not polling, not sleeping. It resumes
+    # only when the executor resolves the callback.
+    - await_approval:
+        try:
+          call: events.await_callback
+          args:
+            callback: $${callback_details}
+            timeout: ${approval_timeout_seconds}
+          result: approval
+        except:
+          # Nobody answering is not the same event as a human declining, and conflating
+          # them makes reviewer disengagement invisible. This branch is the timeout only.
+          as: e
+          steps:
+            - record_abandoned:
+                call: emit_trace
+                args:
+                  event: "approval_abandoned"
+                  payload:
+                    execution_id: $${execution_id}
+                    approval_id: $${validation.body.approval_id}
+                    timeout_seconds: ${approval_timeout_seconds}
+            - fail_abandoned:
+                raise:
+                  message: "approval abandoned"
+
+    - record_success:
+        call: emit_trace
+        args:
+          event: "approval_resolved"
+          payload:
+            execution_id: $${execution_id}
+            approval_id: $${validation.body.approval_id}
+            outcome: $${approval.http_request.body.outcome}
+
+    - complete:
+        steps:
+          - record_terminal:
+              call: emit_trace
+              args:
+                event: "execution_completed"
+                payload:
+                  execution_id: $${execution_id}
+                  steps: $${step_count}
+                  # Cost belongs on the terminal record only. Emitting it per step
+                  # multiply-counts spend.
+                  terminal: true
+                  cost_usd: $${default(map.get(reasoning, ["body", "cost_usd"]), 0)}
+                  total_tokens: $${default(map.get(reasoning, ["body", "total_tokens"]), 0)}
+          - return_result:
+              return:
+                status: "completed"
+                steps: $${step_count}
+                result: $${reasoning.body}
+
+# Traces go through the emitter, not through sys.log. sys.log writes to this workflow's
+# own execution log, which no log-based metric is watching.
+emit_trace:
+  params: [event, payload]
+  steps:
+    - post:
+        try:
+          call: http.post
+          args:
+            url: ${trace_emitter_url}
+            auth:
+              type: OIDC
+              audience: ${trace_emitter_url}
+            body:
+              event: $${event}
+              payload: $${payload}
+        except:
+          # A failed trace must not fail the execution it is describing.
+          as: e
+          steps:
+            - swallow:
+                call: sys.log
+                args:
+                  text: $${"trace emit failed: " + e.message}
+                  severity: "WARNING"
