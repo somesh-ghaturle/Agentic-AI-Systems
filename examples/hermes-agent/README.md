@@ -58,6 +58,8 @@ The two boxes are two objects. `Hermes` is constructed with the read registry an
 the write one; `ApprovalExecutor` is constructed with the write registry and refuses the
 read one. They share an approval store and nothing else.
 
+The same diagram with notes on how to read it: [architecture.md](architecture.md).
+
 ---
 
 ## The boundary, and why it is drawn twice
