@@ -146,7 +146,7 @@ jobs:
       # router's path; trace-eval asserts that its own checks still catch a run that
       # bypasses it. Neither needs a model, a network, or a cloud account, which is what
       # makes them safe to gate merges on.
-      - name: Example suites — hermes-agent and trace-eval
+      - name: Example suites — hermes-agent, trace-eval, starter-agent
         run: python3 -m unittest discover -s tests -v
 
   handlers:
