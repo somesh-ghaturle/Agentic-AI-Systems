@@ -191,7 +191,19 @@ variable "content_filters" {
   }
 
   validation {
-    condition     = alltrue([for f in var.content_filters : f.severity_threshold == null || contains(["Low", "Medium", "High"], f.severity_threshold)])
+    # The null guard is an `if` clause on the comprehension, not a `||` in front of
+    # `contains`. Terraform does not reliably short-circuit `||` — through 1.9.x both
+    # operands are evaluated, so `f.severity_threshold == null || contains(...)` still calls
+    # `contains` with a null and fails with "argument must not be null". Newer versions do
+    # short-circuit, which is worse: the expression works locally and breaks in CI.
+    #
+    # Filtering first means `contains` is only ever reached for a filter that set the field.
+    # Jailbreak and Protected Material legitimately leave it unset — they are detections
+    # rather than graded severities.
+    condition = alltrue([
+      for f in var.content_filters : contains(["Low", "Medium", "High"], f.severity_threshold)
+      if f.severity_threshold != null
+    ])
     error_message = "severity_threshold must be Low, Medium, or High when set."
   }
 }

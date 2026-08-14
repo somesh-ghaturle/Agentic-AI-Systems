@@ -108,7 +108,6 @@ jobs:
       - name: AWS — assert the write boundary holds
         run: python3 -m unittest discover -s infra/terraform-aws/tests -v
 
-      #
       # Azure: guards `app_role_assignment_required`. Set it false and Entra mints a token
       # for any principal in the tenant while every diagram and output still looks correct.
       # See infra/terraform-azure/tests/test_write_boundary.py for why this exists rather
