@@ -281,6 +281,31 @@ module "model_integration" {
   model_caller_members = {
     reason = local.tool_members["reason"]
   }
+
+  # ---------------------------------------------------------------------------
+  # The guardrail. A mitigation layer, not the control — the write boundary in
+  # modules/orchestration is the control. See modules/model-integration/guardrail.tf.
+  # ---------------------------------------------------------------------------
+
+  name_prefix      = local.name_prefix
+  create_guardrail = true
+
+  jailbreak_confidence_level = "LOW_AND_ABOVE"
+  sdp_mode                   = "basic"
+
+  # The floor setting is what makes the guardrail a boundary rather than a convention: it
+  # is enforced by Vertex AI on every generateContent in the project, so a handler that
+  # forgets the sanitize call is still filtered.
+  #
+  # Note the reach before enabling this in a project that hosts anything else — it applies
+  # to every Vertex AI caller, not only this stack.
+  create_floor_setting = true
+
+  # Blocking, not inspect-only. A floor setting in inspect-only mode appears in the console,
+  # reads as enabled, and stops nothing.
+  floor_setting_block = true
+
+  labels = local.labels
 }
 
 module "observability" {

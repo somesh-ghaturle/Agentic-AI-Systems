@@ -13,9 +13,11 @@ resource policy in different words. Section 2 is where that comparison is made p
 including the one place GCP is *stronger* than AWS and the one place it is weaker.
 
 > **Implementation status.** Both roots validate: `envs/dev` and `envs/prod`. Every module
-> in section 6 is built. One thing is absent and is marked **not yet built** where it appears:
-> the GCP handler source (`src/`). Read that mark as literal — everything else in the
-> diagrams exists in Terraform.
+> in section 6 is built, and so is the handler source (`src/`). Everything in the diagrams
+> exists in Terraform.
+>
+> Build the deployment packages with `src/build.sh` before planning: every `package_path`
+> is read at plan time to compute a deployment hash.
 
 ---
 
@@ -385,11 +387,11 @@ structurally identical — every difference is a variable, and each is annotated
 `envs/prod/main.tf` with what it costs and what it buys. An approval gate you only exercise
 in prod is an approval gate you have not tested.
 
-**Not yet built:** the handler source tree (`src/`). The AWS handlers in
-`infra/terraform-aws/src` are written against boto3, DynamoDB, OpenSearch, and Step
-Functions task tokens; they will not run on Cloud Functions unmodified. Every
-`package_path` is read at plan time to compute a deployment hash, so until that source
-exists **these roots validate but do not plan.**
+**Built, with one ordering constraint:** the handler source tree lives in `src/` and is
+written against the Google Cloud SDKs — the AWS handlers use boto3, DynamoDB, OpenSearch,
+and Step Functions task tokens, and would not run on Cloud Functions unmodified. Every
+`package_path` is read at plan time to compute a deployment hash, so **run `src/build.sh`
+before `terraform plan`** or the plan stops on the first missing zip.
 
 ---
 

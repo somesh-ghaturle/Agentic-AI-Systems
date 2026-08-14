@@ -12,10 +12,12 @@ Section 2 is explicit about where it is weaker than the AWS original.
 
 > **Implementation status.** Three roots validate: `envs/dev`, `envs/prod`, and
 > `envs/tenant`. The Logic App workflow definition, the archive immutability policy, the
-> observability wiring, and the write-boundary guards in section 2 are built. One thing is still
-> absent and is marked **not yet built** where it appears: the Azure handler source
-> (`src/`). Read that mark as literal — everything else in the diagrams exists in
-> Terraform.
+> observability wiring, the write-boundary guards in section 2, and the handler source
+> (`src/`) are all built. Everything in the diagrams exists in Terraform.
+>
+> What remains is structural rather than missing: the write boundary here rests on ONE
+> lock, because Azure has no Function resource policy. Section 2 explains what that costs
+> and what guards it.
 
 ---
 
@@ -447,7 +449,8 @@ everything with a principal depends on it — which is the only reason it exists
 ## 7 · Where the properties actually live
 
 Infrastructure cannot enforce all of this. The rows marked **Code** are only true if the
-Azure handler source — which does not exist yet — is written correctly.
+Azure handler source in `src/` is written correctly, which is why `src/tests/` asserts
+exactly those properties — the fingerprint re-check, the tenant filter, the claim.
 
 | Property | Enforced by | If it breaks |
 |---|---|---|
@@ -481,14 +484,11 @@ Where the two trees are not equivalent, and why.
 | Archive immutability | S3 Object Lock, COMPLIANCE mode | Container immutability policy, locked in prod | Yes |
 | Orchestrator | Step Functions state machine | Logic App workflow definition | Yes |
 | Observability | 4 metric filters, 5 alarms | 4 KQL query rules + 1 metric alert | Yes |
-| Handler source | `src/` with tests | None | **No** — not yet ported |
+| Handler source | `src/` with tests | None | **Yes** — Azure SDK, Functions v2 |
 
-Three `No`s remain, and they are not equally serious.
+The remaining `No`s are structural rather than unfinished work.
 
-The handler source is the largest: without it the deployed Function Apps have no code, so
-this tree currently stands up a correct boundary around an empty room.
-
-The single lock is structural. Azure has no Function resource policy and no way to govern
+The single lock is the serious one. Azure has no Function resource policy and no way to govern
 Entra objects with Azure Policy, so the second independent lock AWS gets for free is not
 available at any price here. The guards in section 2 narrow the window rather than closing it,
 and that is the honest description.

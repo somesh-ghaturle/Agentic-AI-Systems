@@ -1,0 +1,8 @@
+functions-framework>=3.8.0
+google-cloud-logging>=3.11.0
+google-cloud-firestore>=2.19.0
+# The executor is the only handler that makes authenticated outbound calls to other
+# functions, so it carries the OIDC token machinery: google-auth mints the token and
+# requests sends it. See shared/gcp_http.py.
+google-auth>=2.35.0
+requests>=2.32.0

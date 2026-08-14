@@ -1,0 +1,141 @@
+{
+  "//": [
+    "Index definition for the retrieval corpus. Applied over the REST API, not by Terraform —",
+    "there is no azurerm_search_index resource. HOW-TO-DEPLOY.md has the curl.",
+    "",
+    "Two fields here are load-bearing and worth checking before every apply:",
+    "",
+    "  tenant_id must be filterable. The retrieve tool sends `tenant_id eq '...'` as the",
+    "  vector query's filter. A schema that leaves this false deploys without complaint and",
+    "  fails on the first real search with an unhelpful 400 — or worse, someone 'fixes' it by",
+    "  dropping the filter.",
+    "",
+    "  classification must be filterable. It is the second half of the access decision: a",
+    "  caller sees public and internal by default and only what their clearances list allows",
+    "  beyond that.",
+    "",
+    "Neither is searchable. Making an access-control field searchable invites it into the",
+    "free-text query path, where a full-text match is not an authorization decision.",
+    "",
+    "dimensions must match the embedding model the retrieve tool calls. 1536 is",
+    "text-embedding-3-small. Change one and you must change the other; a mismatch is",
+    "rejected at upload time, which is the good case, because a silent mismatch would mean",
+    "meaningless similarity scores."
+  ],
+  "name": "knowledge",
+  "fields": [
+    {
+      "name": "document_id",
+      "type": "Edm.String",
+      "key": true,
+      "searchable": false,
+      "filterable": true,
+      "sortable": false,
+      "facetable": false
+    },
+    {
+      "name": "tenant_id",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "sortable": false,
+      "facetable": false
+    },
+    {
+      "name": "classification",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "sortable": false,
+      "facetable": true
+    },
+    {
+      "name": "document_type",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "sortable": false,
+      "facetable": true
+    },
+    {
+      "name": "title",
+      "type": "Edm.String",
+      "searchable": true,
+      "filterable": false,
+      "sortable": false,
+      "facetable": false
+    },
+    {
+      "name": "source_uri",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": false,
+      "sortable": false,
+      "facetable": false
+    },
+    {
+      "name": "text",
+      "type": "Edm.String",
+      "searchable": true,
+      "filterable": false,
+      "sortable": false,
+      "facetable": false
+    },
+    {
+      "name": "updated_at",
+      "type": "Edm.DateTimeOffset",
+      "searchable": false,
+      "filterable": true,
+      "sortable": true,
+      "facetable": false
+    },
+    {
+      "name": "embedding",
+      "type": "Collection(Edm.Single)",
+      "searchable": true,
+      "filterable": false,
+      "sortable": false,
+      "facetable": false,
+      "retrievable": false,
+      "dimensions": 1536,
+      "vectorSearchProfile": "knowledge-hnsw"
+    }
+  ],
+  "vectorSearch": {
+    "algorithms": [
+      {
+        "name": "knowledge-hnsw-config",
+        "kind": "hnsw",
+        "hnswParameters": {
+          "metric": "cosine",
+          "m": 4,
+          "efConstruction": 400,
+          "efSearch": 500
+        }
+      }
+    ],
+    "profiles": [
+      {
+        "name": "knowledge-hnsw",
+        "algorithm": "knowledge-hnsw-config"
+      }
+    ]
+  },
+  "semantic": {
+    "configurations": [
+      {
+        "name": "knowledge-semantic",
+        "prioritizedFields": {
+          "titleField": {
+            "fieldName": "title"
+          },
+          "prioritizedContentFields": [
+            {
+              "fieldName": "text"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

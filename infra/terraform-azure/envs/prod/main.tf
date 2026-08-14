@@ -44,6 +44,18 @@ locals {
 
   logic_app_id = "/subscriptions/${var.subscription_id}/resourceGroups/${local.resource_group_name}/providers/Microsoft.Logic/workflows/${local.name_prefix}-orchestrator"
 
+  # The same cycle-breaker, for the same reason, on a third edge.
+  #
+  # modules/knowledge wants the workspace for its OperationLogs diagnostic setting, and
+  # reading it from `module.observability` would close a loop:
+  #
+  #   knowledge → observability → tools → knowledge
+  #
+  # (tools consumes the search service name; observability consumes the tools' app IDs.)
+  # A workspace ARM ID is deterministic in the same way the Logic App's is, so it is
+  # constructed here rather than read back.
+  log_analytics_workspace_id = "/subscriptions/${var.subscription_id}/resourceGroups/${local.resource_group_name}/providers/Microsoft.OperationalInsights/workspaces/${local.name_prefix}-law"
+
   tags = {
     Project     = var.project
     Environment = "prod"
@@ -146,15 +158,78 @@ module "knowledge" {
   location            = var.location
   sku                 = "standard"
 
+  # Two replicas is the minimum for a read SLA. At one, the service stops answering during
+  # its own maintenance and retrieval degrades for reasons no trace explains.
+  replica_count   = 2
+  partition_count = 1
+
+  # No API keys. An admin key here is a full-control data-plane credential that survives
+  # identity revocation and cannot be attributed to a caller, so the role assignments below
+  # are the only route to the corpus.
+  local_authentication_enabled = false
+
+  # Only the retrieve tool queries the index. Not the orchestrator.
+  reader_principal_ids = {
+    retrieve = module.identity.identities[local.tool_identity_names["retrieve"]].principal_id
+  }
+
+  # Schema and corpus management is a deploy-time grant held by the deploying principal,
+  # not by any workload. Nothing that answers questions can rewrite what it retrieves —
+  # corpus poisoning is prompt injection with persistence, and considerably harder to spot.
+  service_contributor_principal_ids = {
+    deployer = data.azurerm_client_config.current.object_id
+  }
+  contributor_principal_ids = {
+    deployer = data.azurerm_client_config.current.object_id
+  }
+
+  # Reachable from the VNet only. Set `private_dns_zone_ids` alongside the subnet or the
+  # service name still resolves to its public IP from inside the network and the endpoint
+  # sits unused while every resource reports healthy.
+  public_network_access_enabled = var.knowledge_private_dns_zone_ids == null
+  private_endpoint_subnet_id    = var.knowledge_private_dns_zone_ids == null ? null : module.networking.subnet_id
+  private_dns_zone_ids          = var.knowledge_private_dns_zone_ids
+
+  log_analytics_workspace_id = local.log_analytics_workspace_id
+
   tags = local.tags
 }
 
 module "model_integration" {
   source = "../../modules/model-integration"
 
-  azure_openai_endpoint        = var.azure_openai_endpoint
-  azure_openai_key_secret_name = var.azure_openai_key_secret_name
-  model_deployment_name        = var.model_deployment_name
+  name_prefix         = local.name_prefix
+  resource_group_name = module.networking.resource_group_name
+  location            = var.location
+
+  # Bring-your-own by default, for the same reason as dev: an Azure OpenAI account can
+  # require subscription-level access approval. Set create_openai_account = true once the
+  # subscription is enrolled — while it is false, nothing in Terraform asserts that a
+  # content filter sits in front of the model at all.
+  create_account        = var.create_openai_account
+  azure_openai_endpoint = var.azure_openai_endpoint
+
+  model_name            = var.model_name
+  model_version         = var.model_version
+  model_deployment_name = var.model_deployment_name
+
+  # Sized for real traffic, and still a ceiling. Throughput bites before the daily cost
+  # alarm, which only fires after the money is spent.
+  deployment_capacity = 60
+
+  # The mitigation layer. Same status as the Bedrock guardrail on the AWS side: worth
+  # having, and not what stops a determined injection — that is the write boundary.
+  create_content_filter = true
+
+  # Inference only, and only for the reasoning tool. Not deployment management: a
+  # compromised reasoning tool can spend money and cannot remove the filter in front of it.
+  caller_principal_ids = {
+    reason = module.identity.identities[local.tool_identity_names["reason"]].principal_id
+  }
+
+  log_analytics_workspace_id = local.log_analytics_workspace_id
+
+  tags = local.tags
 }
 
 module "tools" {
@@ -177,12 +252,18 @@ module "tools" {
 
   common_environment = {
     KNOWLEDGE_SEARCH_SERVICE = module.knowledge.search_service_name
+    KNOWLEDGE_INDEX          = module.knowledge.index_name
     STATE_STORAGE_ACCOUNT    = module.state.storage_account_name
     STATE_TABLE_NAME         = module.state.table_name
     ARCHIVE_STORAGE_ACCOUNT  = module.archive.storage_account_name
     ARCHIVE_CONTAINER        = module.archive.container_name
     KEY_VAULT_URI            = module.security.keyvault_uri
     AZURE_OPENAI_ENDPOINT    = module.model_integration.azure_openai_endpoint
+
+    # The deployment, not a model name. On Azure OpenAI the deployment is the
+    # addressable unit and it is what carries the RAI content filter, so a handler
+    # calling a bare model name bypasses nothing — it simply 404s.
+    MODEL_DEPLOYMENT = module.model_integration.model_deployment_name
   }
 
   # Elastic Premium, not Consumption. The reason is not performance: Y1 cannot join a

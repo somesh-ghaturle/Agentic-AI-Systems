@@ -14,9 +14,15 @@ envs/      environment roots — dev, prod
 
 ## Status
 
-`terraform validate` passes in both environments. `terraform plan` does not: there is no Azure handler source tree yet, and every function package path is checked with `fileexists()` at plan time. The AWS handlers in `infra/terraform-aws/src` are boto3-based and need porting.
+`terraform validate` passes in both environments. `terraform plan` needs the deployment packages built first — every function package path is checked with `fileexists()` at plan time — so run `src/build.sh` before planning.
 
-See [Remaining work](HOW-TO-DEPLOY.md#remaining-work) for the full list — the Logic App workflow definition and the observability wiring are the other two large gaps.
+The handler source tree exists at `src/`. It is written against the Azure SDK and the Functions v2 programming model rather than ported line-by-line from `infra/terraform-aws/src`, because three things genuinely differ:
+
+- **The approval claim.** DynamoDB expresses "update only if still pending" as a condition on one call. Cosmos has no conditional update; the equivalent is an ETag with `if_match`, and a 412 is what tells the executor somebody else claimed the record. Drop the ETag and a double-clicked approve button runs the refund twice.
+- **Traces go to stdout.** Every alert reads `FunctionAppLogs`, whose `Message` column is the handler's console output — so printing one JSON object per line is exactly right here, and reaching for an SDK would put records where the queries never look. The field is `event_type` and the terminal event is `request_complete`; the GCP tree uses different names for both, and a handler copied from it emits records that parse fine and match no alert.
+- **Packaging ships source, not wheels.** `SCM_DO_BUILD_DURING_DEPLOYMENT` hands the zip to Oryx, which installs `requirements.txt` on the build server. Vendoring wheels locally would ship a developer machine's binaries into a Linux app.
+
+Handler logic lives in `handler.py`, with `function_app.py` as a thin binding, so `src/tests/` can import and test it without a running host. See [Remaining work](HOW-TO-DEPLOY.md#remaining-work) for what is left.
 
 ---
 

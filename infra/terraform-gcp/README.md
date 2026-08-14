@@ -18,12 +18,29 @@ the deny policy before trusting it.
 
 ## Status
 
-`terraform validate` passes in both environments. `terraform plan` does not: there is no
-GCP handler source tree yet, and every function package path is read at plan time to
-compute a deployment hash. The AWS handlers in `infra/terraform-aws/src` are boto3-based
-and need porting.
+`terraform validate` passes in both environments. `terraform plan` needs the deployment
+packages built first — every function package path is read at plan time to compute a
+deployment hash — so run `src/build.sh` before planning.
 
-That is the only gap. Every module described in
+The handler source tree exists at `src/`. It is written against the Google Cloud SDKs
+rather than ported line-by-line from `infra/terraform-aws/src`, because three things
+genuinely differ:
+
+- **Traces must go through the Logging API.** Anything a handler prints to stdout is
+  captured automatically and appears in Cloud Logging looking perfectly healthy — in the
+  function's own log, with no structured payload, where every metric filter misses it. The
+  field is `event`, not `event_type` as on AWS and Azure, and the cost metric keys on a
+  `terminal` flag rather than on the event name.
+- **The approval claim needs a transaction.** DynamoDB expresses "update only if still
+  pending" as a condition on one call; Firestore has no conditional update, so the
+  equivalent is a transaction that reads, decides, and writes, and aborts if the document
+  moved underneath it.
+- **Packaging ships source, not wheels.** Cloud Build unpacks the zip and installs
+  `requirements.txt` against the real runtime image, so vendoring wheels locally would
+  shadow what it resolves correctly on its own. The runtime also preinstalls nothing beyond
+  functions-framework, so every package declares its imports.
+
+Every module described in
 [ARCHITECTURE.md section 6](ARCHITECTURE.md#6--what-terraform-builds) is built.
 
 ---

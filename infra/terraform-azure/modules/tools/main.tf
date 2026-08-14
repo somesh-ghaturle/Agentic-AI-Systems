@@ -178,7 +178,17 @@ resource "azurerm_linux_function_app" "tool" {
     var.common_environment,
     each.value.environment,
     {
-      "FUNCTIONS_WORKER_RUNTIME"         = "python"
+      "FUNCTIONS_WORKER_RUNTIME" = "python"
+
+      # src/build.sh ships SOURCE, not vendored wheels — see the header in that script for
+      # why. Oryx is what turns it into a runnable app: it reads requirements.txt on the
+      # build server and installs against the real Linux runtime.
+      #
+      # Without this the zip deploys successfully and every invocation fails at import on
+      # the first `azure.identity` line, which reads as a code bug rather than a missing
+      # build step.
+      "SCM_DO_BUILD_DURING_DEPLOYMENT"   = "true"
+      "ENABLE_ORYX_BUILD"                = "true"
       "AzureWebJobsStorage__accountName" = azurerm_storage_account.tools.name
 
       # storage_uses_managed_identity alone points the runtime at the SYSTEM-assigned

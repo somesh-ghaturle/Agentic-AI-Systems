@@ -1,0 +1,5 @@
+azure-functions>=1.21.0
+azure-identity>=1.19.0
+# Azure OpenAI is reached through the stock OpenAI SDK's AzureOpenAI client. See the header
+# in handler.py for why this tree calls Azure OpenAI while AWS and GCP call Claude.
+openai>=1.54.0

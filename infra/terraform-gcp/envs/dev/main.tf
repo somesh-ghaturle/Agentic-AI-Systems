@@ -244,6 +244,31 @@ module "model_integration" {
   model_caller_members = {
     reason = local.tool_members["reason"]
   }
+
+  # ---------------------------------------------------------------------------
+  # The guardrail. A mitigation layer, not the control — the write boundary in
+  # modules/orchestration is the control, and this catches the cheap attempts before they
+  # get there. See modules/model-integration/guardrail.tf.
+  # ---------------------------------------------------------------------------
+
+  name_prefix      = local.name_prefix
+  create_guardrail = true
+
+  # Low threshold on the input path. More false positives than the alternatives, and for an
+  # agentic system that is the correct trade: a blocked legitimate request is a retry, an
+  # injection that gets through is an action nobody intended.
+  jailbreak_confidence_level = "LOW_AND_ABOVE"
+
+  # SDP's built-in infotypes. The backstop for PII that upstream masking missed — the Azure
+  # tree has no equivalent to attach at all.
+  sdp_mode = "basic"
+
+  # Template only in dev. The floor setting applies to every Vertex AI call in the project
+  # including ones this tree did not create, which is more reach than a dev environment
+  # should claim over a shared project. Prod turns it on.
+  create_floor_setting = false
+
+  labels = local.labels
 }
 
 module "observability" {

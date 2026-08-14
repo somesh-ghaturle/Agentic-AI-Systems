@@ -85,16 +85,29 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Two suites, one job, and deliberately no AWS counterpart.
+      # Three suites, one job — one per tree.
       #
-      # Both guard mistakes that `terraform validate` is perfectly happy with, because in
-      # each case the wrong value is a valid value in a valid attribute. The AWS tree needs
-      # no equivalent: there the write boundary is a Lambda resource policy, and getting it
-      # wrong is a plan-time error rather than a quiet one.
+      # All three guard mistakes that `terraform validate` is perfectly happy with, because
+      # in each case the wrong value is a valid value in a valid attribute.
+      #
+      # This job used to skip AWS on the grounds that the boundary there is a Lambda
+      # resource policy, so getting it wrong is a plan-time error. That is true of the
+      # resource policy and only of it. For a caller in the same account, Lambda grants
+      # invocation if the IDENTITY policy allows it or the resource policy does, and the
+      # orchestrator's identity policy is built from a list nothing checks. Widening that
+      # list to every tool is a one-word edit that plans, validates, and applies cleanly.
       #
       # No dependencies on purpose — stdlib unittest, reading .tf files as text. A check
       # that needs cloud credentials is a check that gets disabled the first time a secret
       # expires.
+      #
+      # AWS: guards the identity-policy half of the boundary — that no write tool ARN
+      # reaches the orchestrator's policy, that the write tools' resource policy names the
+      # approval executor rather than states.amazonaws.com, and that the read/write outputs
+      # keep their access filters.
+      - name: AWS — assert the write boundary holds
+        run: python3 -m unittest discover -s infra/terraform-aws/tests -v
+
       #
       # Azure: guards `app_role_assignment_required`. Set it false and Entra mints a token
       # for any principal in the tenant while every diagram and output still looks correct.
@@ -109,3 +122,61 @@ jobs:
       # which GCP accepts and matches against nothing.
       - name: GCP — assert the write boundary holds
         run: python3 -m unittest discover -s infra/terraform-gcp/tests -v
+
+  handlers:
+    name: handlers
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tree: [terraform-aws, terraform-azure, terraform-gcp]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The handler logic, one suite per tree. Each stubs its provider SDK rather than
+      # installing it — boto3 ships in the Lambda runtime, and the google-cloud and azure-*
+      # packages are installed at deploy time by Cloud Build and Oryx respectively, so none
+      # of them are dependencies of this repo.
+      #
+      # What is actually under test is the part that is pure logic anyway, and it is the
+      # part where a copied handler goes quietly wrong: the filters that keep retrieval
+      # scoped to one tenant, the claim that stops a double-clicked approve button running
+      # a refund twice, and the rule that cost appears only on terminal trace records.
+      #
+      # The three trees deliberately disagree on two field names — AWS and Azure emit
+      # `event_type` with a `request_complete` terminal event, GCP emits `event` with a
+      # `terminal` flag — because that is what each provider's queries actually match. Each
+      # suite asserts its own convention, so a handler copied between trees fails here
+      # rather than in production, where it would emit records that parse, look correct,
+      # and match no alert.
+      - name: ${{ matrix.tree }} — handler logic
+        run: python3 -m unittest discover -s infra/${{ matrix.tree }}/src/tests -v
+
+  packages:
+    name: packages
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tree: [terraform-aws, terraform-azure, terraform-gcp]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The build scripts are not incidental: every module reads its zips at PLAN time, so
+      # a package that cannot be built is a root that cannot be planned. Running them here
+      # catches a missing entry point or an undeclared requirements.txt at review time
+      # rather than when someone follows HOW-TO-DEPLOY.md.
+      #
+      # This builds packages; it does not install their dependencies. AWS vendors wheels
+      # into the zip and needs pip, so it is the only one whose output is a complete
+      # artifact — the other two ship source and let the platform's builder resolve it.
+      - name: ${{ matrix.tree }} — build deployment packages
+        run: infra/${{ matrix.tree }}/src/build.sh

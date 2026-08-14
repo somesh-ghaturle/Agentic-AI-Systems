@@ -1,0 +1,6 @@
+# The Azure Functions Python worker ships azure-functions itself, but nothing else. Every
+# client a handler imports has to be declared here or it fails at cold start, after a deploy
+# that reported success.
+azure-functions>=1.21.0
+azure-identity>=1.19.0
+azure-search-documents>=11.6.0

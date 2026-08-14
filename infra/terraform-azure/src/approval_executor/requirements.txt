@@ -1,0 +1,7 @@
+azure-functions>=1.21.0
+azure-identity>=1.19.0
+azure-cosmos>=4.7.0
+# The executor is the only handler that makes authenticated outbound calls to other apps, so
+# it carries the token machinery: azure-identity mints the bearer token and requests sends
+# it. See shared/azure_http.py.
+requests>=2.32.0

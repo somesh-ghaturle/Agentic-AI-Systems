@@ -1,0 +1,6 @@
+functions-framework>=3.8.0
+google-cloud-logging>=3.11.0
+# The Vertex extra, not the bare SDK: AnthropicVertex authenticates with the function's own
+# service account, so there is no API key to store, encrypt, or rotate. See the note on
+# _vertex() in main.py for what that costs.
+anthropic[vertex]>=0.116.0

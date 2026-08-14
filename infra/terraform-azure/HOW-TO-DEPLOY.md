@@ -2,7 +2,7 @@
 
 A walkthrough from an empty Azure subscription to a working dev environment, then what changes for prod.
 
-> **This environment does not plan yet.** Every function package path is checked with `fileexists()` at plan time, and there is no Azure handler source tree in this repo. `infra/terraform-aws/src` holds the AWS handlers, and they are written against boto3, DynamoDB, and Step Functions task tokens — they will not run on Azure Functions unmodified. `terraform validate` passes; `terraform plan` will stop on the first missing zip. See [Remaining work](#remaining-work).
+> **Build the packages before planning.** Every function package path is checked with `fileexists()` at plan time, so run `./src/build.sh` first or `terraform plan` stops on the first missing zip. The handlers live in `src/` and are written against the Azure SDK and the Functions v2 programming model — the AWS handlers in `infra/terraform-aws/src` use boto3, DynamoDB, and Step Functions task tokens, and would not run on Azure Functions unmodified. See [Remaining work](#remaining-work) for what is still open.
 
 ---
 
@@ -51,7 +51,15 @@ Then replace the `backend "local" {}` block in `envs/dev/main.tf` (and `envs/pro
 
 ## 2 · Build the function packages
 
-**Not yet possible.** This is the step that blocks a real deployment — see the note at the top. When the Azure handler source exists, this section becomes a call to its build script, producing the zips that `terraform.tfvars` points at.
+```bash
+./src/build.sh
+```
+
+Produces one zip per handler in `build/`, which is where the `package_path` values in `terraform.tfvars` point.
+
+Each zip carries `function_app.py` (the v2 binding, discovered by that exact name), `handler.py` (the logic, importable without a host so `src/tests/` can test it), `host.json`, and `requirements.txt`. The script ships source rather than vendoring wheels: `SCM_DO_BUILD_DURING_DEPLOYMENT` hands the zip to Oryx, which runs `pip install` on the build server against the real Linux runtime. Vendoring locally would ship a developer machine's binaries into the app.
+
+An undeclared import is not caught here. It is caught at cold start, on an app that deployed successfully — which is why `build.sh` fails outright on a package missing its `requirements.txt`.
 
 ---
 
@@ -136,12 +144,11 @@ Two mappings are worth explaining because the obvious choice was rejected:
 
 Before this can be applied to a real subscription:
 
-1. **Azure handler source.** No `src/` tree exists. The AWS handlers are boto3-based and need porting to the Azure SDK and the Functions programming model.
-2. **The Logic App workflow definition.** `modules/orchestration` creates the workflow and attaches the orchestrator identity, but the workflow body — call retrieve, call the model step, call the validator, suspend on the approval callback — is not written. Without it there is no orchestrator, only the identity one would run as.
-3. **Diagnostic settings and alerts.** `modules/observability` creates the workspace but nothing routes into it, and no alert rules exist. The AWS side has metric filters and alarms for abandoned approvals, timed-out executions, and daily cost.
-4. **Globally unique resource names.** Key Vault, Cosmos, and every storage account name in this stack is derived deterministically from `project`. Those namespaces are global to Azure, not scoped to your subscription, so two teams using the same `project` value collide at apply time.
-5. **Private endpoints.** Every `*_public_network_access_enabled` variable defaults to `true` and cannot be closed until private endpoints exist and the function plans can join the VNet.
-6. **Cosmos local auth.** Account keys should be disabled. The provider attribute that did this is deprecated and its replacement is not pinned in this repo's provider version, so it is deliberately left unset rather than guessed at. Enforce it with the Azure Policy *"Cosmos DB database accounts should have local authentication methods disabled"* in the meantime.
+1. **The Logic App workflow definition.** `modules/orchestration` creates the workflow and attaches the orchestrator identity, but the workflow body — call retrieve, call the model step, call the validator, suspend on the approval callback — is not written. Without it there is no orchestrator, only the identity one would run as.
+2. **Trace emission from the handlers.** `modules/observability` creates the workspace, routes the function apps and the Logic App into it with diagnostic settings, and defines five alert rules — loop bound, schema failures, abandoned approvals, daily cost, and the Entra write-boundary audit. Every one of them reads `FunctionAppLogs` and parses the `Message` column as JSON, so they stay at zero until handlers actually emit structured traces. `src/shared/agentic_trace.py` does that, and `src/tests/` asserts the field names match; what is untested is the end-to-end path, which needs a real deployment.
+3. **Globally unique resource names.** Key Vault, Cosmos, and every storage account name in this stack is derived deterministically from `project`. Those namespaces are global to Azure, not scoped to your subscription, so two teams using the same `project` value collide at apply time.
+4. **Private endpoints.** `modules/knowledge` provisions one; Cosmos, Service Bus, Key Vault, and the OpenAI account do not have one yet. Every `*_public_network_access_enabled` variable therefore still defaults to `true`, and closing them needs both the endpoints and a function plan that can join the VNet — the Y1 consumption plan used in dev cannot.
+5. **Cosmos local auth.** Account keys should be disabled. The provider attribute that did this is deprecated and its replacement is not pinned in this repo's provider version, so it is deliberately left unset rather than guessed at. Enforce it with the Azure Policy *"Cosmos DB database accounts should have local authentication methods disabled"* in the meantime.
 
 ---
 

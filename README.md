@@ -61,6 +61,32 @@ These resources provide governance, risk, and security perspectives suitable for
 
 - **Agentic System Architecture**: [docs/agentic-system-architecture/](docs/agentic-system-architecture/README.md) — reference architecture for building agentic systems as production software. Single-agent vs. multi-agent trade-offs, the six building blocks (model routing, tool contracts, memory and state, orchestration, trace-level evals, approval gates), production engineering principles, and a design-review checklist.
 
+## Reference infrastructure
+
+Three parallel Terraform trees under [infra/](infra/), implementing the same agentic architecture on each cloud's own primitives. They are the deployment-ready counterpart to the architecture reference above — the six building blocks expressed as infrastructure rather than as prose.
+
+| Tree | Orchestrator | Tools | State / approvals | Knowledge |
+| --- | --- | --- | --- | --- |
+| [terraform-aws/](infra/terraform-aws/) | Step Functions | Lambda | DynamoDB | OpenSearch Serverless |
+| [terraform-azure/](infra/terraform-azure/) | Logic Apps | Functions | Storage Tables / Cosmos DB | AI Search |
+| [terraform-gcp/](infra/terraform-gcp/) | Cloud Workflows | Cloud Functions gen2 | Firestore | Vertex AI Vector Search |
+
+Each tree has its own `ARCHITECTURE.md` with mermaid diagrams drawn in that cloud's terms, a `HOW-TO-DEPLOY.md`, and `envs/dev` plus `envs/prod` roots. Azure has a third root, `envs/tenant`, because the Entra audit alert it applies is tenant-scoped — two roots managing it would revert each other.
+
+**The property they all enforce:** a state-changing action cannot reach production without a human approving that specific action, and that is enforced by the identity platform — not by the prompt, and not by the model choosing to behave. Tools are split into `read` and `write`; only the approval executor can invoke a write tool, and the orchestrator cannot.
+
+**How that boundary is drawn differs by cloud, and each tree's ARCHITECTURE.md section 2 says so plainly rather than claiming parity it does not have:**
+
+- **AWS** — two independent locks: an identity policy and a Lambda resource policy. Remove either and the other still refuses.
+- **Azure** — one load-bearing line (`app_role_assignment_required = true`) plus two mitigations. Azure has no resource-policy equivalent for Functions, so this is genuinely thinner, and a CI check and an Entra audit alert guard the line rather than replacing it.
+- **GCP** — the closest to the AWS original, because a gen2 function is a Cloud Run service underneath and carries its own IAM policy. It also adds an IAM Deny policy, the only override-proof lock of the three: deny rules evaluate before allow policies, so a later broad grant cannot reopen the path.
+
+**Status.** All seven environment roots pass `terraform validate`, and all three trees have a handler source tree (`src/`) with a build script, so each can `plan` once its packages are built — every function package path is read at plan time to compute a deployment hash, which is why `src/build.sh` runs before `terraform plan` rather than after.
+
+The three trees are at parity in structure, not in implementation, and the differences are deliberate. Each handler tree is written against its own provider's SDK and its own failure modes: the packaging differs (AWS vendors wheels into the zip because a Lambda zip is the final artifact; Azure and GCP ship source and let Oryx and Cloud Build resolve dependencies), the approval claim differs (a DynamoDB condition expression, a Firestore transaction, a Cosmos ETag), and the trace field names differ because each provider's queries match different ones. `src/tests/` in each tree asserts its own conventions, so a handler copied between trees fails in CI rather than in production.
+
+The model layer is the one place the trees diverge on vendor: AWS calls Claude on Bedrock and GCP calls Claude on Vertex, while Azure calls Azure OpenAI. That is a trade — it buys `azurerm_cognitive_account_rai_policy`, the only Azure content filter that is a first-class Terraform resource and the closest analogue to a Bedrock guardrail, at the cost of model consistency. Serving Claude through the Azure AI model catalog instead would reverse both halves of that trade.
+
 ## Working with coding agents
 
 - **Agentic Coding Playbook**: [docs/agentic-coding-playbook/](docs/agentic-coding-playbook/README.md) — a drop-in kit for treating Claude (or any coding agent) as an agent inside your workflow rather than a chatbot you consult. Eight habits, a two-week ramp, named antipatterns, a team workflow for shared repos, enterprise rollout and agent-security guidance, and copy-paste templates for `CLAUDE.md`, scoped rules, slash commands, skills, and subagents.
@@ -80,4 +106,12 @@ More runnable templates (examples):
 - Ray orchestration sample: [examples/ray-orchestrator/README.md](examples/ray-orchestrator/README.md)
 - End-to-end secure & observable agent (traceability, SLA, governance): [examples/e2e-agent/README.md](examples/e2e-agent/README.md)
 
-CI: A basic smoke-test workflow is included at `.github/workflows/smoke.yml` to run tests and basic checks on push/PR.
+## CI
+
+[`.github/workflows/terraform.yml`](.github/workflows/terraform.yml) runs on any change under `infra/`:
+
+- `terraform fmt -check` across all three trees
+- `terraform validate` on each of the seven environment roots, as a matrix so one broken root does not hide the others
+- Write-boundary tests for Azure and GCP — stdlib `unittest` reading `.tf` files as text
+
+Everything runs without cloud credentials, which is deliberate: a check that needs a subscription is a check that gets disabled the first time a secret expires. The write-boundary tests exist because `terraform validate` accepts every mistake they catch — in each case the wrong value is a valid value in a valid attribute. AWS needs no equivalent, because there the same mistake is a plan-time error rather than a quiet one.

@@ -69,14 +69,18 @@ visible later.
 
 ## 2 · Build the handler packages
 
-**This does not exist yet.** There is no `src/` tree here. The AWS handlers in
-`infra/terraform-aws/src` are written against boto3, DynamoDB, OpenSearch, and Step
-Functions task tokens, and will not run on Cloud Functions unmodified.
+```bash
+./src/build.sh
+```
 
 Every `package_path` in `terraform.tfvars` is read at plan time to compute a deployment
-hash, so **until that source exists these roots validate but do not plan.**
+hash, so **run this before `terraform plan`** or the plan stops on the first missing zip.
 
-When you write them, the expected layout is one zip per handler:
+The handlers live in `src/` and are written against the Google Cloud SDKs — the AWS
+handlers in `infra/terraform-aws/src` use boto3, DynamoDB, OpenSearch, and Step Functions
+task tokens, and would not run on Cloud Functions unmodified.
+
+The script produces one zip per handler:
 
 ```
 build/
@@ -88,9 +92,16 @@ build/
   emit_trace.zip
 ```
 
-Each zip has the handler at its root with a `requirements.txt` beside it — the gen2 build
-runs `pip install` from that file during deployment. The exported symbol must match the
-tool's `entry_point`.
+Each zip has `main.py` at its root with a `requirements.txt` beside it — the gen2 build
+runs `pip install` from that file during deployment, which is why `build.sh` ships source
+rather than vendoring wheels: bundling locally-resolved wheels would shadow what Cloud
+Build resolves correctly against the real runtime image. The exported symbol must match the
+tool's `entry_point`, and the file must be named `main.py` — a package missing one deploys
+successfully and then 404s on every invocation.
+
+The runtime preinstalls nothing beyond functions-framework, so every package declares its
+imports in `requirements.txt`. An undeclared import is not caught at build time; it is
+caught at cold start, on a function that deployed cleanly.
 
 The object name in GCS carries the package hash. Without that, uploading a changed zip
 under the same name leaves the deployed function untouched: Cloud Functions keys its build

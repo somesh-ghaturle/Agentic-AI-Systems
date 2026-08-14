@@ -125,24 +125,48 @@ variable "alert_email_receivers" {
 # ---------------------------------------------------------------------------
 # Model layer
 #
-# Azure OpenAI accounts are not created here: provisioning one requires tenant-level
-# enrollment that Terraform cannot request. Create it out of band and pass the endpoint.
+# Terraform can create the Azure OpenAI account, its deployment, and the content filter in
+# front of it — but only in a subscription that has been granted access to Azure OpenAI.
+# That approval is a request Terraform cannot make, so account creation is opt-in and the
+# default is to point at an account provisioned out of band.
+#
+# While `create_openai_account` is false, note what is NOT asserted anywhere in this tree:
+# that a content filter exists on the model at all. The AWS tree always creates its Bedrock
+# guardrail; here that is a manual step until the switch is flipped.
 # ---------------------------------------------------------------------------
 
+variable "create_openai_account" {
+  description = "Whether Terraform provisions the Azure OpenAI account, deployment, and content filter. Requires the subscription to be enrolled for Azure OpenAI. False points the reasoning tool at azure_openai_endpoint instead."
+  type        = bool
+  default     = false
+}
+
 variable "azure_openai_endpoint" {
-  description = "Azure OpenAI endpoint, e.g. https://my-openai.openai.azure.com/. Empty leaves the reasoning tool without a model."
+  description = "Azure OpenAI endpoint, e.g. https://my-openai.openai.azure.com/. Used when create_openai_account is false. Empty leaves the reasoning tool without a model."
   type        = string
   default     = ""
 }
 
 variable "azure_openai_key_secret_name" {
-  description = "Key Vault secret name holding the model API key, when the deployment uses key auth rather than managed identity."
+  description = "Key Vault secret name holding the model API key, when a bring-your-own deployment uses key auth rather than managed identity. Prefer identity: a created account disables key auth outright."
   type        = string
   default     = ""
 }
 
 variable "model_deployment_name" {
-  description = "Azure OpenAI deployment name the reasoning tool targets."
+  description = "Azure OpenAI deployment name the reasoning tool targets. Created when create_openai_account is true, passed through when it is false."
   type        = string
-  default     = ""
+  default     = "reasoning"
+}
+
+variable "model_name" {
+  description = "Model to deploy when create_openai_account is true. Availability is region-specific."
+  type        = string
+  default     = "gpt-4o"
+}
+
+variable "model_version" {
+  description = "Model version, pinned. A model that moves underneath a prompt-versioned reasoning step makes results non-reproducible and nothing in the trace record explains the change."
+  type        = string
+  default     = "2024-11-20"
 }

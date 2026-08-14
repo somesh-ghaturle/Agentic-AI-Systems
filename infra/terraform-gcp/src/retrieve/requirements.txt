@@ -1,0 +1,7 @@
+# Unlike the Lambda runtime, the Cloud Functions python312 runtime ships almost nothing
+# beyond functions-framework — there is no preinstalled google-cloud-*. Every client this
+# package imports has to be declared here or it fails at cold start, after a successful
+# deploy.
+functions-framework>=3.8.0
+google-cloud-logging>=3.11.0
+google-cloud-aiplatform>=1.71.0

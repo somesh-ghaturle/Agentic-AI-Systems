@@ -1,13 +1,13 @@
 # Model integration — Claude on Vertex AI.
 #
-# The AWS tree calls Bedrock. The Azure tree could not call anything, because Azure OpenAI
-# requires a separately provisioned resource with its own quota approval, so that module
-# is a placeholder that carries an endpoint string.
+# The AWS tree calls Bedrock. The Azure tree provisions an Azure OpenAI account and a
+# deployment, but only where the subscription has been granted access to Azure OpenAI —
+# an approval Terraform cannot request — so creation there is opt-in and the fallback is
+# an endpoint provisioned out of band.
 #
-# GCP sits between the two. Anthropic's models are served through Vertex AI in the same
-# project, with the same IAM, and no separate resource to provision — the reason handler
-# authenticates as its own service account and calls the endpoint. That makes this module
-# real rather than a placeholder.
+# GCP has no such gate on the resource. Anthropic's models are served through Vertex AI in
+# the same project, with the same IAM, and there is no account to provision — the reason
+# handler authenticates as its own service account and calls the endpoint.
 #
 # What it still cannot do is the enablement. Anthropic models in Model Garden require
 # accepting the provider's terms once per project, through the console or the Model Garden
