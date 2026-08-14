@@ -1,0 +1,5 @@
+# No external dependencies. Standard library only, Python 3.9+.
+#
+# That is a design constraint rather than an accident. The subject of this example is a
+# boundary between two sets of capabilities, and a boundary is easier to believe when you
+# can read every line that enforces it without also reading a framework.

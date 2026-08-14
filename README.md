@@ -105,6 +105,12 @@ More runnable templates (examples):
 - Retrieval (RAG) with FAISS: [examples/rag-faiss/README.md](examples/rag-faiss/README.md)
 - Ray orchestration sample: [examples/ray-orchestrator/README.md](examples/ray-orchestrator/README.md)
 - End-to-end secure & observable agent (traceability, SLA, governance): [examples/e2e-agent/README.md](examples/e2e-agent/README.md)
+- Hermes router — the write boundary in application code: [examples/hermes-agent/README.md](examples/hermes-agent/README.md)
+- Trace-level evals — scoring the path, not just the answer: [examples/trace-eval/README.md](examples/trace-eval/README.md)
+
+**Hermes** is the runnable counterpart to the infrastructure below. It routes a request to a handler, runs read tools on the spot, and returns anything that would change state as a proposal that stops until a human approves *that specific action* — approval bound to a fingerprint of the exact arguments, single-use, expiring. The router holds no reference to a write tool; the approval executor holds nothing else. Standard library only, no model, no cloud account, and the boundary tests were mutation-tested rather than trusted.
+
+**trace-eval** is the feedback edge from the architecture diagram, running. It scores the same runs two ways — one grader reads the final answer, one reads the trace — and prints where they disagree. Against an agent with no write boundary, it finds three requests where the answer was on topic, helpful, and graded PASS while a production service was restarted with nobody's authorisation. Whether a human approved an action is not a property of the text a user reads, so no output grader can see it, however sophisticated. Both examples are stdlib-only and run offline.
 
 ## CI
 

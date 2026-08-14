@@ -1,0 +1,5 @@
+# No external dependencies. Standard library only, Python 3.9+.
+#
+# An eval harness that needs a model to run is an eval harness that stops running the first
+# time a key rotates. Every grader here is deterministic and offline, which is also what
+# makes it safe to put in CI.
