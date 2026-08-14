@@ -1,4 +1,4 @@
-# Static checks on the Terraform trees under infra/.
+# Static checks on the Terraform trees under infra/ and the example suites under tests/.
 #
 # This repo is reference material: the configurations here are read and copied far more
 # often than they are applied. That inverts the usual reason for CI. Production infra
@@ -6,22 +6,31 @@
 # someone copies the HCL and cannot work out why it will not plan — and assumes the
 # mistake is theirs. `terraform validate` is the only thing that notices.
 #
+# The same argument covers the examples, which is why this file is named `checks` rather
+# than `terraform`: hermes-agent's write boundary and trace-eval's graders are the claims
+# those examples exist to make, and until this workflow ran them a broken boundary merged
+# green.
+#
 # Everything here runs without cloud credentials. That is a constraint worth keeping:
 # a check that needs a subscription is a check that gets disabled the first time a
 # secret expires.
 
-name: terraform
+name: checks
 
 on:
   push:
     branches: [main]
     paths:
       - "infra/**"
-      - ".github/workflows/terraform.yml"
+      - "examples/**"
+      - "tests/**"
+      - ".github/workflows/checks.yml"
   pull_request:
     paths:
       - "infra/**"
-      - ".github/workflows/terraform.yml"
+      - "examples/**"
+      - "tests/**"
+      - ".github/workflows/checks.yml"
 
 permissions:
   contents: read
@@ -121,6 +130,24 @@ jobs:
       # which GCP accepts and matches against nothing.
       - name: GCP — assert the write boundary holds
         run: python3 -m unittest discover -s infra/terraform-gcp/tests -v
+
+  examples:
+    name: examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Both example suites, one runner, no dependencies — the same reasoning as the
+      # write-boundary job above. hermes-agent asserts that a write cannot happen by the
+      # router's path; trace-eval asserts that its own checks still catch a run that
+      # bypasses it. Neither needs a model, a network, or a cloud account, which is what
+      # makes them safe to gate merges on.
+      - name: Example suites — hermes-agent and trace-eval
+        run: python3 -m unittest discover -s tests -v
 
   handlers:
     name: handlers

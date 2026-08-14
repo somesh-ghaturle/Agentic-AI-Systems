@@ -41,7 +41,9 @@ flowchart LR
   class OTel,Traces,Metrics,Audit,Provenance,ModelRegistry,Secrets,CI infra
 ```
 
-	SVG diagram (auto-generated on PR): [architecture.svg](architecture.svg)
+Full diagram with notes on how to read it: [architecture.md](architecture.md). The rendered
+[architecture.svg](architecture.svg) is a hand-exported snapshot — nothing in CI regenerates
+it, so treat `architecture.md` as the source of truth if the two ever disagree.
 
 Design guidance & 2026 reference
 
@@ -50,7 +52,8 @@ https://github.com/alirezadir/Agentic-AI-Systems/blob/main/03_system_design/2026
 
 Security & governance
 
-- API key enforcement via `x-api-key` header (for demo; replace with a secrets manager in production).
+- API key enforcement via `x-api-key` header, compared in constant time with `hmac.compare_digest`. `E2E_AGENT_API_KEY` has no default: the app refuses to start without it rather than falling back to a constant published in this repository. Set it to anything for a local demo, and use a secrets manager in production.
+- The container runs as the non-root user `appuser` (uid 10001).
 - `E2E_AGENT_MODEL`, `E2E_AGENT_COMMIT` environment variables for provenance and auditability.
 - Audit log and provenance files are stored in the repository under `examples/e2e-agent/` for demo; in production use immutable storage, tamper-evident logs, and RBAC.
 

@@ -47,22 +47,22 @@ second verify line needs a working Docker daemon.
 
 | # | Task | Phase | Severity | Status |
 |---|---|---|---|---|
-| 1 | Add a LICENSE | 1 | high | [ ] |
-| 2 | Fix e2e-agent's artifact paths | 2 | high | [ ] |
-| 3 | Ignore audit logs and provenance | 2 | high | [ ] |
-| 4 | Modernise timestamps in e2e-agent | 2 | low | [ ] |
-| 5 | Run example tests in CI | 3 | medium | [ ] |
-| 6 | Convert `tests/test_agent.py` to unittest | 3 | medium | [ ] |
-| 7 | Rewrite the root README's CI section | 4 | medium | [ ] |
-| 8 | Point architecture docs at all three trees | 4 | medium | [ ] |
-| 9 | Add the two newest examples to the architecture doc | 4 | medium | [ ] |
-| 10 | Add the missing example link and group the list by depth | 4 | medium | [ ] |
-| 11 | Repair the two LangChain examples | 5 | high | [ ] |
-| 12 | Pin example dependencies | 5 | medium | [ ] |
-| 13 | Close e2e-agent's three security gaps | 6 | medium | [ ] |
-| 14 | Note where model configuration lives on AWS | 6 | low | [ ] |
-| 15 | Convert `e2e-agent/architecture.mmd` | 6 | low | [ ] |
-| 16 | Drop the obsolete Compose `version` key | 6 | low | [ ] |
+| 1 | Add a LICENSE | 1 | high | [x] |
+| 2 | Fix e2e-agent's artifact paths | 2 | high | [x] |
+| 3 | Ignore audit logs and provenance | 2 | high | [x] |
+| 4 | Modernise timestamps in e2e-agent | 2 | low | [x] |
+| 5 | Run example tests in CI | 3 | medium | [x] |
+| 6 | Convert `tests/test_agent.py` to unittest | 3 | medium | [x] |
+| 7 | Rewrite the root README's CI section | 4 | medium | [x] |
+| 8 | Point architecture docs at all three trees | 4 | medium | [x] |
+| 9 | Add the two newest examples to the architecture doc | 4 | medium | [x] |
+| 10 | Add the missing example link and group the list by depth | 4 | medium | [x] |
+| 11 | Repair the two LangChain examples | 5 | high | [x] |
+| 12 | Pin example dependencies | 5 | medium | [x] |
+| 13 | Close e2e-agent's three security gaps | 6 | medium | [x] |
+| 14 | Note where model configuration lives on AWS | 6 | low | [x] |
+| 15 | Convert `e2e-agent/architecture.mmd` | 6 | low | [x] |
+| 16 | Drop the obsolete Compose `version` key | 6 | low | [x] |
 
 ---
 
@@ -279,7 +279,9 @@ with:
 **Verify.**
 
 ```bash
-grep -c "utcnow" examples/e2e-agent/app.py   # expect 0
+# Match the call, not the word: the docstring above deliberately names `utcnow()` to explain
+# why it went, so a bare grep for "utcnow" returns 1 and always will.
+grep -c "datetime\.utcnow" examples/e2e-agent/app.py   # expect 0
 python3 -W error::DeprecationWarning -c \
   "import sys; sys.path.insert(0,'examples/e2e-agent'); import app; print(app._timestamp())"
 ```
@@ -292,7 +294,8 @@ Until this lands, every fix in phases 4 to 6 is unprotected.
 
 ### Task 5 — Run example tests in CI
 
-**Finding.** [`terraform.yml:15-24`](../.github/workflows/terraform.yml) triggers only on:
+**Finding.** `terraform.yml:15-24` — since renamed by this task to
+[`checks.yml`](../.github/workflows/checks.yml) — triggered only on:
 
 ```yaml
 paths:
@@ -452,7 +455,12 @@ if __name__ == "__main__":
 
 ```bash
 python3 -m unittest discover -s tests            # expect: Ran 68 tests ... OK
-(cd /tmp && python3 -m unittest discover -s "$OLDPWD/tests" -t "$OLDPWD")
+
+# From elsewhere. Both paths are the tests directory: `tests/` has no __init__.py, so it is
+# not importable as a package, and passing the repository root as -t fails with
+# "Start directory is not importable" before a single test runs.
+repo="$PWD"
+(cd /tmp && python3 -m unittest discover -s "$repo/tests" -t "$repo/tests")
 ```
 
 ---
@@ -468,7 +476,8 @@ and GCP", and line 124 says "AWS needs no equivalent, because there the same mis
 plan-time error rather than a quiet one."
 
 Both are false. `infra/terraform-aws/tests/` holds 11 tests and the workflow runs them at
-[`terraform.yml:108-109`](../.github/workflows/terraform.yml). The suite's own header
+`terraform.yml:108-109`, now [`checks.yml`](../.github/workflows/checks.yml).
+The suite's own header
 explains why the original reasoning was incomplete: the
 resource-policy half is a plan-time error, the identity-policy half is not, and widening
 `var.tool_function_arns` passes `terraform validate` in silence.
@@ -669,10 +678,14 @@ from langchain.llms import OpenAI
 ```
 
 These target the pre-0.2 top-level API. Both `requirements.txt` files ask for
-`langchain>=0.0.300`, which resolves to the current 0.3 line, where `LLMChain` and
-`PromptTemplate` are no longer exported from the package root and `langchain.llms` has
-moved to `langchain_community`. `openai>=0.27.0` has the same shape of problem across the
-1.0 rewrite.
+`langchain>=0.0.300`, which resolves to **1.3.15** — `LLMChain` and `PromptTemplate` are no
+longer exported from the package root, and `langchain.llms` moved to `langchain_community`
+long before that. `openai>=0.27.0` has the same shape of problem: it resolves to **3.0.0**,
+two rewrites past the API this code was written against.
+
+Checked on 2026-08-14 with `pip index versions`. Installing `langchain-core` and
+`langchain-openai` does not pull the old top-level `langchain` distribution at all, so the
+original import is now a bare `ModuleNotFoundError: No module named 'langchain'`.
 
 The second half is worse. Both call sites wrap the import in `except Exception` and return:
 

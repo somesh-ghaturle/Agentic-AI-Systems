@@ -1,1 +1,5 @@
-ray[default]>=2.7.0
+# Pinned rather than floored. See docs/REPO-AUDIT.md task 12 for why floors were replaced
+# across the examples.
+#
+# Resolved 2026-08-14 on Python 3.14.
+ray[default]==2.57.0

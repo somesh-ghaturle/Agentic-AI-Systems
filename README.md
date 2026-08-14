@@ -97,17 +97,24 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 - Governance checklist: [docs/governance-checklist.md](docs/governance-checklist.md)
 - Security checklist: [docs/security-checklist.md](docs/security-checklist.md)
 - Privacy checklist: [docs/privacy-checklist.md](docs/privacy-checklist.md)
-- Starter agent example: [examples/starter-agent/README.md](examples/starter-agent/README.md)
 - CONTRIBUTING guidelines: [CONTRIBUTING.md](CONTRIBUTING.md)
 
-More runnable templates (examples):
+**Worked examples** — tests, architecture notes, and no dependencies:
 
-- LangChain agent: [examples/langchain-agent/README.md](examples/langchain-agent/README.md)
-- Retrieval (RAG) with FAISS: [examples/rag-faiss/README.md](examples/rag-faiss/README.md)
-- Ray orchestration sample: [examples/ray-orchestrator/README.md](examples/ray-orchestrator/README.md)
-- End-to-end secure & observable agent (traceability, SLA, governance): [examples/e2e-agent/README.md](examples/e2e-agent/README.md)
-- Hermes router — the write boundary in application code: [examples/hermes-agent/README.md](examples/hermes-agent/README.md)
-- Trace-level evals — scoring the path, not just the answer: [examples/trace-eval/README.md](examples/trace-eval/README.md)
+- [hermes-agent](examples/hermes-agent/README.md) — routing and the write boundary in application code
+- [trace-eval](examples/trace-eval/README.md) — trace-level evaluation, scoring the path rather than the answer
+
+**Applied example** — tracing, audit, provenance, and governance docs over HTTP:
+
+- [e2e-agent](examples/e2e-agent/README.md)
+
+**Minimal references** — short scripts showing one idea each:
+
+- [starter-agent](examples/starter-agent/README.md) — the smallest possible agent loop
+- [rag-faiss](examples/rag-faiss/README.md) — build and query a local vector index
+- [rag-langchain](examples/rag-langchain/README.md) — the same, through LangChain
+- [langchain-agent](examples/langchain-agent/README.md) — a minimal LangChain agent
+- [ray-orchestrator](examples/ray-orchestrator/README.md) — parallel task execution with Ray
 
 **Hermes** is the runnable counterpart to the infrastructure below. It routes a request to a handler, runs read tools on the spot, and returns anything that would change state as a proposal that stops until a human approves *that specific action* — approval bound to a fingerprint of the exact arguments, single-use, expiring. The router holds no reference to a write tool; the approval executor holds nothing else. Standard library only, no model, no cloud account, and the boundary tests were mutation-tested rather than trusted.
 
@@ -115,10 +122,19 @@ More runnable templates (examples):
 
 ## CI
 
-[`.github/workflows/terraform.yml`](.github/workflows/terraform.yml) runs on any change under `infra/`:
+[`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, or `tests/`:
 
 - `terraform fmt -check` across all three trees
 - `terraform validate` on each of the seven environment roots, as a matrix so one broken root does not hide the others
-- Write-boundary tests for Azure and GCP — stdlib `unittest` reading `.tf` files as text
+- Write-boundary tests for all three trees — stdlib `unittest` reading `.tf` files as text
+- Handler logic tests for all three trees
+- Deployment package builds for all three trees
+- Both example suites — `hermes-agent` and `trace-eval`
 
-Everything runs without cloud credentials, which is deliberate: a check that needs a subscription is a check that gets disabled the first time a secret expires. The write-boundary tests exist because `terraform validate` accepts every mistake they catch — in each case the wrong value is a valid value in a valid attribute. AWS needs no equivalent, because there the same mistake is a plan-time error rather than a quiet one.
+Everything runs without cloud credentials, which is deliberate: a check that needs a subscription is a check that gets disabled the first time a secret expires.
+
+The write-boundary tests exist because `terraform validate` accepts every mistake they catch — in each case the wrong value is a valid value in a valid attribute. AWS was originally excluded on the grounds that its boundary is a Lambda resource policy, so getting it wrong fails at plan time. That turned out to be true of the resource policy and only of it: for a caller in the same account Lambda grants invocation if the *identity* policy allows it **or** the resource policy does, and the orchestrator's identity policy is built from a list nothing checked. Widening that list to every tool is a one-word edit that plans, validates, and applies cleanly. The AWS suite guards that half.
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE). The Terraform trees and examples are intended to be copied into your own repositories and adapted.

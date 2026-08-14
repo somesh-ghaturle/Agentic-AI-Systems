@@ -26,7 +26,7 @@ That framing is the thesis of this folder.
 | [PRODUCTION-PRINCIPLES.md](PRODUCTION-PRINCIPLES.md) | Reliability, cost and latency, context and RAG design, observability, security and privacy |
 | [checklists/design-review.md](checklists/design-review.md) | A design review to run before building, and again before shipping |
 | [REFERENCES.md](REFERENCES.md) | Sourcing and provenance — which claims are measured, which are directional |
-| [infra/terraform-aws/](../../infra/terraform-aws/README.md) | This architecture as Terraform on AWS — one module per building block |
+| [infra/](../../infra/) | This architecture as Terraform on three clouds — [AWS](../../infra/terraform-aws/README.md), [Azure](../../infra/terraform-azure/README.md), [GCP](../../infra/terraform-gcp/README.md), each with its own `ARCHITECTURE.md` drawn in that cloud's terms |
 
 ---
 
@@ -78,9 +78,15 @@ and the design review. Most production problems trace back to a missing structur
 contract, an unbounded autonomous loop, or no trace-level evaluation.
 
 **Want to see the patterns in code:** the [examples/](../../examples/) directory has
-runnable implementations — [starter-agent](../../examples/starter-agent/README.md),
+runnable implementations. Two implement the building blocks directly —
+[hermes-agent](../../examples/hermes-agent/README.md) is the tool read/write split and the
+approval gate in application code, and [trace-eval](../../examples/trace-eval/README.md) is
+the evaluation feedback edge above, scoring the path a run took rather than only the answer
+it gave. Both are standard library only. Alongside them are smaller references:
+[starter-agent](../../examples/starter-agent/README.md),
 [rag-faiss](../../examples/rag-faiss/README.md),
 [rag-langchain](../../examples/rag-langchain/README.md),
+[langchain-agent](../../examples/langchain-agent/README.md),
 [ray-orchestrator](../../examples/ray-orchestrator/README.md), and
 [e2e-agent](../../examples/e2e-agent/README.md) with its architecture diagram, model card,
 datasheet, and SLA.

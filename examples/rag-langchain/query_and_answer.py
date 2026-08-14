@@ -4,6 +4,8 @@
 If `OPENAI_API_KEY` is not set, the script prints retrieved documents and a suggested answer template.
 """
 import os
+import sys
+
 from sentence_transformers import SentenceTransformer
 import faiss
 
@@ -26,30 +28,47 @@ def retrieve(q: str, k: int = 2, model_name: str = "all-MiniLM-L6-v2"):
     return results
 
 
-def answer_with_llm(query: str, context_texts: list[str]):
-    try:
-        from langchain import LLMChain, PromptTemplate
-        from langchain.llms import OpenAI
-    except Exception:
-        return None
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        return None
-    llm = OpenAI(temperature=0.0)
-    prompt_template = """
-You are an assistant. Use the following context to answer the user.
+SYSTEM_PROMPT = "You are an assistant. Use the following context to answer the user."
 
-Context:\n{context}\n
-User question:\n{question}
-"""
-    prompt = PromptTemplate(input_variables=["context", "question"], template=prompt_template)
-    chain = LLMChain(llm=llm, prompt=prompt)
-    out = chain.run({"context": "\n".join(context_texts), "question": query})
+
+def answer_with_llm(query: str, context_texts: list[str]):
+    """Return the model's answer, or None so the caller falls back to the template.
+
+    The reason for returning None goes to stderr rather than staying silent. This function
+    previously swallowed every failure — including a version mismatch — into a bare `return
+    None`, so the script printed the fallback template and gave no clue why.
+    """
+    # ImportError only: a bare `except Exception` here hid genuine runtime failures behind
+    # the same silent fallback as a missing package.
+    try:
+        from langchain_core.output_parsers import StrOutputParser
+        from langchain_core.prompts import ChatPromptTemplate
+        from langchain_openai import ChatOpenAI
+    except ImportError as error:
+        print(
+            f"LangChain is not installed or is a version this example does not target: "
+            f"{error}. Install the pinned requirements.txt.",
+            file=sys.stderr,
+        )
+        return None
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        print("OPENAI_API_KEY not set — set it to use the OpenAI model.", file=sys.stderr)
+        return None
+
+    template = ChatPromptTemplate.from_messages(
+        [
+            ("system", SYSTEM_PROMPT + "\n\nContext:\n{context}"),
+            ("human", "{question}"),
+        ]
+    )
+    # LCEL: the pipe replaces LLMChain, which the 1.x line removed outright.
+    chain = template | ChatOpenAI(temperature=0.0) | StrOutputParser()
+    out = chain.invoke({"context": "\n".join(context_texts), "question": query})
     return out.strip()
 
 
 if __name__ == "__main__":
-    import sys
     q = "What are governance needs for enterprise AI?" if len(sys.argv) == 1 else " ".join(sys.argv[1:])
     res = retrieve(q)
     print("Retrieved documents:")

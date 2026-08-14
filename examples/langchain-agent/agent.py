@@ -14,25 +14,28 @@ PROMPT = "\n".join(["You are a helpful assistant.", "Answer concisely."])
 
 
 def run_with_langchain(prompt: str) -> str:
+    # ImportError only. A bare `except Exception` here reported "not installed" for every
+    # failure including a version mismatch, which sent people to reinstall a package that
+    # was already present and correct.
     try:
-        from langchain import LLMChain, PromptTemplate
-        from langchain.llms import OpenAI
-    except Exception:
-        return "LangChain or OpenAI not installed — install requirements to run with real LLM."
+        from langchain_core.output_parsers import StrOutputParser
+        from langchain_core.prompts import ChatPromptTemplate
+        from langchain_openai import ChatOpenAI
+    except ImportError as error:
+        return (
+            f"LangChain is not installed or is a version this example does not target: "
+            f"{error}. Install the pinned requirements.txt."
+        )
 
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        return "OPENAI_API_KEY not set — set it to use OpenAI LLM."
+    if not os.environ.get("OPENAI_API_KEY"):
+        return "OPENAI_API_KEY not set — set it to use the OpenAI model."
 
-    llm = OpenAI(temperature=0.2)
-    template = PromptTemplate(input_variables=["system", "input"], template="""
-{system}
-
-User: {input}
-""")
-    chain = LLMChain(llm=llm, prompt=template)
-    out = chain.run({"system": PROMPT, "input": prompt})
-    return out.strip()
+    template = ChatPromptTemplate.from_messages(
+        [("system", PROMPT), ("human", "{input}")]
+    )
+    # LCEL: the pipe replaces LLMChain, which the 1.x line removed outright.
+    chain = template | ChatOpenAI(temperature=0.2) | StrOutputParser()
+    return chain.invoke({"input": prompt}).strip()
 
 
 def main():

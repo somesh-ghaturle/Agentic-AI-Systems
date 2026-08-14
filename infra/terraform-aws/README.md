@@ -60,6 +60,23 @@ application code decides" rendered as IAM.
 Both environments use the **same modules and the same wiring**. Only variables differ — an
 approval gate exercised only in prod is a gate nobody has tested.
 
+**Where the model layer lives.** AWS has no `model-integration/` module, unlike the Azure
+and GCP trees. Bedrock model access and the guardrail are declared in `modules/security/`,
+because on AWS the model layer *is* an access-control surface: there is no account resource
+to create, only an IAM policy naming the model ARNs and a `aws_bedrock_guardrail` attached
+to them. Azure and GCP both need a first-class account or endpoint resource, so both earn a
+module. Identity is distributed the same way — each module declares the roles it needs
+rather than a central `identity/` module owning them.
+
+**Why handler dependencies carry floors, not pins.** `src/*/requirements.txt` here uses
+`>=` while `examples/*/requirements.txt` was pinned to `==`
+(see [docs/REPO-AUDIT.md](../../docs/REPO-AUDIT.md) task 12). The difference is deliberate.
+These handlers are deployed rather than demonstrated: the Lambda runtime already ships a
+boto3, and pinning a conflicting one into the package is how you get an import error that
+only appears in the deployed artifact. The AWS SDKs also hold a far stronger compatibility
+line than the LLM framework ecosystem, which is what made floors unsafe in the examples —
+`langchain>=0.0.300` resolved to 1.3.15 and took its own imports with it.
+
 ---
 
 ## Quick start

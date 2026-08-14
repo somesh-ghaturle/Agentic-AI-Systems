@@ -1,10 +1,12 @@
-version: '3.8'
 services:
   e2e-agent:
     build: .
     command: uvicorn app:app --host 0.0.0.0 --port 8000
     environment:
-      E2E_AGENT_API_KEY: ${E2E_AGENT_API_KEY:-local-test-key}
+      # `:?` rather than `:-`. A default here would put the published demo key back into
+      # the one path most likely to be copied into a deployment, undoing the fail-closed
+      # check in app.py. Export it first: E2E_AGENT_API_KEY=local-test-key docker compose up
+      E2E_AGENT_API_KEY: ${E2E_AGENT_API_KEY:?set E2E_AGENT_API_KEY before starting}
       E2E_AGENT_MODEL: ${E2E_AGENT_MODEL:-v0.1-demo}
       E2E_AGENT_COMMIT: ${E2E_AGENT_COMMIT:-local-demo}
     ports:

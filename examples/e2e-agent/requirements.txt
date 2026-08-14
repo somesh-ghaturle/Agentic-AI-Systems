@@ -1,5 +1,10 @@
-fastapi
-uvicorn[standard]
-opentelemetry-api
-opentelemetry-sdk
-pydantic
+# Pinned rather than floored. CONTRIBUTING asks for reproducible examples and pinned
+# dependencies; `fastapi`, `uvicorn`, and `numpy` previously carried no constraint at all,
+# which is the same unbounded range that broke the LangChain examples.
+#
+# Resolved 2026-08-14 on Python 3.14.
+fastapi==0.141.1
+uvicorn[standard]==0.52.3
+opentelemetry-api==1.44.0
+opentelemetry-sdk==1.44.0
+pydantic==2.13.4

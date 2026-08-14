@@ -45,6 +45,21 @@ __pycache__/
 .venv/
 
 # ---------------------------------------------------------------------------
+# Example run artifacts
+# ---------------------------------------------------------------------------
+
+# e2e-agent writes the full prompt, response, and user id into every audit entry and one
+# provenance file per request. Both are produced by running the demo, and both are exactly
+# the kind of content that should never reach a commit. The Terraform patterns above guard
+# against a 580 MB push; these guard against a smaller and more embarrassing one.
+examples/e2e-agent/audit.log
+examples/e2e-agent/provenance/
+
+# rag-* build a local index on first run.
+examples/rag-faiss/index.faiss
+examples/rag-langchain/index.faiss
+
+# ---------------------------------------------------------------------------
 # OS noise
 # ---------------------------------------------------------------------------
 

@@ -1,5 +1,12 @@
-sentence-transformers>=2.2.0
-faiss-cpu
-langchain>=0.0.300
-openai>=0.27.0
-numpy
+# Pinned rather than floored. This example previously carried `langchain>=0.0.300`, which
+# resolved to a line where its own imports no longer exist — see docs/REPO-AUDIT.md task 11.
+#
+# Direct dependencies only, at the versions that resolved. A full transitive freeze is also
+# reproducible, but this file is meant to be read as well as installed.
+#
+# Resolved 2026-08-14 on Python 3.14.
+sentence-transformers==5.7.0
+faiss-cpu==1.15.0
+numpy==2.5.2
+langchain-core==1.5.4
+langchain-openai==1.5.1
