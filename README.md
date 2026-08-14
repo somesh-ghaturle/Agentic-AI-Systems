@@ -93,6 +93,7 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 
 ## Included templates & checklists
 
+- Repository audit (2026-08-14) — findings and suggested order: [docs/REPO-AUDIT.md](docs/REPO-AUDIT.md)
 - Governance checklist: [docs/governance-checklist.md](docs/governance-checklist.md)
 - Security checklist: [docs/security-checklist.md](docs/security-checklist.md)
 - Privacy checklist: [docs/privacy-checklist.md](docs/privacy-checklist.md)

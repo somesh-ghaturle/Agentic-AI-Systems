@@ -61,7 +61,8 @@ flowchart TB
 ```
 
 Neither grader is given the other's information. The moment they share it, the comparison
-stops measuring anything.
+stops measuring anything. The same diagram with notes on how to read it:
+[architecture.md](architecture.md).
 
 Two subjects answer the same seven requests, using **the same tools over the same data** —
 `subjects.py` imports the actual tool functions from [hermes-agent](../hermes-agent/), it
