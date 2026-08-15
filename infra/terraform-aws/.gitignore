@@ -2,7 +2,12 @@
 *.tfstate
 *.tfstate.*
 .terraform/
-.terraform.lock.hcl
+
+# `.terraform.lock.hcl` is deliberately NOT ignored, and used to be. It is the only committed
+# file that names the provider version CI actually ran against: `~> 5.0` in required_providers
+# permits every 5.x, and the lock is what makes two people resolve the same one. Ignoring it
+# here while the Azure and GCP trees committed theirs meant the AWS roots were the two of seven
+# that could not be reproduced — the pin looked enforced and was not.
 
 # Real variable values. Only the .example files are committed.
 terraform.tfvars

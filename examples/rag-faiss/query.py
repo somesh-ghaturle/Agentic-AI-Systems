@@ -5,13 +5,13 @@ Run `build_index.py` first to create `index.faiss`.
 """
 from sentence_transformers import SentenceTransformer
 import faiss
-import numpy as np
 
-DOCS = [
-    "Agentic AI systems coordinate tools and models to solve multi-step tasks.",
-    "Reproducibility and governance are critical for enterprise deployments.",
-    "FAISS provides efficient similarity search over dense vectors.",
-]
+# Imported rather than copied. This list used to be duplicated verbatim in both files, which
+# is a silent-corruption bug waiting to happen: the index is built from build_index.DOCS and
+# the search results are mapped back to labels by position. Edit one list and the other keeps
+# reporting the old text against the new vectors — every result confidently wrong, nothing
+# raised, and the two files still looking correct read on their own.
+from build_index import DOCS
 
 
 def query(q: str, k: int = 2, model_name: str = "all-MiniLM-L6-v2"):

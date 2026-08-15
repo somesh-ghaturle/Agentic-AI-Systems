@@ -6,7 +6,7 @@ first place: **the repository has no automated check that would have caught them
 
 The audit's most serious finding — `rag-langchain` and `langchain-agent` importing a LangChain
 v0.x API that no longer exists — was found by a human reading files. CI was green throughout.
-It was green because five of the eight examples are verified by nothing: no test, no import
+It was green because five of the eight examples were verified by nothing: no test, no import
 check, not even a syntax check. Pinned dependencies plus no update signal is how the pins got
 stale, and nothing in the repository would have told anyone.
 
@@ -37,11 +37,11 @@ No task needs cloud credentials. Task 2 needs network access to resolve pins fro
 
 | # | Task | Phase | Severity | Status |
 |---|---|---|---|---|
-| 1 | Syntax-check all eight examples | 1 | high | [x] |
+| 1 | Syntax-check every example | 1 | high | [x] |
 | 2 | Install and import the five dependency-carrying examples | 1 | high | [x] |
 | 3 | Assert e2e-agent still fails closed without its key | 1 | medium | [x] |
 | 4 | Dependabot for pip, terraform, and github-actions | 2 | high | [x] |
-| 5 | Relative-link check in CI | 3 | medium | [ ] |
+| 5 | Relative-link check in CI | 3 | medium | [x] |
 | 6 | Add SECURITY.md | 4 | medium | [ ] |
 | 7 | Ruff config and lint job — parity with `terraform fmt` | 4 | low | [ ] |
 | 8 | tflint and checkov over the three trees | 5 | low | [ ] |
@@ -55,7 +55,7 @@ Phases 1 and 2 are the agreed scope. Phases 3 onward are sequenced but not commi
 
 ## Phase 1 — Verify the examples (the gap that already bit)
 
-Three of eight examples are covered by `tests/`: `starter-agent`, `hermes-agent`, and
+Three of eight examples were covered by `tests/` when this plan was written (seven of eleven now): `starter-agent`, `hermes-agent`, and
 `trace-eval`. The other five — `e2e-agent`, `langchain-agent`, `rag-faiss`, `rag-langchain`,
 `ray-orchestrator` — are covered by nothing.
 
@@ -64,7 +64,7 @@ every change; task 2 costs minutes and downloads `ray[default]` and `sentence-tr
 it earns its own path filter. Collapsing them would mean either paying the slow cost for a typo
 or losing the fast signal entirely.
 
-### Task 1 — Syntax-check all eight examples
+### Task 1 — Syntax-check every example
 
 **Severity: high.** Catches a broken example in about a second, with no dependencies at all.
 This is strictly weaker than task 2 and does not replace it: `compileall` parses, it does not
@@ -238,6 +238,11 @@ python3 -c "import yaml,sys; yaml.safe_load(open('.github/dependabot.yml')); pri
 
 ## Phase 3 — Documentation integrity
 
+**Done 2026-08-15 as round-two Task 17 in [REPO-AUDIT.md](REPO-AUDIT.md),** which
+supersedes this section: it carries the two false-positive findings (fenced code
+blocks, `#fragment` suffixes) that this task was written without, and it also widened
+the path filters so documentation changes trigger CI at all.
+
 ### Task 5 — Relative-link check in CI
 
 **Severity: medium.** This repository is 67 markdown files and its primary output is prose. A
@@ -306,7 +311,11 @@ rather than lowering the rules to make it pass.
 so they fit the existing constraint. Expect noise on first run; tune the ruleset rather than
 disabling the job.
 
-### Task 9 — Reconcile the Terraform version pin
+### Task 9 — Reconcile the Terraform CLI version pin
+
+**This is the CLI, not the providers.** `.github/dependabot.yml` used to point here for the
+provider-constraint decision; that was task 21 in [REPO-AUDIT.md](REPO-AUDIT.md), and it closed
+on 2026-08-15 by pinning every provider to its major. Nothing below is affected by it.
 
 **Severity: low.** CI pins 1.9.8. Local development is on 1.15.8. `fmt` agrees across that gap
 and all seven roots validate on both, but the two are not guaranteed to stay agreed, and a

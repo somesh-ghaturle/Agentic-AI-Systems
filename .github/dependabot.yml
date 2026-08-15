@@ -72,18 +72,25 @@ updates:
   # Terraform providers
   # ---------------------------------------------------------------------------
   #
-  # CAVEAT, and it is the whole story for this entry: every required_providers block in the
-  # three trees declares a floor (`version = ">= 5.0"`), not a pin. Dependabot raises a
-  # constraint when the constraint excludes the newest release, and a floor never excludes
-  # anything, so as written this entry will open approximately zero pull requests.
+  # This entry used to carry a caveat saying it would open approximately zero pull requests,
+  # because every required_providers block declared a floor (`>= 5.0`) and Dependabot only
+  # raises a constraint that actually excludes the newest release. That is no longer true.
+  # Every block in the three trees now pins to a major — `~> 5.0` for aws and azurerm, `~> 3.0`
+  # for azuread, `~> 6.0` for google, `~> 3.6` for random — so a new major opens a PR here.
   #
-  # It is here anyway because it costs nothing and starts working the moment the constraints
-  # tighten. Whether they *should* tighten is a real decision this repository has not made:
-  # `>= 5.0` means a reader running `terraform init` today gets whatever shipped this morning,
-  # which is honest about the trees being reference material rather than a deployed system, but
-  # it also means the configurations are validated in CI against a provider version that no
-  # committed file names. `~> 5.0` would make CI reproducible at the cost of the trees quietly
-  # falling behind. See task 9 in docs/HARDENING-PLAN.md.
+  # The decision behind that, recorded in task 21 of docs/REPO-AUDIT.md: these trees are read
+  # and copied more often than they are applied, and a reader running `terraform init` on a
+  # floor gets whatever shipped that morning, against which CI's green check said nothing. The
+  # cost accepted in exchange is that the trees fall behind a major until someone merges the PR
+  # this entry opens — which is the point of pointing Dependabot at them.
+  #
+  # The pin names the major; `.terraform.lock.hcl` in each of the seven roots names the exact
+  # version, and all seven are committed. Both halves are required: the constraint bounds what
+  # `init` may resolve, the lock records what it did.
+  #
+  # `/infra/terraform-aws` and `/infra/terraform-azure/modules/*` are absent on purpose. The AWS
+  # tree has no tree-level .tf files (it declares in each main.tf), and the Azure modules
+  # declare no required_providers at all, inheriting from whichever root calls them.
   - package-ecosystem: terraform
     directories:
       - /infra/terraform-aws/envs/*

@@ -14,6 +14,12 @@
 # Everything here runs without cloud credentials. That is a constraint worth keeping:
 # a check that needs a subscription is a check that gets disabled the first time a
 # secret expires.
+#
+# The path filters now include docs/ and the root markdown files, which they did not until
+# 2026-08-15. This repository is 70 markdown files against 11 examples — mostly documentation,
+# by volume and by purpose — and until that change a documentation-only commit ran no checks
+# at all. REPO-AUDIT Task 12 was two broken links to a workflow that had been renamed, merged
+# green, and found by a human reading the file. See round-two Task 17.
 
 name: checks
 
@@ -24,12 +30,18 @@ on:
       - "infra/**"
       - "examples/**"
       - "tests/**"
+      - "docs/**"
+      - "*.md"
+      - ".github/scripts/**"
       - ".github/workflows/checks.yml"
   pull_request:
     paths:
       - "infra/**"
       - "examples/**"
       - "tests/**"
+      - "docs/**"
+      - "*.md"
+      - ".github/scripts/**"
       - ".github/workflows/checks.yml"
 
 permissions:
@@ -47,9 +59,28 @@ jobs:
           terraform_version: "1.9.8"
           terraform_wrapper: false
 
-      # One pass over both trees — formatting has no per-root component.
+      # One pass over all three trees — formatting has no per-root component.
       - name: fmt
         run: terraform fmt -recursive -check -diff infra/
+
+      # Guards the decision in REPO-AUDIT task 21: every provider constraint pins a major
+      # (`~> `), never a floor (`>= `). A floor here is invisible to `validate` — it resolves
+      # fine, it just resolves to something different next month — so nothing else in this
+      # workflow would catch a reintroduced one.
+      #
+      # Matches the bare `version` key only. `required_version` is `>= 1.6` throughout and
+      # should stay a floor: capping the Terraform CLI to a major buys nothing.
+      #
+      # Two of these floors survived for months in tree-level versions.tf files that no root
+      # reads and `validate` therefore never loaded, which is exactly the shape of drift a
+      # grep catches and a plan does not.
+      - name: provider pins
+        run: |
+          if grep -rnE '^\s+version\s*=\s*">=' infra --include='*.tf'; then
+            echo "::error::Provider constraint uses a floor (>=). Pin the major with ~> — see docs/REPO-AUDIT.md task 21."
+            exit 1
+          fi
+          echo "All provider constraints pin a major."
 
   validate:
     name: validate
@@ -165,6 +196,28 @@ jobs:
       # commit to infra/.
       - name: All examples — syntax
         run: python3 -m compileall -q examples/
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Relative links only, and that is deliberate. External URLs rot for reasons nobody here
+      # controls, and a job that goes red because someone else's blog moved is a job that gets
+      # switched off — taking the useful half of the check with it.
+      #
+      # The script skips fenced code blocks and strips #fragments. Both matter more than they
+      # sound: a naive version of this check reported 34 broken links in this repository and
+      # every one was a false positive, because the audit and plan documents quote other
+      # files' markdown inside fences, and `FILE.md#anchor` is a valid link to a file that
+      # exists. The script's docstring carries the detail.
+      - name: Relative links resolve
+        run: python3 .github/scripts/linkcheck.py .
 
   handlers:
     name: handlers

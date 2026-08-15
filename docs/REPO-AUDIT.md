@@ -398,7 +398,7 @@ two tests have never run — not locally, not in CI — and they are the only co
 The file also builds a repo-root-relative path, so it only works from one directory — the
 same class of bug as Task 2.
 
-**Fix.** Replace the whole of [`tests/test_agent.py`](../tests/test_agent.py) with:
+**Fix.** Replace the whole of [`tests/test_agent.py`](../tests/test_starter_agent.py) with:  <!-- renamed to test_starter_agent.py on 2026-08-15; see round-two Task 18 -->
 
 ```python
 """Smoke tests for the starter agent.
@@ -1053,3 +1053,271 @@ examined.
 234 tests passed at audit time. The `.gitignore` is thorough on Terraform artifacts and
 explains its own reasoning, which is what makes Task 3 stand out — it covers the 580 MB
 failure mode and misses the one that leaks prompt text.
+
+---
+---
+
+# Round two — 2026-08-15
+
+A second pass, one day after the first. Everything above this line is the record of
+2026-08-14 and is left exactly as it was written; nothing in round one was edited to
+accommodate what follows. An audit that gets revised after the fact stops being evidence of
+what was true when it ran.
+
+**What changed in between.** The [hardening plan](HARDENING-PLAN.md) landed its first two
+phases — example syntax and import verification, and Dependabot. The
+[concepts plan](CONCEPTS-PLAN.md) added harness, context, and graph engineering, taking the
+repository from eight examples to eleven and from 68 tests to 146.
+
+**How these findings were reached.** Round one was a full read. This one is narrower: it comes
+from working in the repository for a day and noticing what the checks do not cover. Three of
+the six are consequences of the repository growing — the fourth is stale text in a document
+written yesterday.
+
+**Scope:** 11 examples, 146 tests, 3 Terraform trees, 2 workflows, 70 markdown files.
+
+---
+
+## Progress
+
+| # | Task | Severity | Status |
+|---|---|---|---|
+| 17 | Documentation changes run no CI at all | high | [x] |
+| 18 | Four examples verified by nothing but syntax and import | medium | [x] |
+| 19 | `CONTRIBUTING.md` does not describe the bar the repo holds | medium | [x] |
+| 20 | `HARDENING-PLAN.md` says "eight examples"; there are eleven | low | [x] |
+| 21 | Terraform providers are floors, not pins — a decision, not a defect | low | [x] |
+| 22 | Hardening plan phases 3–6 remain | low | [ ] |
+
+Numbering continues from round one deliberately. Task 17 is the seventeenth thing this
+repository has been asked to fix, and restarting at 1 would hide that.
+
+---
+
+## Task 17 — Documentation changes run no CI at all
+
+**Severity: high.** The largest structural hole currently in the repository.
+
+Both workflows filter on the same three paths:
+
+```yaml
+paths:
+  - "infra/**"
+  - "examples/**"
+  - "tests/**"
+```
+
+Nothing matches `docs/**` or the root `*.md` files. This repository is **70 markdown files
+against 11 examples** — mostly documentation, by volume and by purpose — and a documentation-only
+commit currently merges with zero checks run against it.
+
+This is not hypothetical. Round one, Task 12 in this very document, fixed two broken links in
+`REPO-AUDIT.md` pointing at `terraform.yml`, a workflow that had been renamed to `checks.yml`.
+A link check would have caught it at review time. There was no link check, and there still is
+not one.
+
+**Fix.** Land the link checker used to verify both plans into `.github/scripts/linkcheck.py`,
+add a `docs` job to `checks.yml`, and widen both workflows' path filters to include `docs/**`
+and `*.md`.
+
+Two things the checker must handle, both established by writing a naive version and reading
+its output — it reported 34 broken links across this repository and every one was a false
+positive:
+
+- **Fenced code blocks.** This document and both plans quote other files' markdown, including
+  their relative links, inside triple-backtick fences. Those resolve against the file being
+  quoted, not the file quoting it.
+- **`#fragment` suffixes.** `ARCHITECTURE.md#6--what-terraform-builds` is a valid link to a
+  file that exists. Split on `#` and test the left half.
+
+The real count with both handled is zero. This task is about keeping it there.
+
+**Verify:**
+
+```bash
+python3 .github/scripts/linkcheck.py .          # exits non-zero on the first broken link
+python3 -c "
+import yaml
+w = yaml.safe_load(open('.github/workflows/checks.yml'))
+assert 'docs/**' in w[True]['pull_request']['paths'], 'docs still not covered'
+print('docs changes now trigger CI')"
+```
+
+---
+
+## Task 18 — Four examples verified by nothing but syntax and import
+
+**Severity: medium.**
+
+`langchain-agent`, `rag-faiss`, `rag-langchain`, and `ray-orchestrator` have no test file. The
+`example-deps` job imports them, which catches a stale pin — the failure that actually happened
+here — and `compileall` catches a syntax error. Neither catches wrong behaviour.
+
+Seven of eleven examples now have suites. These four are the remainder, and they are the same
+four that were quietly broken before round one.
+
+**Fix.** `rag-faiss` is the tractable one and should go first: build an index over a small fixed
+corpus, query it, assert the expected document ranks first. Deterministic, offline, no key —
+which is what makes it safe to gate merges on. It needs `faiss-cpu` and
+`sentence-transformers`, so the suite skips when they are absent and runs in `example-deps`,
+the same pattern as `tests/test_e2e_agent.py`.
+
+`ray-orchestrator` is second: assert the tasks fan out and results come back in the right shape.
+
+`langchain-agent` and `rag-langchain` are hardest to test honestly because their subject is a
+call to a model. Assert what does not need one — that the chain composes, that the prompt
+template renders with the expected variables — and say plainly in the README that the model
+call itself is unverified. A test that mocks the model and asserts the mock was called proves
+nothing.
+
+`tests/test_agent.py` was renamed to `tests/test_starter_agent.py` as part of this task, so
+that every suite matches the `test_<example>.py` convention that `CONTRIBUTING.md` now states.
+Round one's prose still refers to the old name — correctly, since that was its name then — and
+only the link target was repointed.
+
+That rename immediately broke a relative link in round one, and the `docs` job added in Task 17
+caught it on the first run. Worth recording: the check justified itself within the same session
+it was written.
+
+**Verify:**
+
+```bash
+python3 -m unittest discover -s tests 2>&1 | tail -3
+for d in examples/*/; do
+  n=$(basename "$d")
+  ls tests/ | grep -q "${n//-/_}" || echo "no suite: $n"
+done
+```
+
+---
+
+## Task 19 — `CONTRIBUTING.md` does not describe the bar the repo holds
+
+**Severity: medium**, and the highest-leverage document in the repository for what it costs.
+
+The current text says "follow PEP8", "add tests or a smoke-check where applicable", and "keep
+code simple and dependency-light". None of that is wrong. All of it is generic, and someone
+following it would not produce anything resembling `hermes-agent` or `harness-agent`.
+
+The standard this repository actually holds is specific and unusual, and it is currently
+written down nowhere:
+
+| The real rule | Where it is visible |
+| --- | --- |
+| Standard library only, unless the dependency *is* the subject | 7 of 11 `requirements.txt` files, each explaining why |
+| Boundary tests are mutation-tested, not trusted | `hermes-agent`, `harness-agent` (9 mutations, all caught) |
+| A worked example carries an `architecture.md` with mermaid | `hermes-agent`, `trace-eval`, `e2e-agent`, `harness-agent` |
+| No check may require a secret | Every workflow job; stated in `checks.yml`'s header |
+| Three tiers — worked, applied, minimal — and new examples declare one | Root README's examples section |
+| Comments explain *why*, at the density of the surrounding file | Every `.tf` and `.py` file added since round one |
+| Pins are exact, with the resolution date recorded | Every `requirements.txt` |
+
+For a repository whose stated purpose is being read and copied, the file that tells people how
+to add to it should not be the least specific document in it.
+
+**Verify:** no command proves this one. The test is whether a contributor reading it could
+predict the review comments they would get.
+
+---
+
+## Task 20 — `HARDENING-PLAN.md` says "eight examples"
+
+**Severity: low.** Four occurrences, written yesterday, stale within a day of the concepts work
+landing.
+
+Round one's counts in this document are *not* stale and must not be updated — this is a dated
+record. `HARDENING-PLAN.md` is a live working document, which is the difference.
+
+**Fix:** update the four occurrences to eleven, and Task 1's title with them.
+
+**Verify:**
+
+```bash
+grep -n "eight examples\|eight of the" docs/HARDENING-PLAN.md   # expect no output
+```
+
+---
+
+## Task 21 — Terraform providers are floors, not pins
+
+**Decided 2026-08-15: pin to the major.** Recorded here so it stops being re-derived.
+
+The decision was `~>`, not `>=`. A reader running `terraform init` against a floor gets
+whatever shipped that morning, which means CI's green check named no version anyone could
+reproduce, and the `terraform` entry in `.github/dependabot.yml` opened approximately zero pull
+requests — Dependabot raises a constraint only when the constraint excludes the newest release,
+and a floor never excludes anything. The accepted cost is that the trees fall a major behind
+until someone merges the PR Dependabot now opens.
+
+Constraints as they stand, in every `required_providers` block across the three trees:
+
+| Provider | Constraint | Locked |
+|---|---|---|
+| `hashicorp/aws` | `~> 5.0` | 5.100.0 |
+| `hashicorp/azurerm` | `~> 5.0` | 5.0.1 |
+| `hashicorp/azuread` | `~> 3.0` | 3.9.0 |
+| `hashicorp/google` | `~> 6.0` | 6.50.0 |
+| `hashicorp/random` | `~> 3.6` | 3.9.0 |
+
+**Two things had to be fixed for that to actually be true**, and both had already produced false
+findings:
+
+- **Two orphaned tree-level `versions.tf` files** — `infra/terraform-azure/versions.tf` and
+  `infra/terraform-gcp/versions.tf` — still carried floors (`>= 3.0`, `>= 5.0`) and
+  `required_version = ">= 1.3.0"` against `>= 1.6` everywhere else. Neither is a root, so
+  `terraform validate` never reads them and the discrepancy could not fail CI. Dependabot *is*
+  pointed at both directories, so the stale floors were also the reason those two entries were
+  inert. Both now match their roots. The AWS tree has no equivalent file: it declares in each
+  `main.tf`.
+- **The AWS lock files were gitignored**, at `infra/terraform-aws/.gitignore` line 5 — not
+  merely unstaged, which is what an earlier pass through this concluded from reading only the
+  root `.gitignore`. Azure and GCP committed theirs. So the two AWS roots were the only two of
+  seven whose provider resolution was unreproducible, which is precisely the thing the pin was
+  supposed to guarantee. The rule is removed and both locks are committed; all seven roots now
+  carry a tracked lock.
+
+The constraint bounds what `init` may resolve; the lock records what it did. Both halves are
+required, and neither substitutes for the other.
+
+**Verify.**
+
+```bash
+# No floors left in any required_providers block. Match the bare `version` key, not
+# `required_version` — the CLI constraint is `>= 1.6` everywhere and should stay a floor,
+# since capping the Terraform CLI to a major buys nothing.
+grep -rnE '^\s+version\s*=\s*">=' infra --include='*.tf'   # expect: no matches
+
+# All seven roots carry a tracked lock file
+git ls-files 'infra/**/.terraform.lock.hcl' | wc -l        # expect: 7
+
+terraform fmt -recursive -check infra/
+```
+
+---
+
+## Task 22 — Hardening plan phases 3–6 remain
+
+**Severity: low.** Tracked in [HARDENING-PLAN.md](HARDENING-PLAN.md), not duplicated here:
+`SECURITY.md`, a ruff lint job, `tflint` and `checkov`, and reconciling the Terraform *CLI*
+version pin.
+
+Hardening Task 9 is not Task 21 above, though the two have been conflated. Task 21 was about
+*provider* constraints and is now closed; hardening Task 9 is about the *CLI* — CI pins 1.9.8,
+local development is on 1.15.8, and `required_version = ">= 1.6"` floors both. That one is
+still open.
+
+Note that hardening Task 5 and round-two Task 17 are the same work. Task 17 supersedes it and
+carries the two false-positive findings that hardening Task 5 was written without.
+
+---
+
+## Definition of done — round two
+
+```bash
+python3 .github/scripts/linkcheck.py .
+python3 -m unittest discover -s tests 2>&1 | tail -3
+python3 -m compileall -q examples/
+grep -c "eleven runnable" README.md
+```
+
+Task 22 is excluded — it is tracked elsewhere. Task 21 carries its own verify block above.
