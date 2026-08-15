@@ -56,6 +56,8 @@ jobs:
             modules: build_index query_and_answer
           - example: ray-orchestrator
             modules: orchestrator
+          - example: graph-agent
+            modules: graph_agent
     steps:
       - uses: actions/checkout@v4
 
@@ -65,10 +67,14 @@ jobs:
           cache: pip
           cache-dependency-path: examples/${{ matrix.example }}/requirements.txt
 
-      # hermes-agent, starter-agent, and trace-eval are absent from this matrix on purpose:
-      # their requirements.txt files are empty because they are stdlib-only, and the `examples`
-      # job in checks.yml already runs their suites. Adding them here would install nothing and
-      # assert nothing that is not already asserted.
+      # hermes-agent, harness-agent, context-compaction, starter-agent, and trace-eval are
+      # absent from this matrix on purpose: their requirements.txt files carry no packages
+      # because they are stdlib-only, and `checks.yml` already covers them — the `examples` job
+      # runs the suites for those that have one, and `compileall` parses all eight. Adding them
+      # here would install nothing and assert nothing that is not already asserted.
+      #
+      # graph-agent is the exception among the recent additions and needs Python 3.10+, which
+      # this job's 3.12 satisfies.
       - name: Install pinned dependencies
         run: pip install -q -r examples/${{ matrix.example }}/requirements.txt
 

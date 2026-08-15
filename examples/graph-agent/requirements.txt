@@ -1,0 +1,16 @@
+# Pinned, like every other example here. Resolved and verified 2026-08-15.
+#
+# Requires Python 3.10+ — langgraph dropped 3.9. That makes this the only example in the
+# repository with a floor above 3.9, which is worth knowing before copying it into an older
+# environment.
+#
+# This is also the only example of the three added alongside the harness and context docs that
+# carries a dependency at all. That is deliberate: a graph example that hand-rolls its own
+# graph would be demonstrating the thing the concept says not to do, and LangGraph is the
+# reference implementation of the model the docs describe.
+#
+#   https://github.com/langchain-ai/langgraph
+#
+# No model provider here. The node functions are deterministic, so no langchain-openai and no
+# API key — see the module docstring in graph_agent.py.
+langgraph==1.2.11

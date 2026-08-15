@@ -208,6 +208,42 @@ is genuinely unpredictable. That mixture is a mature design, not a compromise.
 Branching, retry loops, and human-in-the-loop gates become first-class rather than
 improvised. Worth reaching for when you have all three, and overhead when you have none.
 
+The deeper argument is that a graph makes the control flow **a value rather than a trace**. In
+a loop, the topology exists only as it happens — you learn what the agent did by reading logs
+afterwards. In a graph, the nodes and edges are declared before anything runs, which changes
+four things:
+
+| | Loop | Graph |
+|---|---|---|
+| Topology | Emerges at runtime | Declared, inspectable, diffable in review |
+| Resumption | Wherever you remembered to checkpoint | Node boundaries are natural checkpoints |
+| Human gates | An `if` somewhere in the loop body | An interrupt the framework understands |
+| Retry | Around the whole step, or hand-rolled | Per node, with its own policy |
+
+The resumption row is the one that usually decides it. A long-running agent *will* be
+interrupted — deploys, timeouts, rate limits, approval waits measured in hours — and "resume
+from the last completed node" is a sentence you can only say if node boundaries exist. Bolting
+checkpoints onto a loop means inventing those boundaries anyway, less carefully.
+
+The human-gate row matters for the same reason [§6](#6--approval-gates-and-policy-controls)
+exists: an approval that suspends a workflow for a day is not an `input()` call. It is a durable
+interrupt, and frameworks that treat it as one give you the persistence for free.
+
+**Where the cost lands.** A graph is a second representation of your control flow that has to be
+kept true — when the code and the graph disagree, the graph is what someone reviewed. Debugging
+moves from a stack trace to a framework's execution model. And the declaration is only worth
+writing when the topology is stable: a graph rebuilt every request is a pipeline with ceremony.
+
+**A useful heuristic.** Reach for a graph when you can draw the thing on a whiteboard and the
+drawing does not change per request. If the drawing changes per request, that is a loop and
+should be bounded rather than diagrammed. If the drawing has five boxes in a line, that is five
+function calls.
+
+[LangGraph](https://github.com/langchain-ai/langgraph) is the common implementation of this
+model — nodes, edges, a shared state object, durable execution, and interrupts as a first-class
+concept. [graph-agent](../../examples/graph-agent/README.md) is a minimal one: the same request
+routed by an explicit graph, with the approval gate as an interrupt.
+
 ### Non-negotiables
 
 Whatever you choose:

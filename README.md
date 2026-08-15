@@ -3,7 +3,7 @@
 [![checks](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/checks.yml/badge.svg)](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/checks.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Reference implementations of a production agentic architecture: **three parallel Terraform trees** deploying the same system on AWS, Azure, and GCP, **eight runnable examples**, and the architecture and governance documents behind them. Everything here is meant to be read, copied into your own repository, and adapted.
+Reference implementations of a production agentic architecture: **three parallel Terraform trees** deploying the same system on AWS, Azure, and GCP, **eleven runnable examples**, and the architecture and governance documents behind them. Everything here is meant to be read, copied into your own repository, and adapted.
 
 The property the whole repository is organised around: **a state-changing action cannot reach production without a human approving that specific action** — enforced by the identity platform, not by the prompt and not by the model choosing to behave.
 
@@ -52,20 +52,24 @@ Agentic-AI-Systems/
 │       ├── envs/                 one root per environment
 │       ├── src/                  handler source + build.sh (run before plan)
 │       └── tests/                write-boundary tests, stdlib unittest
-├── examples/                     eight runnable examples, worked → minimal
+├── examples/                     eleven runnable examples, worked → minimal
 │   ├── hermes-agent/             the write boundary in application code
 │   ├── trace-eval/               scoring the path rather than the answer
+│   ├── harness-agent/            continuity across context windows
 │   ├── e2e-agent/                tracing, audit, provenance over HTTP
 │   ├── starter-agent/            the smallest possible agent loop
 │   ├── rag-faiss/                build and query a local vector index
 │   ├── rag-langchain/            the same, through LangChain
 │   ├── langchain-agent/          a minimal LangChain agent
+│   ├── context-compaction/       what survives when history is compressed
+│   ├── graph-agent/              the read/write split as an explicit graph
 │   └── ray-orchestrator/         parallel task execution with Ray
 ├── docs/
 │   ├── agentic-system-architecture/   the six building blocks, as prose
 │   ├── agentic-coding-playbook/       working with coding agents day to day
 │   ├── REPO-AUDIT.md                  the 2026-08-14 audit and its 16 fixes
 │   ├── HARDENING-PLAN.md              CI hardening, 11 tasks over 6 phases
+│   ├── CONCEPTS-PLAN.md               adding harness, context, and graph engineering
 │   └── *.md                           governance, security, privacy, runbook, templates
 ├── tests/                        example suites run by CI
 ├── CONTRIBUTING.md               what a good example looks like here
@@ -114,6 +118,7 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 
 - [hermes-agent](examples/hermes-agent/README.md) — routing and the write boundary in application code
 - [trace-eval](examples/trace-eval/README.md) — trace-level evaluation, scoring the path rather than the answer
+- [harness-agent](examples/harness-agent/README.md) — continuity across context windows, and the four things a harness refuses to let an agent do
 
 **Applied example** — tracing, audit, provenance, and governance docs over HTTP:
 
@@ -126,6 +131,8 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 - [rag-langchain](examples/rag-langchain/README.md) — the same, through LangChain
 - [langchain-agent](examples/langchain-agent/README.md) — a minimal LangChain agent
 - [ray-orchestrator](examples/ray-orchestrator/README.md) — parallel task execution with Ray
+- [context-compaction](examples/context-compaction/README.md) — what survives when history is compressed, and why truncation drops the wrong things
+- [graph-agent](examples/graph-agent/README.md) — the same read/write split as hermes-agent, as an explicit LangGraph graph
 
 **Hermes** is the runnable counterpart to the infrastructure above. It routes a request to a handler, runs read tools on the spot, and returns anything that would change state as a proposal that stops until a human approves *that specific action* — approval bound to a fingerprint of the exact arguments, single-use, expiring. The router holds no reference to a write tool; the approval executor holds nothing else. Standard library only, no model, no cloud account, and the boundary tests were mutation-tested rather than trusted.
 
@@ -161,7 +168,7 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 - Handler logic tests for all three trees
 - Deployment package builds for all three trees
 - The example suites under `tests/` — `hermes-agent`, `trace-eval`, and the `starter-agent` smoke tests, via `unittest discover`
-- A syntax check over all eight examples, including the five with no suite of their own
+- A syntax check over all eleven examples, including those with no suite of their own
 
 [`.github/workflows/example-deps.yml`](.github/workflows/example-deps.yml) runs only on changes under `examples/` or `tests/`. It installs each example's pinned `requirements.txt` and imports its entry modules — the five examples that carry dependencies, one matrix leg each. It has its own file because it has its own trigger: it downloads Torch, Ray, and FAISS, and has no business running when someone edits a Terraform module.
 

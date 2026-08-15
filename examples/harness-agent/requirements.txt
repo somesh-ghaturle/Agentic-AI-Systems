@@ -1,0 +1,6 @@
+# No external dependencies. Standard library only, Python 3.9+.
+#
+# A harness is the layer you would otherwise get from a framework, so an example of one that
+# imports a framework has quietly delegated its own subject. Every rule enforced here —
+# one feature per session, no completion without evidence, an unreadable progress file being
+# impossible — is readable in four short modules with nothing underneath them.

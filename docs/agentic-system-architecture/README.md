@@ -24,6 +24,8 @@ That framing is the thesis of this folder.
 | [ARCHITECTURE-PATTERNS.md](ARCHITECTURE-PATTERNS.md) | Single-agent vs. multi-agent — the decision, the trade-offs, and when the second one is a mistake |
 | [BUILDING-BLOCKS.md](BUILDING-BLOCKS.md) | The six layers: model routing, tools, memory and state, orchestration, evals, approval gates |
 | [PRODUCTION-PRINCIPLES.md](PRODUCTION-PRINCIPLES.md) | Reliability, cost and latency, context and RAG design, observability, security and privacy |
+| [HARNESS-ENGINEERING.md](HARNESS-ENGINEERING.md) | The scaffolding around the model — continuity across context windows, and who decides the work is done |
+| [CONTEXT-ENGINEERING.md](CONTEXT-ENGINEERING.md) | What the model sees — context rot, compaction, note-taking, sub-agents, just-in-time retrieval |
 | [checklists/design-review.md](checklists/design-review.md) | A design review to run before building, and again before shipping |
 | [REFERENCES.md](REFERENCES.md) | Sourcing and provenance — which claims are measured, which are directional |
 | [infra/](../../infra/) | This architecture as Terraform on three clouds — [AWS](../../infra/terraform-aws/README.md), [Azure](../../infra/terraform-azure/README.md), [GCP](../../infra/terraform-gcp/README.md), each with its own `ARCHITECTURE.md` drawn in that cloud's terms |

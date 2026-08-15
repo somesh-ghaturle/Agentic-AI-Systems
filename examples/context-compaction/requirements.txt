@@ -1,0 +1,5 @@
+# No external dependencies. Standard library only, Python 3.9+.
+#
+# The subject here is a retention policy — which messages survive compression and which do
+# not. That is a decision you can read, argue with, and test without a model in the loop, and
+# putting one in the loop would hide the policy behind its output.
