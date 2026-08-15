@@ -45,6 +45,7 @@ Agentic-AI-Systems/
 │   ├── terraform-aws/            8 modules · envs/{dev,prod}
 │   ├── terraform-azure/          12 modules · envs/{dev,prod,tenant}
 │   └── terraform-gcp/            10 modules · envs/{dev,prod}
+│       ├── README.md             entry point for that cloud
 │       ├── ARCHITECTURE.md       mermaid diagrams in that cloud's own terms
 │       ├── HOW-TO-DEPLOY.md      ordered deploy steps and prerequisites
 │       ├── modules/              approval, orchestration, tools, state, knowledge…
@@ -55,13 +56,24 @@ Agentic-AI-Systems/
 │   ├── hermes-agent/             the write boundary in application code
 │   ├── trace-eval/               scoring the path rather than the answer
 │   ├── e2e-agent/                tracing, audit, provenance over HTTP
-│   └── starter-agent/ rag-faiss/ rag-langchain/ langchain-agent/ ray-orchestrator/
+│   ├── starter-agent/            the smallest possible agent loop
+│   ├── rag-faiss/                build and query a local vector index
+│   ├── rag-langchain/            the same, through LangChain
+│   ├── langchain-agent/          a minimal LangChain agent
+│   └── ray-orchestrator/         parallel task execution with Ray
 ├── docs/
 │   ├── agentic-system-architecture/   the six building blocks, as prose
 │   ├── agentic-coding-playbook/       working with coding agents day to day
-│   └── *.md                      governance, security, privacy, runbook, templates
+│   ├── REPO-AUDIT.md                  the 2026-08-14 audit and its 16 fixes
+│   ├── HARDENING-PLAN.md              CI hardening, 11 tasks over 6 phases
+│   └── *.md                           governance, security, privacy, runbook, templates
 ├── tests/                        example suites run by CI
-└── .github/workflows/checks.yml  fmt, validate, boundary tests, builds
+├── CONTRIBUTING.md               what a good example looks like here
+├── LICENSE                       Apache-2.0
+└── .github/
+    ├── workflows/checks.yml         fmt, validate, boundary tests, handlers, builds
+    ├── workflows/example-deps.yml   installs each example's pins and imports it
+    └── dependabot.yml               monthly pip, actions, and provider updates
 ```
 
 The per-tree files are shown once under `terraform-gcp/` but exist in all three. AWS has no `model-integration` module — its Bedrock guardrail lives in `modules/security`, because a guardrail is a security control on AWS and a separate service on the other two.
