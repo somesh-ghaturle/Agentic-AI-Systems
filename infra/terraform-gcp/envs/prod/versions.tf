@@ -11,7 +11,7 @@ terraform {
     # and declaring an unused provider means `init` downloads it forever.
     google = {
       source  = "hashicorp/google"
-      version = "~> 6.0"
+      version = "~> 7.44"
     }
   }
 }
