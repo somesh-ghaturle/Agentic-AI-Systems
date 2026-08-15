@@ -1,0 +1,106 @@
+# Update signal for pinned dependencies.
+#
+# Every example's requirements.txt is pinned to an exact version, which is deliberate: these
+# examples are read and copied more often than they are run, and an unpinned example that
+# resolves differently every month teaches nothing reproducible.
+#
+# The cost of that choice is that a pin is a snapshot of one afternoon's PyPI. It does not rot
+# loudly. `rag-langchain` and `langchain-agent` sat in this repository importing a LangChain
+# v0.x API that the pinned version had already deleted, and nothing said so until a human read
+# the files. The `example deps` job in checks.yml now catches a pin that is *broken*; this file
+# is the other half, catching a pin that is merely *old*.
+#
+# Grouped aggressively. Five example directories on a weekly cadence with one PR per package
+# would be a few dozen pull requests a month against a repository whose examples change rarely,
+# and a review queue that noisy gets muted, which is the same outcome as not having it.
+
+version: 2
+
+updates:
+  # ---------------------------------------------------------------------------
+  # Python examples
+  # ---------------------------------------------------------------------------
+  #
+  # Only the five directories with a non-empty requirements.txt. hermes-agent, starter-agent,
+  # and trace-eval are stdlib-only by design — their requirements files exist to say so — and
+  # pointing Dependabot at an empty file achieves nothing.
+  - package-ecosystem: pip
+    directories:
+      - /examples/e2e-agent
+      - /examples/langchain-agent
+      - /examples/rag-faiss
+      - /examples/rag-langchain
+      - /examples/ray-orchestrator
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per example per month rather than one per package. The examples share pins
+      # across directories — sentence-transformers and faiss-cpu appear in both rag-* trees,
+      # langchain-core in both LangChain trees — so ungrouped updates would also arrive as
+      # near-duplicate PRs that have to be merged in step or not at all.
+      example-dependencies:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions
+  # ---------------------------------------------------------------------------
+  #
+  # The ecosystem people forget. checks.yml pins actions/checkout@v4,
+  # actions/setup-python@v5, and hashicorp/setup-terraform@v3, and those age exactly the way
+  # a requirements.txt does — with the added property that a deprecated runner action starts
+  # emitting warnings and then stops working, rather than failing cleanly.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: ci
+    labels:
+      - dependencies
+
+  # ---------------------------------------------------------------------------
+  # Terraform providers
+  # ---------------------------------------------------------------------------
+  #
+  # CAVEAT, and it is the whole story for this entry: every required_providers block in the
+  # three trees declares a floor (`version = ">= 5.0"`), not a pin. Dependabot raises a
+  # constraint when the constraint excludes the newest release, and a floor never excludes
+  # anything, so as written this entry will open approximately zero pull requests.
+  #
+  # It is here anyway because it costs nothing and starts working the moment the constraints
+  # tighten. Whether they *should* tighten is a real decision this repository has not made:
+  # `>= 5.0` means a reader running `terraform init` today gets whatever shipped this morning,
+  # which is honest about the trees being reference material rather than a deployed system, but
+  # it also means the configurations are validated in CI against a provider version that no
+  # committed file names. `~> 5.0` would make CI reproducible at the cost of the trees quietly
+  # falling behind. See task 9 in docs/HARDENING-PLAN.md.
+  - package-ecosystem: terraform
+    directories:
+      - /infra/terraform-aws/envs/*
+      - /infra/terraform-aws/modules/*
+      - /infra/terraform-azure
+      - /infra/terraform-azure/envs/*
+      - /infra/terraform-gcp
+      - /infra/terraform-gcp/envs/*
+      - /infra/terraform-gcp/modules/*
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      providers:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies

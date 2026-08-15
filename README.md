@@ -148,9 +148,14 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 - Write-boundary tests for all three trees — stdlib `unittest` reading `.tf` files as text
 - Handler logic tests for all three trees
 - Deployment package builds for all three trees
-- The example suites under `tests/` — `hermes-agent`, `trace-eval`, and the `starter-agent` smoke tests, 68 tests via `unittest discover`
+- The example suites under `tests/` — `hermes-agent`, `trace-eval`, and the `starter-agent` smoke tests, via `unittest discover`
+- A syntax check over all eight examples, including the five with no suite of their own
 
-Everything runs without cloud credentials, which is deliberate: a check that needs a subscription is a check that gets disabled the first time a secret expires.
+[`.github/workflows/example-deps.yml`](.github/workflows/example-deps.yml) runs only on changes under `examples/` or `tests/`. It installs each example's pinned `requirements.txt` and imports its entry modules — the five examples that carry dependencies, one matrix leg each. It has its own file because it has its own trigger: it downloads Torch, Ray, and FAISS, and has no business running when someone edits a Terraform module.
+
+That job exists because of a failure this repository actually had. Two LangChain examples imported an API the pinned version had already deleted, and CI stayed green — the suites did not cover those examples, and a syntax check parses rather than imports, so it happily accepts a module naming a package that no longer exists. A stale pin is invisible to every check that does not install the pin. [`.github/dependabot.yml`](.github/dependabot.yml) covers the other half: the syntax and import checks catch a pin that is *broken*, Dependabot catches one that is merely *old*.
+
+Everything runs without cloud credentials, which is deliberate: a check that needs a subscription is a check that gets disabled the first time a secret expires. The import job needs PyPI and nothing else — no model key, because importing a module builds no client.
 
 The write-boundary tests exist because `terraform validate` accepts every mistake they catch — in each case the wrong value is a valid value in a valid attribute. AWS was originally excluded on the grounds that its boundary is a Lambda resource policy, so getting it wrong fails at plan time. That turned out to be true of the resource policy and only of it: for a caller in the same account Lambda grants invocation if the *identity* policy allows it **or** the resource policy does, and the orchestrator's identity policy is built from a list nothing checked. Widening that list to every tool is a one-word edit that plans, validates, and applies cleanly. The AWS suite guards that half.
 

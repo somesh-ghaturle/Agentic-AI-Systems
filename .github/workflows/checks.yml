@@ -149,6 +149,23 @@ jobs:
       - name: Example suites — hermes-agent, trace-eval, starter-agent
         run: python3 -m unittest discover -s tests -v
 
+      # Every example, not just the three with suites. Five of the eight — e2e-agent,
+      # langchain-agent, rag-faiss, rag-langchain, ray-orchestrator — were verified by nothing
+      # at all until this step, which is how two of them sat here importing a LangChain v0.x
+      # API that the pinned version had already deleted while this workflow stayed green.
+      #
+      # compileall parses without importing, so it needs none of their dependencies and
+      # finishes in about a second. That is what makes it affordable here, on the unfiltered
+      # path, next to the stdlib suites above.
+      #
+      # It catches the example edited in place and never run again. It cannot catch a
+      # dependency that stopped exporting a name, because parsing is not importing — that is
+      # `example-deps.yml`, which lives in its own file because it needs a different trigger:
+      # it installs Torch and Ray, so it must fire on changes to examples/ and not on every
+      # commit to infra/.
+      - name: All examples — syntax
+        run: python3 -m compileall -q examples/
+
   handlers:
     name: handlers
     runs-on: ubuntu-latest

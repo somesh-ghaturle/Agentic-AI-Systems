@@ -1,0 +1,99 @@
+# Installs each example's pinned dependencies and imports its entry modules.
+#
+# Separate from checks.yml for one reason: the trigger. Every job in that file is fast and
+# dependency-free, so it can afford to run on any change under infra/, examples/, or tests/.
+# This one installs Torch, Ray, and FAISS — minutes and hundreds of megabytes — and has no
+# business running when someone edits a Terraform module. `on.paths` is per-workflow, not
+# per-job, so a genuinely different trigger needs a genuinely different file.
+#
+# It exists because of a failure this repository actually had. `rag-langchain` and
+# `langchain-agent` imported `langchain.chains.LLMChain`; the pinned langchain-core had
+# already deleted it; CI was green throughout. It was green because five of the eight
+# examples were covered by nothing, and because `compileall` — the check in checks.yml that
+# now covers all eight — parses rather than imports, so it passes a module that names a
+# package which no longer exists. A stale pin is invisible to every check that does not
+# install the pin. This is the check that installs the pin.
+#
+# No cloud credentials, consistent with checks.yml. No OpenAI key either, and that is not an
+# oversight: importing a module builds no client and calls no API, and a check that needs a
+# secret is a check that gets disabled the first time one expires.
+
+name: example deps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "examples/**"
+      - "tests/**"
+      - ".github/workflows/example-deps.yml"
+  pull_request:
+    paths:
+      - "examples/**"
+      - "tests/**"
+      - ".github/workflows/example-deps.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  imports:
+    name: ${{ matrix.example }}
+    runs-on: ubuntu-latest
+    strategy:
+      # Report every broken example, not just the first — the same reasoning as the validate
+      # matrix in checks.yml. Someone fixing a pin wants to know whether the others rotted too.
+      fail-fast: false
+      matrix:
+        include:
+          - example: e2e-agent
+            modules: app
+          - example: langchain-agent
+            modules: agent
+          - example: rag-faiss
+            modules: build_index query
+          - example: rag-langchain
+            modules: build_index query_and_answer
+          - example: ray-orchestrator
+            modules: orchestrator
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: examples/${{ matrix.example }}/requirements.txt
+
+      # hermes-agent, starter-agent, and trace-eval are absent from this matrix on purpose:
+      # their requirements.txt files are empty because they are stdlib-only, and the `examples`
+      # job in checks.yml already runs their suites. Adding them here would install nothing and
+      # assert nothing that is not already asserted.
+      - name: Install pinned dependencies
+        run: pip install -q -r examples/${{ matrix.example }}/requirements.txt
+
+      # Importing is the whole point of the job. Every entry module except e2e-agent's is
+      # `__main__`-guarded, so an import runs the imports and the definitions and no work;
+      # e2e-agent's builds a FastAPI object without serving it.
+      #
+      # E2E_AGENT_API_KEY is set because app.py raises at import time without it. That is
+      # deliberate — the repository audit deleted a default `local-test-key` so the service
+      # fails closed rather than starting with a credential published in its own source — and
+      # this throwaway value is a workaround for it. The step below asserts the raise still
+      # happens when the variable is unset, so this line cannot quietly become a regression.
+      - name: Import every entry module
+        env:
+          E2E_AGENT_API_KEY: ci-import-check
+        working-directory: examples/${{ matrix.example }}
+        run: |
+          for m in ${{ matrix.modules }}; do
+            echo "importing $m"
+            python3 -c "import $m"
+          done
+
+      # Only meaningful for e2e-agent. It runs here rather than in checks.yml because the
+      # suite needs fastapi installed, and that workflow deliberately installs nothing — the
+      # suite skips itself there rather than failing for the wrong reason.
+      - name: e2e-agent — assert it still fails closed without a key
+        if: matrix.example == 'e2e-agent'
+        run: python3 -m unittest tests.test_e2e_agent -v
