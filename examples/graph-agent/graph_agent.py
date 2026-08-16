@@ -16,7 +16,7 @@ graph rather than about a prompt.
 """
 
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 # The langgraph import is soft, and that is not politeness — it is what makes this file
 # testable. The first version called sys.exit() here, so importing the module without
@@ -55,8 +55,8 @@ class State(TypedDict, total=False):
 
     request: str
     kind: str
-    findings: List[str]
-    proposal: Optional[Dict[str, Any]]
+    findings: list[str]
+    proposal: Optional[dict[str, Any]]
     approved: bool
     answer: str
 

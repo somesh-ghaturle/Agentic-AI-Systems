@@ -18,7 +18,7 @@ sys.path.insert(
     str(pathlib.Path(__file__).resolve().parent.parent / "examples" / "context-compaction"),
 )
 
-import compact as cc  # noqa: E402
+import compact as cc
 
 
 class TestTheRegression(unittest.TestCase):

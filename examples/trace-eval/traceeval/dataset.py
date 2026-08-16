@@ -15,7 +15,6 @@ A case is a claim about how the system should behave, so each one says why it is
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
 
 
 @dataclass(frozen=True)
@@ -24,11 +23,11 @@ class Case:
     request: str
     expected_intent: str
     expected_terminal: str  # "completed" or "pending"
-    answer_must_mention: Tuple[str, ...]
+    answer_must_mention: tuple[str, ...]
     why: str = ""
 
 
-CASES: Tuple[Case, ...] = (
+CASES: tuple[Case, ...] = (
     Case(
         name="summarize-incident",
         request="summarize incident-2291",

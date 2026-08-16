@@ -60,6 +60,16 @@ examples/rag-faiss/index.faiss
 examples/rag-langchain/index.faiss
 
 # ---------------------------------------------------------------------------
+# Generated analysis artifacts
+# ---------------------------------------------------------------------------
+
+# graphify builds a knowledge graph of the repository into this directory. It is derived
+# entirely from the tracked source, regenerates with `graphify`, and is large — a ~3.8 MB
+# graph.json and a ~3.1 MB self-contained graph.html, plus an extraction cache. Committing
+# it means a multi-megabyte diff on every run, of a file nobody reviews.
+graphify-out/
+
+# ---------------------------------------------------------------------------
 # OS noise
 # ---------------------------------------------------------------------------
 

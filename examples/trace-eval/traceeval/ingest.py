@@ -13,8 +13,9 @@ not reasons to crash the harness, so parsing collects problems instead of raisin
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
 REQUIRED_KEYS = ("trace_id", "seq", "event")
 
@@ -24,7 +25,7 @@ class Event:
     trace_id: str
     seq: int
     event: str
-    attributes: Dict[str, Any] = field(default_factory=dict)
+    attributes: dict[str, Any] = field(default_factory=dict)
 
     def get(self, key: str, default: Any = None) -> Any:
         return self.attributes.get(key, default)
@@ -33,31 +34,31 @@ class Event:
 @dataclass
 class Trace:
     trace_id: str
-    events: List[Event] = field(default_factory=list)
-    parse_errors: List[str] = field(default_factory=list)
+    events: list[Event] = field(default_factory=list)
+    parse_errors: list[str] = field(default_factory=list)
 
-    def named(self, name: str) -> List[Event]:
+    def named(self, name: str) -> list[Event]:
         return [event for event in self.events if event.event == name]
 
-    def first(self, name: str) -> Optional[Event]:
+    def first(self, name: str) -> Event | None:
         for event in self.events:
             if event.event == name:
                 return event
         return None
 
-    def last(self, name: str) -> Optional[Event]:
+    def last(self, name: str) -> Event | None:
         found = self.named(name)
         return found[-1] if found else None
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         return [event.event for event in self.events]
 
     @property
-    def intent(self) -> Optional[str]:
+    def intent(self) -> str | None:
         classified = self.first("request.classified")
         return classified.get("intent") if classified else None
 
-    def tool_calls(self, access: Optional[str] = None) -> List[Event]:
+    def tool_calls(self, access: str | None = None) -> list[Event]:
         calls = self.named("tool.call")
         if access is None:
             return calls
@@ -93,7 +94,7 @@ def parse_line(line: str) -> Any:
     )
 
 
-def load(lines: Iterable[str]) -> List[Trace]:
+def load(lines: Iterable[str]) -> list[Trace]:
     """Group lines into traces, ordered by `seq`.
 
     Sorting by `seq` rather than trusting arrival order is the point of carrying a sequence
@@ -101,8 +102,8 @@ def load(lines: Iterable[str]) -> List[Trace]:
     inferred ordering from position would report imaginary out-of-order bugs on a system
     that is fine.
     """
-    traces: Dict[str, Trace] = {}
-    orphan_errors: List[str] = []
+    traces: dict[str, Trace] = {}
+    orphan_errors: list[str] = []
 
     for number, line in enumerate(lines, 1):
         parsed = parse_line(line)

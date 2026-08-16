@@ -42,7 +42,7 @@ class Harness:
         # steps, wall-clock, tokens, *and* no-progress. The first three were already here; a
         # run of the demo is what showed the fourth was missing.
         self.max_attempts = max_attempts
-        self.attempts = {f: 0 for f in features}
+        self.attempts = dict.fromkeys(features, 0)
 
         existing = st.load(progress_path)
         if existing is None:
@@ -144,7 +144,7 @@ class Harness:
         clearing it is a decision someone makes after changing the thing that was failing.
         """
         if feature is None:
-            self.attempts = {f: 0 for f in self.progress.features}
+            self.attempts = dict.fromkeys(self.progress.features, 0)
         else:
             if feature not in self.attempts:
                 raise HarnessError(f"unknown feature: {feature!r}")

@@ -78,7 +78,9 @@ data "aws_iam_policy_document" "key" {
     principals {
       type = "Service"
       identifiers = [
-        "logs.${data.aws_region.current.name}.amazonaws.com",
+        # `.region`, not `.name` — the provider deprecated `name` on this data source in 6.x.
+        # The stutter reads like a typo and isn't one.
+        "logs.${data.aws_region.current.region}.amazonaws.com",
         "s3.amazonaws.com",
         "dynamodb.amazonaws.com",
         "sns.amazonaws.com",

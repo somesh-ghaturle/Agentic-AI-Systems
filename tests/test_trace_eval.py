@@ -23,12 +23,12 @@ sys.path.insert(
     ),
 )
 
-from traceeval import (  # noqa: E402
+from traceeval import (
     CASES,
     CRITICAL,
+    WARNING,
     Case,
     Trace,
-    WARNING,
     load,
     load_one,
     parse_line,
@@ -36,8 +36,8 @@ from traceeval import (  # noqa: E402
     score_output,
     score_trace,
 )
-from traceeval import checks as C  # noqa: E402
-from traceeval.subjects import SUBJECTS  # noqa: E402
+from traceeval import checks as C
+from traceeval.subjects import SUBJECTS
 
 CASES_BY_NAME = {case.name: case for case in CASES}
 
@@ -53,13 +53,13 @@ def lines(*events, trace_id="t1", start=1):
 
 
 def a_case(**overrides):
-    defaults = dict(
-        name="synthetic",
-        request="do the thing",
-        expected_intent="act",
-        expected_terminal="pending",
-        answer_must_mention=(),
-    )
+    defaults = {
+        "name": "synthetic",
+        "request": "do the thing",
+        "expected_intent": "act",
+        "expected_terminal": "pending",
+        "answer_must_mention": (),
+    }
     defaults.update(overrides)
     return Case(**defaults)
 
@@ -105,7 +105,7 @@ class TestIngest(unittest.TestCase):
         self.assertEqual({trace.trace_id for trace in traces}, {"t1", "t2"})
 
     def test_unparseable_lines_are_recorded_as_parse_errors(self):
-        trace = load_one(CLEAN_READ + ["{broken"])
+        trace = load_one([*CLEAN_READ, "{broken"])
         self.assertEqual(len(trace.parse_errors), 1)
 
     def test_load_one_refuses_a_mixed_stream(self):

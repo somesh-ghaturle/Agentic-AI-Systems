@@ -224,7 +224,7 @@ def _find_neighbors(vector, restricts, limit):
                         # Datapoint metadata rides in crowding/restrict fields on Vector
                         # Search rather than in a document body, so the text itself is
                         # stored alongside by the ingest job. See HOW-TO-DEPLOY.md.
-                        r.namespace: list(r.allow_list)[0] if r.allow_list else None
+                        r.namespace: next(iter(r.allow_list)) if r.allow_list else None
                         for r in neighbor.datapoint.restricts
                     },
                 }

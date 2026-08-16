@@ -9,7 +9,6 @@
 # 404 on every route.
 
 import azure.functions as func
-
 import handler
 from azure_http import json_response, request_json
 

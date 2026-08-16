@@ -54,9 +54,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Pinned to the version this repository is actually developed on, not a floor.
+      #
+      # These two jobs used to pin 1.9.8 while every contributor ran 1.15.x. `fmt` agreed
+      # across that gap and all seven roots validated on both, so nothing was broken — but
+      # nothing was checking either, and the first divergence would have surfaced in CI on
+      # a change that had nothing to do with it. The modules keep `required_version = ">= 1.6"`
+      # deliberately: that is the floor a consumer copying this HCL must clear, and it is a
+      # different question from which single version CI proves the trees against.
+      #
+      # Raise this and the pin in `validate` together — they are the same decision.
       - uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: "1.9.8"
+          terraform_version: "1.15.8"
           terraform_wrapper: false
 
       # For the provider-pins step below. The runner ships a python3, but every other Python
@@ -104,7 +114,8 @@ jobs:
 
       - uses: hashicorp/setup-terraform@v4
         with:
-          terraform_version: "1.9.8"
+          # Keep in step with the pin in `fmt` above — see the note there.
+          terraform_version: "1.15.8"
           terraform_wrapper: false
 
       # Each root separately: they have different backends and different provider sets,

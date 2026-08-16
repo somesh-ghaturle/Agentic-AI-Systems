@@ -251,7 +251,7 @@ class TestToolOutputsStayFiltered(unittest.TestCase):
     def _output_value(self, name):
         path = os.path.join(TREE, "modules", "tools", "outputs.tf")
         text = read(path)
-        match = re.search(r'output\s+"%s"\s*\{' % re.escape(name), text)
+        match = re.search(rf'output\s+"{re.escape(name)}"\s*\{{', text)
         self.assertIsNotNone(match, f"output {name!r} not found in {path}")
         return block_body(text, match.end() - 1)
 

@@ -3,9 +3,8 @@
 
 Requirements: pip install -r requirements.txt
 """
-from sentence_transformers import SentenceTransformer
-import numpy as np
 import faiss
+from sentence_transformers import SentenceTransformer
 
 DOCS = [
     "Agentic AI systems coordinate tools and models to solve multi-step tasks.",
@@ -15,7 +14,7 @@ DOCS = [
 
 
 def build_index(model_name: str = "all-MiniLM-L6-v2"):
-    from pathlib import Path
+    from pathlib import Path  # noqa: PLC0415
 
     model = SentenceTransformer(model_name)
     embeddings = model.encode(DOCS, convert_to_numpy=True)

@@ -18,7 +18,7 @@ import sys
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 
 @dataclass(frozen=True)
@@ -28,7 +28,7 @@ class Event:
     trace_id: str
     seq: int
     event: str
-    attributes: Dict[str, Any] = field(default_factory=dict)
+    attributes: dict[str, Any] = field(default_factory=dict)
     timestamp: float = 0.0
 
     def to_json(self) -> str:
@@ -54,12 +54,12 @@ class Tracer:
 
     def __init__(
         self,
-        trace_id: Optional[str] = None,
-        sink: Optional[Callable[[Event], None]] = None,
+        trace_id: str | None = None,
+        sink: Callable[[Event], None] | None = None,
         clock: Callable[[], float] = time.time,
     ) -> None:
         self.trace_id = trace_id or uuid.uuid4().hex
-        self.events: List[Event] = []
+        self.events: list[Event] = []
         self._sink = sink
         self._clock = clock
         self._seq = 0
@@ -78,7 +78,7 @@ class Tracer:
             self._sink(record)
         return record
 
-    def event_names(self) -> List[str]:
+    def event_names(self) -> list[str]:
         return [event.event for event in self.events]
 
 

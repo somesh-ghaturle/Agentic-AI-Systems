@@ -160,8 +160,8 @@ class TestTrace(unittest.TestCase):
         A record split across lines parses to null on every fragment and is dropped by the
         isnotempty filter — silently, since a dropped record raises nothing.
         """
-        import io
-        from contextlib import redirect_stdout
+        import io  # noqa: PLC0415
+        from contextlib import redirect_stdout  # noqa: PLC0415
 
         tracer = agentic_trace.Tracer("c")
         tracer.emit("step_complete", note="a\nb")
@@ -263,7 +263,7 @@ class TestValidator(unittest.TestCase):
             {"action": "process_refund", "arguments": {"order_id": "o1", "amount_cents": 100}},
             self._actor(),
         )
-        ownership = [c for c in checks if c["code"] == "actor_owns_resource"][0]
+        ownership = next(c for c in checks if c["code"] == "actor_owns_resource")
         self.assertFalse(ownership["passed"])
 
     def test_approval_id_is_stable_for_the_same_proposal(self):
@@ -409,7 +409,7 @@ class TestReason(unittest.TestCase):
                 "answer": "",
             }
         )
-        decision, invalid = reason._parse(payload, agentic_trace.Tracer("c"))
+        _decision, invalid = reason._parse(payload, agentic_trace.Tracer("c"))
         self.assertEqual(invalid["error"], "incomplete_write_proposal")
 
     def test_arguments_json_must_parse_to_an_object(self):
@@ -422,7 +422,7 @@ class TestReason(unittest.TestCase):
                 "answer": "",
             }
         )
-        decision, invalid = reason._parse(payload, agentic_trace.Tracer("c"))
+        _decision, invalid = reason._parse(payload, agentic_trace.Tracer("c"))
         self.assertEqual(invalid["error"], "invalid_arguments_json")
 
     def test_valid_proposal_parses(self):

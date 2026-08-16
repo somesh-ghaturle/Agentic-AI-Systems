@@ -166,7 +166,7 @@ def _reason(payload, tracer):
                 },
             },
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # The RAI policy rejects at the API boundary with a content_filter error rather than
         # returning a message, so a filtered request never reaches the parsing below. Handled
         # as what it is: a designed failure path that ends the request visibly.

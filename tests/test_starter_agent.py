@@ -27,7 +27,7 @@ def run_agent(args):
     passes from anywhere instead of only from the repository root.
     """
     result = subprocess.run(
-        [sys.executable, str(AGENT)] + args, capture_output=True, text=True
+        [sys.executable, str(AGENT), *args], capture_output=True, text=True
     )
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 

@@ -190,9 +190,8 @@ def _publish(message):
     with ServiceBusClient(
         fully_qualified_namespace=f"{namespace}.servicebus.windows.net",
         credential=credential,
-    ) as client:
-        with client.get_topic_sender(topic_name=topic) as sender:
-            sender.send_messages(ServiceBusMessage(json.dumps(message)))
+    ) as client, client.get_topic_sender(topic_name=topic) as sender:
+        sender.send_messages(ServiceBusMessage(json.dumps(message)))
 
 
 def validate(proposal, actor):

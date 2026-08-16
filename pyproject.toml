@@ -1,0 +1,60 @@
+# Ruff configuration — the Python half of the parity with `terraform fmt -check`.
+#
+# This repository gated merges on `terraform fmt -check` for the HCL and ran nothing at all
+# over 83 Python files, an asymmetry visible to anyone who opened both. HARDENING-PLAN task 7.
+#
+# There is no package here to build. This file exists only to configure the linter, which is
+# why it carries no [project] table: `pip install .` is not a thing anyone should do to this
+# repository, and declaring metadata would imply otherwise.
+
+[tool.ruff]
+line-length = 100
+
+# The floor the zero-dependency examples claim in their READMEs.
+#
+# This does NOT stop `UP` from rewriting `Optional[str]` into `str | None`: ruff allows PEP 604
+# in any file carrying `from __future__ import annotations`, because there the annotation is
+# never evaluated. That is correct and the rewrites are safe. What the floor does buy is the
+# files WITHOUT that import — chiefly the handler modules — where `str | None` would be a
+# runtime TypeError on 3.9 and ruff therefore leaves them alone.
+#
+# Two examples genuinely need 3.10+: graph-agent, because LangGraph dropped 3.9, and e2e-agent,
+# which ships a 3.11 Dockerfile. Both say so where a reader will look. Raising this to match
+# them would let ruff rewrite the other nine into syntax their READMEs promise they do not need.
+target-version = "py39"
+
+extend-exclude = [
+    "**/.terraform/**",
+    "**/__pycache__/**",
+    "examples/*/provenance/**",
+]
+
+[tool.ruff.lint]
+# The rule set is not arbitrary: it is the one this codebase was already written against.
+# Before any of this existed the tree carried 59 `# noqa` directives naming exactly three
+# rules — PLC0415, BLE001, E402 — which is a record of the linter the author had in mind.
+# Selecting a narrower set would have made those directives dead, and RUF100 would then have
+# deleted the reasoning they encode. So:
+#
+#   E, F  — table stakes
+#   I     — import order, the largest source of pointless diffs between contributors
+#   B     — bugbear; B006 (mutable default argument) alone earns it in a repo whose whole
+#           subject is state that must not leak between requests
+#   UP    — pyupgrade, held at the py39 floor above
+#   SIM   — simplification; example code being readable IS the product here
+#   C4    — comprehension rewrites
+#   RUF   — chiefly RUF012 (mutable class default) and RUF100 (noqa that suppresses nothing)
+#
+# PLC0415 and BLE001 are named individually rather than pulled in as `PL` and `BLE`. The full
+# PL group adds 39 further findings led by PLW0603 (global-statement, 17 of them), which is an
+# architectural argument about the handler modules and not a lint fix. That argument may be
+# worth having; it is not worth having as a side effect of turning the linter on.
+#
+# E402 is deliberately absent from any noqa in the tree after this change. Ruff's E402 exempts
+# `sys.path` modifications outright, so the 13 directives naming it suppressed nothing — they
+# were written for flake8, which has no such exemption. RUF100 removed them.
+select = ["E", "F", "I", "B", "UP", "SIM", "C4", "RUF", "BLE001", "PLC0415"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test suites read `assert x == y` more clearly than a wrapped helper.
+"**/tests/**" = ["B011"]

@@ -28,7 +28,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable
 
 DEFAULT_TTL_SECONDS = 300.0
 
@@ -53,7 +53,7 @@ class ApprovalAlreadyUsed(ApprovalError):
     """The token is real and matches, and it has already been spent."""
 
 
-def fingerprint(tool_name: str, arguments: Dict[str, Any]) -> str:
+def fingerprint(tool_name: str, arguments: dict[str, Any]) -> str:
     """Hash the action a human is being asked to approve.
 
     `sort_keys` matters more than it looks: without it, two dicts that are equal in Python
@@ -72,11 +72,11 @@ class Approval:
     token: str
     fingerprint: str
     tool: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
     approver: str
     granted_at: float
     expires_at: float
-    used_at: Optional[float] = None
+    used_at: float | None = None
 
     @property
     def used(self) -> bool:
@@ -97,13 +97,13 @@ class ApprovalStore:
 
     def __init__(self, clock: Callable[[], float] = time.time) -> None:
         self._clock = clock
-        self._approvals: Dict[str, Approval] = {}
+        self._approvals: dict[str, Approval] = {}
         self._lock = threading.Lock()
 
     def grant(
         self,
         tool: str,
-        arguments: Dict[str, Any],
+        arguments: dict[str, Any],
         approver: str,
         ttl_seconds: float = DEFAULT_TTL_SECONDS,
     ) -> Approval:
@@ -121,7 +121,7 @@ class ApprovalStore:
             self._approvals[approval.token] = approval
         return approval
 
-    def claim(self, token: str, tool: str, arguments: Dict[str, Any]) -> Approval:
+    def claim(self, token: str, tool: str, arguments: dict[str, Any]) -> Approval:
         """Spend an approval for exactly this action, or raise.
 
         Everything happens under one lock. Checking validity and marking the token spent in
@@ -150,10 +150,10 @@ class ApprovalStore:
             approval.used_at = now
             return approval
 
-    def get(self, token: str) -> Optional[Approval]:
+    def get(self, token: str) -> Approval | None:
         with self._lock:
             return self._approvals.get(token)
 
 
-def _render(arguments: Dict[str, Any]) -> str:
+def _render(arguments: dict[str, Any]) -> str:
     return ", ".join(f"{key}={value!r}" for key, value in sorted(arguments.items()))

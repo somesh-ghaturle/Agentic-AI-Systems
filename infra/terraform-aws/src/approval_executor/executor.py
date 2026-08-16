@@ -21,9 +21,8 @@ import os
 import time
 
 import boto3
-from botocore.exceptions import ClientError
-
 from agentic_trace import tracer_for
+from botocore.exceptions import ClientError
 from contracts import fingerprint, require
 from ddb import from_item, to_item
 

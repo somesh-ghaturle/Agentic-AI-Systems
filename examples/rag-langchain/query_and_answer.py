@@ -6,8 +6,8 @@ If `OPENAI_API_KEY` is not set, the script prints retrieved documents and a sugg
 import os
 import sys
 
-from sentence_transformers import SentenceTransformer
 import faiss
+from sentence_transformers import SentenceTransformer
 
 DOCS = [
     "Agentic AI systems coordinate tools and models to solve multi-step tasks.",
@@ -17,14 +17,14 @@ DOCS = [
 
 
 def retrieve(q: str, k: int = 2, model_name: str = "all-MiniLM-L6-v2"):
-    from pathlib import Path
+    from pathlib import Path  # noqa: PLC0415
 
     model = SentenceTransformer(model_name)
     emb = model.encode([q], convert_to_numpy=True)
     index_path = Path(__file__).resolve().parent / "index.faiss"
     index = faiss.read_index(str(index_path))
-    D, I = index.search(emb, k)
-    results = [(DOCS[i], float(D[0][j])) for j, i in enumerate(I[0])]
+    distances, indices = index.search(emb, k)
+    results = [(DOCS[i], float(distances[0][j])) for j, i in enumerate(indices[0])]
     return results
 
 
@@ -41,9 +41,9 @@ def answer_with_llm(query: str, context_texts: list[str]):
     # ImportError only: a bare `except Exception` here hid genuine runtime failures behind
     # the same silent fallback as a missing package.
     try:
-        from langchain_core.output_parsers import StrOutputParser
-        from langchain_core.prompts import ChatPromptTemplate
-        from langchain_openai import ChatOpenAI
+        from langchain_core.output_parsers import StrOutputParser  # noqa: PLC0415
+        from langchain_core.prompts import ChatPromptTemplate  # noqa: PLC0415
+        from langchain_openai import ChatOpenAI  # noqa: PLC0415
     except ImportError as error:
         print(
             f"LangChain is not installed or is a version this example does not target: "

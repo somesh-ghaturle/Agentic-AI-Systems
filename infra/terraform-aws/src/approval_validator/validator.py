@@ -18,7 +18,6 @@ import time
 import uuid
 
 import boto3
-
 from agentic_trace import tracer_for
 from contracts import fingerprint, positive_int
 from ddb import to_item

@@ -14,7 +14,7 @@ missing reference, either one sufficient. Losing one leaves the other standing. 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable
 
 READ = "read"
 WRITE = "write"
@@ -43,7 +43,7 @@ class Tool:
     name: str
     access: str
     description: str
-    run: Callable[[Dict[str, Any]], Any]
+    run: Callable[[dict[str, Any]], Any]
 
     def __post_init__(self) -> None:
         if self.access not in ACCESS_LEVELS:
@@ -64,7 +64,7 @@ class ToolRegistry:
         if access not in ACCESS_LEVELS:
             raise ValueError(f"access must be one of {ACCESS_LEVELS}, got {access!r}")
         self.access = access
-        self._tools: Dict[str, Tool] = {}
+        self._tools: dict[str, Tool] = {}
 
     def register(self, tool: Tool) -> Tool:
         if tool.access != self.access:
@@ -88,7 +88,7 @@ class ToolRegistry:
     def has(self, name: str) -> bool:
         return name in self._tools
 
-    def names(self) -> List[str]:
+    def names(self) -> list[str]:
         return sorted(self._tools)
 
     def __len__(self) -> int:
@@ -112,10 +112,10 @@ class Toolbelt:
         self._tracer = tracer
 
     @property
-    def available(self) -> List[str]:
+    def available(self) -> list[str]:
         return self._registry.names()
 
-    def call(self, name: str, arguments: Optional[Dict[str, Any]] = None) -> Any:
+    def call(self, name: str, arguments: dict[str, Any] | None = None) -> Any:
         arguments = dict(arguments or {})
         tool = self._registry.get(name)
         # Belt and braces: the registry cannot hold a write tool, and this refuses one

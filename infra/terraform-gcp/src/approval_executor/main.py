@@ -33,11 +33,10 @@
 import os
 import time
 
+import firestore_io
 from agentic_trace import tracer_for
 from contracts import fingerprint, require
 from gcp_http import json_response, post_with_identity, request_json, resolve_callback
-
-import firestore_io
 
 
 def handler(request):

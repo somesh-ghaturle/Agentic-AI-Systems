@@ -9,11 +9,11 @@ changes — which is itself the claim being demonstrated.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from .approvals import ApprovalStore
 from .router import ApprovalExecutor, Hermes, Route, Router, WriteProposal
-from .tools import READ, WRITE, Tool, ToolRegistry, Toolbelt
+from .tools import READ, WRITE, Tool, Toolbelt, ToolRegistry
 
 # ---------------------------------------------------------------------------
 # Simulated tools
@@ -38,7 +38,7 @@ _SERVICE_STATE = {
 }
 
 
-def _kb_search(arguments: Dict[str, Any]) -> Dict[str, Any]:
+def _kb_search(arguments: dict[str, Any]) -> dict[str, Any]:
     query = str(arguments.get("query", "")).lower()
     hits = [
         key
@@ -48,17 +48,17 @@ def _kb_search(arguments: Dict[str, Any]) -> Dict[str, Any]:
     return {"query": arguments.get("query", ""), "hits": hits or sorted(_KNOWLEDGE_BASE)[:2]}
 
 
-def _fetch_document(arguments: Dict[str, Any]) -> Dict[str, Any]:
+def _fetch_document(arguments: dict[str, Any]) -> dict[str, Any]:
     key = str(arguments.get("id", ""))
     return {"id": key, "text": _KNOWLEDGE_BASE.get(key, "(no such document)")}
 
 
-def _service_status(arguments: Dict[str, Any]) -> Dict[str, Any]:
+def _service_status(arguments: dict[str, Any]) -> dict[str, Any]:
     name = str(arguments.get("service", ""))
     return {"service": name, "status": _SERVICE_STATE.get(name, {"healthy": None})}
 
 
-def _restart_service(arguments: Dict[str, Any]) -> Dict[str, Any]:
+def _restart_service(arguments: dict[str, Any]) -> dict[str, Any]:
     name = str(arguments.get("service", ""))
     state = _SERVICE_STATE.setdefault(
         name, {"healthy": True, "version": "0.0.0", "restarts_today": 0}
@@ -68,18 +68,18 @@ def _restart_service(arguments: Dict[str, Any]) -> Dict[str, Any]:
     return {"restarted": name, "restarts_today": state["restarts_today"]}
 
 
-def _post_message(arguments: Dict[str, Any]) -> Dict[str, Any]:
+def _post_message(arguments: dict[str, Any]) -> dict[str, Any]:
     return {
         "posted_to": arguments.get("channel", ""),
         "characters": len(str(arguments.get("body", ""))),
     }
 
 
-def _delete_record(arguments: Dict[str, Any]) -> Dict[str, Any]:
+def _delete_record(arguments: dict[str, Any]) -> dict[str, Any]:
     return {"deleted": arguments.get("id", ""), "recoverable": False}
 
 
-def build_registries() -> Tuple[ToolRegistry, ToolRegistry]:
+def build_registries() -> tuple[ToolRegistry, ToolRegistry]:
     read = ToolRegistry(READ)
     read.register(Tool("kb_search", READ, "Search the internal knowledge base", _kb_search))
     read.register(Tool("fetch_document", READ, "Fetch one document by id", _fetch_document))
@@ -97,7 +97,7 @@ def build_registries() -> Tuple[ToolRegistry, ToolRegistry]:
 # ---------------------------------------------------------------------------
 
 
-def research(request: str, tools: Toolbelt) -> Dict[str, Any]:
+def research(request: str, tools: Toolbelt) -> dict[str, Any]:
     """Search, then read the top hit. Two read calls, no approval needed for either."""
     found = tools.call("kb_search", {"query": _subject(request) or request})
     documents = [tools.call("fetch_document", {"id": hit}) for hit in found["hits"][:2]]
@@ -107,7 +107,7 @@ def research(request: str, tools: Toolbelt) -> Dict[str, Any]:
     }
 
 
-def status(request: str, tools: Toolbelt) -> Dict[str, Any]:
+def status(request: str, tools: Toolbelt) -> dict[str, Any]:
     service = _service_name(request) or "billing"
     return tools.call("service_status", {"service": service})
 
@@ -145,7 +145,7 @@ def act(request: str, tools: Toolbelt) -> WriteProposal:
     )
 
 
-def unrouted(request: str, tools: Toolbelt) -> Dict[str, Any]:
+def unrouted(request: str, tools: Toolbelt) -> dict[str, Any]:
     """The fallback says so plainly instead of guessing.
 
     A router that quietly picks its most common route when it does not understand
@@ -189,8 +189,8 @@ FALLBACK = Route(intent="unrouted", keywords=(), handler=unrouted)
 
 
 def build_agent(
-    approvals: Optional[ApprovalStore] = None,
-) -> Tuple[Hermes, ApprovalExecutor]:
+    approvals: ApprovalStore | None = None,
+) -> tuple[Hermes, ApprovalExecutor]:
     """Return the pair. They share an approval store and nothing else.
 
     Returning two objects rather than one with an `execute_write` method is the point: the
@@ -214,12 +214,12 @@ _SERVICE_PATTERN = re.compile(
 _ID_PATTERN = re.compile(r"\b([a-z]+-[a-z0-9]+)\b", re.IGNORECASE)
 
 
-def _service_name(request: str) -> Optional[str]:
+def _service_name(request: str) -> str | None:
     match = _SERVICE_PATTERN.search(request)
     return match.group(1).lower() if match else None
 
 
-def _subject(request: str) -> Optional[str]:
+def _subject(request: str) -> str | None:
     """Pull an identifier like `incident-2291` out of the text.
 
     A real system takes structured arguments from a model's tool call rather than guessing

@@ -25,20 +25,20 @@ from .state import (
 from .verify import AlwaysPasses, CommandVerifier, Result, ScriptedVerifier
 
 __all__ = [
-    "AlwaysPasses",
     "CLAIMED",
     "COMPLETE",
+    "PENDING",
+    "VERIFIED",
+    "AlwaysPasses",
     "CommandVerifier",
     "Harness",
     "HarnessError",
-    "PENDING",
     "Progress",
     "Result",
     "ScriptedVerifier",
     "Session",
     "SessionError",
     "StateError",
-    "VERIFIED",
     "load",
     "save",
 ]

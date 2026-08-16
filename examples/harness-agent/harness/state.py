@@ -49,7 +49,7 @@ class Progress:
         if len(set(features)) != len(features):
             raise StateError(f"duplicate feature names: {features}")
         self._features = list(features)
-        self._states = dict(states) if states else {f: PENDING for f in features}
+        self._states = dict(states) if states else dict.fromkeys(features, PENDING)
         self.session = session
 
         unknown = set(self._states) - set(self._features)

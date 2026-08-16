@@ -21,9 +21,8 @@ import json
 import os
 import time
 
-from anthropic import AnthropicBedrockMantle
-
 from agentic_trace import tracer_for
+from anthropic import AnthropicBedrockMantle
 from contracts import error, ok
 
 # Bedrock model IDs carry an "anthropic." prefix; the bare id is the first-party form.
@@ -109,7 +108,7 @@ def handler(event, context=None):
 
     try:
         decision = _reason(event, tracer)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         tracer.step_complete(
             outcome="failure", latency_ms=_elapsed_ms(started), error=str(exc)
         )

@@ -31,11 +31,10 @@ import os
 import time
 import uuid
 
+import firestore_io
 from agentic_trace import tracer_for
 from contracts import fingerprint, positive_int
 from gcp_http import json_response, request_json
-
-import firestore_io
 
 # Namespace for deterministic approval IDs. A retried validation produces the same
 # approval_id, so the audit collection shows one decision with revisions rather than two

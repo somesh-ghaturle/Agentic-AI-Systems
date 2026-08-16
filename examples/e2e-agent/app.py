@@ -11,24 +11,21 @@ Features:
 
 This is a minimal, self-contained example suitable for local testing and CI smoke checks.
 """
-import os
 import hmac
 import json
-import uuid
+import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict
 
 from fastapi import FastAPI, HTTPException, Request
-from pydantic import BaseModel
 
 # OpenTelemetry
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor, ConsoleSpanExporter
-
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+from pydantic import BaseModel
 
 # --- Config
 # Fails closed. A default here means that anyone who deploys this without reading the README
@@ -76,7 +73,7 @@ def _timestamp() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def audit_entry(trace_id: str, payload: Dict):
+def audit_entry(trace_id: str, payload: dict):
     entry = {
         "trace_id": trace_id,
         "timestamp": _timestamp(),
@@ -86,7 +83,7 @@ def audit_entry(trace_id: str, payload: Dict):
         f.write(json.dumps(entry) + "\n")
 
 
-def write_provenance(trace_id: str, metadata: Dict):
+def write_provenance(trace_id: str, metadata: dict):
     path = PROV_DIR / f"{trace_id}.json"
     with open(path, "w") as f:
         json.dump(metadata, f, indent=2)

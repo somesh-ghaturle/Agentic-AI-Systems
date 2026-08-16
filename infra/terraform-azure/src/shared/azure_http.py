@@ -24,6 +24,7 @@
 # Terraform diff — which is exactly why modules/entra-audit exists as a detective control
 # and why tests/test_write_boundary.py asserts the flag is never set to false.
 
+import contextlib
 import json
 import os
 
@@ -105,10 +106,8 @@ def request_json(req):
         return body
 
     raw = None
-    try:
+    with contextlib.suppress(AttributeError):
         raw = req.get_body()
-    except AttributeError:
-        pass
 
     if raw:
         try:

@@ -22,7 +22,7 @@ import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 HERMES = Path(__file__).resolve().parents[2] / "hermes-agent"
 if not (HERMES / "hermes" / "__init__.py").exists():
@@ -43,7 +43,7 @@ class Run:
     case: Any
     subject: str
     answer: str
-    trace_lines: List[str] = field(default_factory=list)
+    trace_lines: list[str] = field(default_factory=list)
 
 
 def _render(value: Any) -> str:
@@ -56,7 +56,7 @@ def _render(value: Any) -> str:
 
 
 def run_hermes(case) -> Run:
-    lines: List[str] = []
+    lines: list[str] = []
     agent, _executor = build_agent()
     tracer = Tracer(sink=lambda event: lines.append(event.to_json()))
     result = agent.handle(case.request, tracer=tracer)
@@ -101,17 +101,17 @@ def _naive_classify(request: str):
 
 
 def run_naive(case) -> Run:
-    lines: List[str] = []
+    lines: list[str] = []
     tracer = Tracer(sink=lambda event: lines.append(event.to_json()))
 
     read_registry, write_registry = build_registries()
     # One table. Nothing here knows the difference between reading and writing.
-    tools: Dict[str, Any] = {}
+    tools: dict[str, Any] = {}
     for registry in (read_registry, write_registry):
         for name in registry.names():
             tools[name] = registry.get(name)
 
-    def call(name: str, arguments: Dict[str, Any]) -> Any:
+    def call(name: str, arguments: dict[str, Any]) -> Any:
         tool = tools[name]
         tracer.emit("tool.call", tool=name, access=tool.access, arguments=arguments)
         result = tool.run(dict(arguments))
@@ -161,7 +161,7 @@ def _naive_handle(intent: str, request: str, call: Callable) -> Any:
     return {"answer": "No route matched this request.", "tools_available": []}
 
 
-SUBJECTS: Dict[str, Callable[[Any], Run]] = {
+SUBJECTS: dict[str, Callable[[Any], Run]] = {
     "hermes": run_hermes,
     "naive": run_naive,
 }

@@ -83,7 +83,7 @@ def block_body(text, open_brace_index):
             depth -= 1
             if depth == 0:
                 return text[open_brace_index + 1 : i]
-    raise AssertionError("unbalanced braces starting at offset %d" % open_brace_index)
+    raise AssertionError(f"unbalanced braces starting at offset {open_brace_index}")
 
 
 def service_principals():
@@ -106,10 +106,10 @@ class TestWriteBoundary(unittest.TestCase):
         self.assertGreaterEqual(
             len(self.principals),
             4,
-            "expected at least 4 azuread_service_principal blocks; found %d. Either the "
-            "tree changed or the file walk is broken — check the latter first, because a "
-            "broken walk makes the rest of this file pass while checking nothing."
-            % len(self.principals),
+            f"expected at least 4 azuread_service_principal blocks; "
+            f"found {len(self.principals)}. Either the tree changed or the file walk is "
+            "broken — check the latter first, because a broken walk makes the rest of "
+            "this file pass while checking nothing.",
         )
 
     def test_every_service_principal_requires_role_assignment(self):
@@ -121,19 +121,19 @@ class TestWriteBoundary(unittest.TestCase):
             )
             rel = os.path.relpath(path, TREE)
             if assignment is None:
-                missing.append("%s: %s — attribute absent" % (rel, name))
+                missing.append(f"{rel}: {name} — attribute absent")
             elif assignment.group("value") != "true":
                 missing.append(
-                    "%s: %s — set to %s" % (rel, name, assignment.group("value"))
+                    "{}: {} — set to {}".format(rel, name, assignment.group("value"))
                 )
 
         self.assertEqual(
             [],
             missing,
-            "Service principals without %s = true:\n  %s\n\n"
+            "Service principals without {} = true:\n  {}\n\n"
             "This is the write boundary. Without it Entra issues a token for these APIs "
             "to any principal in the tenant, and the orchestrator can invoke write tools "
-            "directly. See ARCHITECTURE.md section 2." % (REQUIRED, "\n  ".join(missing)),
+            "directly. See ARCHITECTURE.md section 2.".format(REQUIRED, "\n  ".join(missing)),
         )
 
     def test_attribute_is_never_set_false_anywhere(self):
@@ -145,14 +145,12 @@ class TestWriteBoundary(unittest.TestCase):
             with open(path, encoding="utf-8") as fh:
                 for lineno, line in enumerate(fh, start=1):
                     if pattern.search(strip_comments(line)):
-                        offenders.append(
-                            "%s:%d" % (os.path.relpath(path, TREE), lineno)
-                        )
+                        offenders.append(f"{os.path.relpath(path, TREE)}:{lineno}")
 
         self.assertEqual(
             [],
             offenders,
-            "%s is set to false at:\n  %s" % (REQUIRED, "\n  ".join(offenders)),
+            "{} is set to false at:\n  {}".format(REQUIRED, "\n  ".join(offenders)),
         )
 
 

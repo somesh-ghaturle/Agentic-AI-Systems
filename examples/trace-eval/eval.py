@@ -18,9 +18,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from traceeval import CASES, score_output, score_trace  # noqa: E402
-from traceeval.scoring import Report  # noqa: E402
-from traceeval.subjects import SUBJECTS  # noqa: E402
+from traceeval import CASES, score_output, score_trace
+from traceeval.scoring import Report
+from traceeval.subjects import SUBJECTS
 
 
 def main(argv=None) -> int:

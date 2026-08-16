@@ -25,28 +25,28 @@ sys.path.insert(
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples", "hermes-agent"),
 )
 
-from hermes import (  # noqa: E402
+from hermes import (
+    READ,
+    WRITE,
     ApprovalAlreadyUsed,
     ApprovalExecutor,
     ApprovalExpired,
     ApprovalMismatch,
     ApprovalStore,
     Hermes,
-    READ,
     Route,
     Router,
     Tool,
-    ToolRegistry,
     Toolbelt,
+    ToolRegistry,
     Tracer,
     UnknownApproval,
     UnknownTool,
-    WRITE,
     WriteBoundaryViolation,
     WriteProposal,
     fingerprint,
 )
-from hermes.demo import build_agent, build_registries  # noqa: E402
+from hermes.demo import build_agent, build_registries
 
 
 class FakeClock:
@@ -246,7 +246,7 @@ class TestApprovals(unittest.TestCase):
 
     def test_failed_claim_does_not_run_the_tool(self):
         """A mismatch must fail before the side effect, not after it."""
-        from hermes.demo import _SERVICE_STATE
+        from hermes.demo import _SERVICE_STATE  # noqa: PLC0415
 
         before = _SERVICE_STATE["billing"]["restarts_today"]
         proposal = self._propose()
@@ -337,7 +337,7 @@ class TestTracing(unittest.TestCase):
         )
 
     def test_events_serialise_to_one_json_object_per_line(self):
-        import json
+        import json  # noqa: PLC0415
 
         tracer = Tracer()
         self.agent.handle("summarize incident-2291", tracer=tracer)

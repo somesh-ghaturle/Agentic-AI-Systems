@@ -17,9 +17,8 @@ import json
 import os
 import time
 
-import boto3
-
 import aoss
+import boto3
 from agentic_trace import tracer_for
 from contracts import error, ok
 
@@ -40,7 +39,7 @@ def handler(event, context=None):
 
     try:
         result = _retrieve(event, tracer)
-    except Exception as exc:  # noqa: BLE001 — a tool failure must not be a stack trace
+    except Exception as exc:
         tracer.step_complete(
             outcome="failure", latency_ms=_elapsed_ms(started), error=str(exc)
         )
@@ -88,7 +87,7 @@ def _retrieve(event, tracer):
 
     try:
         vector = _embed(query)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         tracer.step_complete(outcome="failure", error=f"embedding_failed: {exc}")
         raise
 

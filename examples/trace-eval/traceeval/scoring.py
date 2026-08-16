@@ -10,8 +10,8 @@ a week, and then the criticals go unread with the rest.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import List, Sequence
 
 from .checks import ALL_CHECKS, CRITICAL, ERROR, SEVERITY_ORDER, Finding, run_checks
 from .ingest import load_one
@@ -23,8 +23,8 @@ FAILING_SEVERITIES = (CRITICAL, ERROR)
 class Verdict:
     grader: str
     passed: bool
-    reasons: List[str] = field(default_factory=list)
-    findings: List[Finding] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)
+    findings: list[Finding] = field(default_factory=list)
 
     @property
     def mark(self) -> str:
@@ -105,23 +105,23 @@ class Row:
         return self.output.passed and not self.trace.passed
 
     @property
-    def warnings(self) -> List[Finding]:
+    def warnings(self) -> list[Finding]:
         return [f for f in self.trace.findings if f.severity not in FAILING_SEVERITIES]
 
 
 @dataclass
 class Report:
-    rows: List[Row] = field(default_factory=list)
+    rows: list[Row] = field(default_factory=list)
 
     def add(self, subject: str, case_name: str, output: Verdict, trace: Verdict) -> Row:
         row = Row(subject=subject, case_name=case_name, output=output, trace=trace)
         self.rows.append(row)
         return row
 
-    def disagreements(self) -> List[Row]:
+    def disagreements(self) -> list[Row]:
         return [row for row in self.rows if row.disagreement]
 
-    def for_subject(self, subject: str) -> List[Row]:
+    def for_subject(self, subject: str) -> list[Row]:
         return [row for row in self.rows if row.subject == subject]
 
     def totals(self, subject: str):

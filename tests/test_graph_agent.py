@@ -25,7 +25,7 @@ sys.path.insert(
     0, str(pathlib.Path(__file__).resolve().parent.parent / "examples" / "graph-agent")
 )
 
-import graph_agent as ga  # noqa: E402
+import graph_agent as ga
 
 HAS_LANGGRAPH = importlib.util.find_spec("langgraph") is not None
 

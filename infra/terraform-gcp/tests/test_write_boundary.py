@@ -121,7 +121,7 @@ def block_body(text, open_brace_index):
             depth -= 1
             if depth == 0:
                 return text[open_brace_index + 1 : i]
-    raise AssertionError("unbalanced braces starting at offset %d" % open_brace_index)
+    raise AssertionError(f"unbalanced braces starting at offset {open_brace_index}")
 
 
 def resources(resource_type=None, subdir=None):
@@ -154,10 +154,11 @@ class TestLockOneInvokerBindings(unittest.TestCase):
         self.assertGreaterEqual(
             len(self.bindings),
             4,
-            "expected at least 4 google_cloud_run_service_iam_member blocks; found %d. "
+            f"expected at least 4 google_cloud_run_service_iam_member blocks; "
+            f"found {len(self.bindings)}. "
             "Either the tree changed or the file walk is broken — check the latter first, "
             "because a broken walk makes the rest of this file pass while checking "
-            "nothing." % len(self.bindings),
+            "nothing.",
         )
 
     def test_write_tool_bindings_name_the_approval_executor(self):
@@ -176,44 +177,43 @@ class TestLockOneInvokerBindings(unittest.TestCase):
 
             member = re.search(r"member\s*=\s*(?P<value>\S+)", body)
             if member is None:
-                wrong.append("%s: %s — no member attribute" % (rel(path), name))
+                wrong.append(f"{rel(path)}: {name} — no member attribute")
             elif member.group("value") != "var.approval_executor_member":
                 wrong.append(
-                    "%s: %s — grants to %s"
-                    % (rel(path), name, member.group("value"))
+                    "{}: {} — grants to {}".format(rel(path), name, member.group("value"))
                 )
 
         self.assertEqual(
             [],
             wrong,
-            "Write tool invoker bindings that do not name the approval executor:\n  %s\n\n"
+            "Write tool invoker bindings that do not name the approval executor:\n  {}\n\n"
             "This is lock 1. The executor is the only principal permitted to invoke a "
             "write tool; anything else here means the model can execute irreversible "
-            "actions without passing the gate." % "\n  ".join(wrong),
+            "actions without passing the gate.".format("\n  ".join(wrong)),
         )
 
         self.assertEqual(
             1,
             checked,
-            "expected exactly 1 invoker binding over local.write_tools; found %d. More "
-            "than one means a second principal is being granted invoke on write tools "
-            "somewhere — read it before changing this number." % checked,
+            f"expected exactly 1 invoker binding over local.write_tools; found {checked}. "
+            "More than one means a second principal is being granted invoke on write tools "
+            "somewhere — read it before changing this number.",
         )
 
     def test_orchestrator_never_appears_in_a_write_tool_binding(self):
         offenders = [
-            "%s: %s" % (rel(path), name)
+            f"{rel(path)}: {name}"
             for path, _type, name, body in self.bindings
             if "local.write_tools" in body and "var.orchestrator_member" in body
         ]
 
+        listed = "\n  ".join(offenders)
         self.assertEqual(
             [],
             offenders,
-            "The orchestrator is named in a write tool invoker binding at:\n  %s\n\n"
+            f"The orchestrator is named in a write tool invoker binding at:\n  {listed}\n\n"
             "The orchestrator proposes writes. It does not execute them — that inversion "
-            "is the single most important safety property in the system."
-            % "\n  ".join(offenders),
+            "is the single most important safety property in the system.",
         )
 
 
@@ -228,34 +228,34 @@ class TestInvokerRoleIsCloudRun(unittest.TestCase):
             with open(path, encoding="utf-8") as fh:
                 for lineno, line in enumerate(fh, start=1):
                     if pattern.search(strip_comments(line)):
-                        offenders.append("%s:%d" % (rel(path), lineno))
+                        offenders.append(f"{rel(path)}:{lineno}")
 
+        listed = "\n  ".join(offenders)
         self.assertEqual(
             [],
             offenders,
-            "roles/cloudfunctions.invoker is granted at:\n  %s\n\n"
+            f"roles/cloudfunctions.invoker is granted at:\n  {listed}\n\n"
             "Every function in this tree is Cloud Functions gen2, which is a Cloud Run "
             "service underneath. This role appears in the console, applies without error, "
             "and does not control HTTP invocation. Use "
-            "google_cloud_run_service_iam_member with roles/run.invoker."
-            % "\n  ".join(offenders),
+            "google_cloud_run_service_iam_member with roles/run.invoker.",
         )
 
     def test_no_gen2_function_iam_resources(self):
         """The same mistake in resource form rather than role form."""
         offenders = [
-            "%s: %s" % (rel(path), name)
+            f"{rel(path)}: {name}"
             for path, rtype, name, _body in resources()
             if rtype.startswith("google_cloudfunctions2_function_iam")
         ]
 
+        listed = "\n  ".join(offenders)
         self.assertEqual(
             [],
             offenders,
-            "Function-level IAM resources found at:\n  %s\n\n"
+            f"Function-level IAM resources found at:\n  {listed}\n\n"
             "These manage the function resource's own policy, which is not what gates "
-            "invocation for gen2. Bind the underlying Cloud Run service instead."
-            % "\n  ".join(offenders),
+            "invocation for gen2. Bind the underlying Cloud Run service instead.",
         )
 
 
@@ -269,9 +269,9 @@ class TestLockTwoDenyPolicy(unittest.TestCase):
         self.assertEqual(
             1,
             len(self.policies),
-            "expected exactly 1 google_iam_deny_policy; found %d. This is lock 2 — the "
-            "independent denial that survives somebody later granting the orchestrator a "
-            "broad run.invoker at project level." % len(self.policies),
+            f"expected exactly 1 google_iam_deny_policy; found {len(self.policies)}. "
+            "This is lock 2 — the independent denial that survives somebody later granting "
+            "the orchestrator a broad run.invoker at project level.",
         )
 
     def test_denied_principals_use_principal_uri_form(self):
@@ -281,35 +281,34 @@ class TestLockTwoDenyPolicy(unittest.TestCase):
                 r"denied_principals\s*=\s*\[(?P<items>[^\]]*)\]", body, re.S
             )
             if block is None:
-                wrong.append("%s: %s — no denied_principals" % (rel(path), name))
+                wrong.append(f"{rel(path)}: {name} — no denied_principals")
                 continue
 
             items = block.group("items")
             if "principal://" not in items:
                 wrong.append(
-                    "%s: %s — no principal:// entry in denied_principals"
-                    % (rel(path), name)
+                    f"{rel(path)}: {name} — no principal:// entry in denied_principals"
                 )
             if re.search(r'"serviceAccount:', items):
                 wrong.append(
-                    '%s: %s — uses "serviceAccount:" form' % (rel(path), name)
+                    f'{rel(path)}: {name} — uses "serviceAccount:" form'
                 )
 
         self.assertEqual(
             [],
             wrong,
-            "Deny policy principals in the wrong form:\n  %s\n\n"
+            "Deny policy principals in the wrong form:\n  {}\n\n"
             "Deny policies take principal:// URIs, unlike every other IAM resource in this "
             "tree, which takes serviceAccount:. The allow-policy form is accepted at apply "
             "time and matches nothing — the policy exists, looks like a control, and denies "
-            "nobody." % "\n  ".join(wrong),
+            "nobody.".format("\n  ".join(wrong)),
         )
 
     def test_denied_permissions_cover_cloud_run_invoke(self):
         wrong = []
         for path, _type, name, body in self.policies:
             if "denied_permissions" not in body:
-                wrong.append("%s: %s — no denied_permissions" % (rel(path), name))
+                wrong.append(f"{rel(path)}: {name} — no denied_permissions")
 
         self.assertEqual([], wrong, "\n  ".join(wrong))
 
@@ -335,11 +334,11 @@ class TestLockTwoDenyPolicy(unittest.TestCase):
             self.assertIn(
                 "var.write_tool_service_names",
                 body,
-                "%s: %s — the denial condition does not reference "
+                f"{rel(path)}: {name} — the denial condition does not reference "
                 "write_tool_service_names. An unscoped denial would also cut the "
                 "orchestrator off from read tools, the validator, and the trace emitter, "
                 "which fails loudly; a condition built from something else may fail "
-                "quietly." % (rel(path), name),
+                "quietly.",
             )
 
 
@@ -355,7 +354,7 @@ class TestWriteToolUrlsHaveOneConsumer(unittest.TestCase):
 
             match = re.search(r'module\s+"orchestration"\s*\{', text)
             self.assertIsNotNone(
-                match, "%s has no orchestration module block" % rel(path)
+                match, f"{rel(path)} has no orchestration module block"
             )
             body = block_body(text, match.end() - 1)
 
@@ -364,15 +363,15 @@ class TestWriteToolUrlsHaveOneConsumer(unittest.TestCase):
                 "module.tools.tool_urls_by_name",
             ):
                 if forbidden in body:
-                    offenders.append("%s: passes %s" % (rel(path), forbidden))
+                    offenders.append(f"{rel(path)}: passes {forbidden}")
 
         self.assertEqual(
             [],
             offenders,
-            "The orchestration module is handed write tool addresses at:\n  %s\n\n"
+            "The orchestration module is handed write tool addresses at:\n  {}\n\n"
             "A URL is not a secret and this is not the security control — IAM is. It is "
             "the shape layer, and it exists so that reaching a write tool has to be "
-            "deliberate rather than incidental." % "\n  ".join(offenders),
+            "deliberate rather than incidental.".format("\n  ".join(offenders)),
         )
 
     def test_write_tool_urls_go_to_the_approval_module_only(self):
@@ -383,7 +382,7 @@ class TestWriteToolUrlsHaveOneConsumer(unittest.TestCase):
 
             total = text.count("module.tools.write_tool_urls")
             match = re.search(r'module\s+"approval"\s*\{', text)
-            self.assertIsNotNone(match, "%s has no approval module block" % rel(path))
+            self.assertIsNotNone(match, f"{rel(path)} has no approval module block")
             in_approval = block_body(text, match.end() - 1).count(
                 "module.tools.write_tool_urls"
             )
@@ -391,9 +390,9 @@ class TestWriteToolUrlsHaveOneConsumer(unittest.TestCase):
             self.assertEqual(
                 total,
                 in_approval,
-                "%s references module.tools.write_tool_urls %d times but only %d are "
-                "inside the approval module. The executor is the only thing that should "
-                "know a write tool's address." % (rel(path), total, in_approval),
+                f"{rel(path)} references module.tools.write_tool_urls {total} times but "
+                f"only {in_approval} are inside the approval module. The executor is the "
+                "only thing that should know a write tool's address.",
             )
 
 

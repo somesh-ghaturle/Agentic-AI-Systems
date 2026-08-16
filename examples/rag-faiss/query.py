@@ -3,7 +3,6 @@
 
 Run `build_index.py` first to create `index.faiss`.
 """
-from sentence_transformers import SentenceTransformer
 import faiss
 
 # Imported rather than copied. This list used to be duplicated verbatim in both files, which
@@ -12,17 +11,18 @@ import faiss
 # reporting the old text against the new vectors — every result confidently wrong, nothing
 # raised, and the two files still looking correct read on their own.
 from build_index import DOCS
+from sentence_transformers import SentenceTransformer
 
 
 def query(q: str, k: int = 2, model_name: str = "all-MiniLM-L6-v2"):
-    from pathlib import Path
+    from pathlib import Path  # noqa: PLC0415
 
     model = SentenceTransformer(model_name)
     emb = model.encode([q], convert_to_numpy=True)
     index_path = Path(__file__).resolve().parent / "index.faiss"
     index = faiss.read_index(str(index_path))
-    D, I = index.search(emb, k)
-    results = [(DOCS[i], float(D[0][j])) for j, i in enumerate(I[0])]
+    distances, indices = index.search(emb, k)
+    results = [(DOCS[i], float(distances[0][j])) for j, i in enumerate(indices[0])]
     return results
 
 

@@ -21,9 +21,8 @@ import json
 import os
 import time
 
-from anthropic import AnthropicVertex
-
 from agentic_trace import tracer_for
+from anthropic import AnthropicVertex
 from contracts import error, ok
 from gcp_http import json_response, request_json
 

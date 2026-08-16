@@ -257,7 +257,7 @@ class TestValidator(unittest.TestCase):
             {"action": "process_refund", "arguments": {"order_id": "o1", "amount_cents": 100}},
             self._actor(),
         )
-        ownership = [c for c in checks if c["code"] == "actor_owns_resource"][0]
+        ownership = next(c for c in checks if c["code"] == "actor_owns_resource")
         self.assertFalse(ownership["passed"])
 
     def test_approval_id_is_stable_for_the_same_proposal(self):

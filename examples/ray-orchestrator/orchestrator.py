@@ -5,8 +5,9 @@ Requirements: pip install -r requirements.txt
 
 This demonstrates parallel tasks and result aggregation using Ray.
 """
-import ray
 import time
+
+import ray
 
 
 @ray.remote

@@ -34,7 +34,7 @@ def handler(event, context=None):
 
     try:
         result = _process(event, tracer)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         # A write that failed is the case where the trace matters most — it is the
         # evidence of what was attempted against an approval that a human granted.
         tracer.step_complete(

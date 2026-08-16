@@ -18,9 +18,9 @@ def run_with_langchain(prompt: str) -> str:
     # failure including a version mismatch, which sent people to reinstall a package that
     # was already present and correct.
     try:
-        from langchain_core.output_parsers import StrOutputParser
-        from langchain_core.prompts import ChatPromptTemplate
-        from langchain_openai import ChatOpenAI
+        from langchain_core.output_parsers import StrOutputParser  # noqa: PLC0415
+        from langchain_core.prompts import ChatPromptTemplate  # noqa: PLC0415
+        from langchain_openai import ChatOpenAI  # noqa: PLC0415
     except ImportError as error:
         return (
             f"LangChain is not installed or is a version this example does not target: "
@@ -39,16 +39,17 @@ def run_with_langchain(prompt: str) -> str:
 
 
 def main():
-    if len(sys.argv) > 1:
-        user_prompt = " ".join(sys.argv[1:])
-    else:
-        user_prompt = input("Prompt> ")
+    user_prompt = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else input("Prompt> ")
 
-    # Prefer running with LangChain when available, fallback to echo
+    # Prefer running with LangChain when available, fall back to echo.
+    #
+    # Broad on purpose, and the error is printed rather than swallowed — same reasoning as
+    # the ImportError branch above. A fallback that hides an auth failure or a timeout
+    # behind the word "fallback" sends people to debug the wrong thing.
     try:
         out = run_with_langchain(user_prompt)
-    except Exception:
-        out = f"Agent (fallback): {user_prompt}"
+    except Exception as error:  # noqa: BLE001
+        out = f"Agent (fallback after {type(error).__name__}: {error}): {user_prompt}"
     print(out)
 
 

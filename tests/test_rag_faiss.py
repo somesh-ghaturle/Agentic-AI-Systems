@@ -61,8 +61,8 @@ class TestTheDriftBug(unittest.TestCase):
 
     @unittest.skipUnless(IMPORTABLE, "example dependencies absent; runs in example-deps")
     def test_both_modules_see_the_same_list_object(self):
-        import build_index
-        import query
+        import build_index  # noqa: PLC0415
+        import query  # noqa: PLC0415
 
         self.assertIs(query.DOCS, build_index.DOCS)
 
@@ -72,8 +72,8 @@ class TestRetrievalMechanics(unittest.TestCase):
     """Index behaviour, with vectors chosen rather than embedded."""
 
     def setUp(self):
-        import faiss
-        import numpy as np
+        import faiss  # noqa: PLC0415
+        import numpy as np  # noqa: PLC0415
 
         self.faiss = faiss
         self.np = np
@@ -111,7 +111,7 @@ class TestRetrievalMechanics(unittest.TestCase):
     @unittest.skipUnless(IMPORTABLE, "example dependencies absent; runs in example-deps")
     def test_ids_map_back_to_documents_by_position(self):
         """The mapping the drift bug would have corrupted."""
-        import build_index
+        import build_index  # noqa: PLC0415
 
         _, ids = self.index.search(self.np.array([[4.9, 0.0]], dtype="float32"), 1)
         self.assertEqual(build_index.DOCS[ids[0][0]], build_index.DOCS[2])
@@ -120,7 +120,7 @@ class TestRetrievalMechanics(unittest.TestCase):
 @unittest.skipUnless(IMPORTABLE, "example dependencies absent; runs in example-deps")
 class TestTheExampleItself(unittest.TestCase):
     def test_there_are_as_many_documents_as_the_index_expects(self):
-        import build_index
+        import build_index  # noqa: PLC0415
 
         self.assertEqual(len(build_index.DOCS), 3)
         self.assertTrue(all(isinstance(d, str) and d for d in build_index.DOCS))
@@ -134,8 +134,8 @@ class TestTheExampleItself(unittest.TestCase):
         to be run, so index.faiss may legitimately already exist from a previous run, and
         checking for its absence would fail for the wrong reason.
         """
-        import build_index
-        import query
+        import build_index  # noqa: PLC0415
+        import query  # noqa: PLC0415
 
         for module in (build_index, query):
             source = pathlib.Path(module.__file__).read_text(encoding="utf-8")
@@ -159,7 +159,7 @@ class TestEndToEnd(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        import os
+        import os  # noqa: PLC0415
 
         cache = pathlib.Path(
             os.environ.get("HF_HOME", pathlib.Path.home() / ".cache" / "huggingface")
@@ -168,8 +168,8 @@ class TestEndToEnd(unittest.TestCase):
             raise unittest.SkipTest("model not cached; skipping the download path")
 
     def test_the_expected_document_ranks_first(self):
-        import build_index
-        import query
+        import build_index  # noqa: PLC0415
+        import query  # noqa: PLC0415
 
         with tempfile.TemporaryDirectory():
             build_index.build_index()

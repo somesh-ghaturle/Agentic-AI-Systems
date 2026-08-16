@@ -32,7 +32,7 @@ sys.path.insert(
     0, str(pathlib.Path(__file__).resolve().parent.parent / "examples" / "harness-agent")
 )
 
-from harness import (  # noqa: E402
+from harness import (
     CLAIMED,
     COMPLETE,
     PENDING,
@@ -172,7 +172,7 @@ class TestIncompleteTesting(HarnessTestCase):
 
     def test_a_feature_with_no_verification_command_fails(self):
         """'No check defined' must not read as 'passed'."""
-        from harness import CommandVerifier
+        from harness import CommandVerifier  # noqa: PLC0415
 
         verifier = CommandVerifier({})
         result = verifier("alpha")

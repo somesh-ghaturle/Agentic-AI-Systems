@@ -15,8 +15,9 @@ the return type is the seam, and everything downstream is unchanged.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable
 
 from .approvals import ApprovalStore, fingerprint
 from .tools import (
@@ -44,12 +45,12 @@ class WriteProposal:
     """
 
     tool: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
     rationale: str
     fingerprint: str
 
     @classmethod
-    def create(cls, tool: str, arguments: Dict[str, Any], rationale: str) -> "WriteProposal":
+    def create(cls, tool: str, arguments: dict[str, Any], rationale: str) -> WriteProposal:
         arguments = dict(arguments)
         return cls(
             tool=tool,
@@ -70,8 +71,8 @@ class Result:
     trace_id: str
     intent: str
     handler: str
-    output: Optional[Any] = None
-    proposal: Optional[WriteProposal] = None
+    output: Any | None = None
+    proposal: WriteProposal | None = None
 
     @property
     def pending(self) -> bool:
@@ -88,7 +89,7 @@ Handler = Callable[[str, Toolbelt], Any]
 @dataclass(frozen=True)
 class Route:
     intent: str
-    keywords: Tuple[str, ...]
+    keywords: tuple[str, ...]
     handler: Handler
     description: str = ""
 
@@ -106,7 +107,7 @@ class Route:
             ),
         )
 
-    def matches(self, text: str) -> Optional[str]:
+    def matches(self, text: str) -> str | None:
         """Return the keyword that fired, so the trace can say *why* this route won."""
         for keyword, pattern in self._patterns:  # type: ignore[attr-defined]
             if pattern.search(text):
@@ -124,10 +125,10 @@ class Router:
     """
 
     def __init__(self, routes: Sequence[Route], fallback: Route) -> None:
-        self.routes: List[Route] = list(routes)
+        self.routes: list[Route] = list(routes)
         self.fallback = fallback
 
-    def classify(self, text: str) -> Tuple[Route, Optional[str]]:
+    def classify(self, text: str) -> tuple[Route, str | None]:
         for route in self.routes:
             keyword = route.matches(text)
             if keyword is not None:
@@ -169,11 +170,11 @@ class ApprovalExecutor:
         self._approvals = approvals
 
     @property
-    def available(self) -> List[str]:
+    def available(self) -> list[str]:
         return self._registry.names()
 
     def execute(
-        self, proposal: WriteProposal, token: str, tracer: Optional[Tracer] = None
+        self, proposal: WriteProposal, token: str, tracer: Tracer | None = None
     ) -> Any:
         tool = self._registry.get(proposal.tool)
         if tool.access != WRITE:
@@ -221,7 +222,7 @@ class Hermes:
         self,
         router: Router,
         read_registry: ToolRegistry,
-        approvals: Optional[ApprovalStore] = None,
+        approvals: ApprovalStore | None = None,
     ) -> None:
         if read_registry.access != READ:
             raise WriteBoundaryViolation(
@@ -232,7 +233,7 @@ class Hermes:
         self.read_registry = read_registry
         self.approvals = approvals or ApprovalStore()
 
-    def handle(self, request: str, tracer: Optional[Tracer] = None) -> Result:
+    def handle(self, request: str, tracer: Tracer | None = None) -> Result:
         tracer = tracer or Tracer()
         tracer.emit("request.received", characters=len(request))
 

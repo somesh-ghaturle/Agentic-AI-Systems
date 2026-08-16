@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable
 
 from .ingest import Trace
 
@@ -32,14 +32,14 @@ class Finding:
     check: str
     severity: str
     message: str
-    seq: Optional[int] = None
+    seq: int | None = None
 
     def __str__(self) -> str:
         where = f" [seq {self.seq}]" if self.seq is not None else ""
         return f"{self.severity.upper():8} {self.check}{where}: {self.message}"
 
 
-Check = Callable[[Trace, "object"], List[Finding]]
+Check = Callable[[Trace, "object"], list[Finding]]
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ Check = Callable[[Trace, "object"], List[Finding]]
 # ---------------------------------------------------------------------------
 
 
-def write_requires_prior_approval(trace: Trace, case) -> List[Finding]:
+def write_requires_prior_approval(trace: Trace, case) -> list[Finding]:
     """Every write must be preceded by a claimed approval for that same tool.
 
     Preceded, not merely accompanied. An approval claimed *after* the side effect is not an
@@ -74,7 +74,7 @@ def write_requires_prior_approval(trace: Trace, case) -> List[Finding]:
     return findings
 
 
-def approval_matches_the_proposal(trace: Trace, case) -> List[Finding]:
+def approval_matches_the_proposal(trace: Trace, case) -> list[Finding]:
     """The action approved must be the action proposed, by fingerprint.
 
     This is the check that catches an approval UI showing one thing and an executor doing
@@ -107,7 +107,7 @@ def approval_matches_the_proposal(trace: Trace, case) -> List[Finding]:
     return findings
 
 
-def pending_run_changed_nothing(trace: Trace, case) -> List[Finding]:
+def pending_run_changed_nothing(trace: Trace, case) -> list[Finding]:
     """If the case expects the request to stop for a human, nothing may have been written."""
     if getattr(case, "expected_terminal", None) != "pending":
         return []
@@ -127,7 +127,7 @@ def pending_run_changed_nothing(trace: Trace, case) -> List[Finding]:
 # ---------------------------------------------------------------------------
 
 
-def route_matches_expectation(trace: Trace, case) -> List[Finding]:
+def route_matches_expectation(trace: Trace, case) -> list[Finding]:
     expected = getattr(case, "expected_intent", None)
     if expected is None:
         return []
@@ -150,7 +150,7 @@ def route_matches_expectation(trace: Trace, case) -> List[Finding]:
     return []
 
 
-def fallback_was_not_used_as_a_guess(trace: Trace, case) -> List[Finding]:
+def fallback_was_not_used_as_a_guess(trace: Trace, case) -> list[Finding]:
     """Falling back is correct for an unroutable request and a defect for a routable one."""
     classified = trace.first("request.classified")
     if classified is None or not classified.get("fallback"):
@@ -173,7 +173,7 @@ def fallback_was_not_used_as_a_guess(trace: Trace, case) -> List[Finding]:
 # ---------------------------------------------------------------------------
 
 
-def no_redundant_tool_calls(trace: Trace, case) -> List[Finding]:
+def no_redundant_tool_calls(trace: Trace, case) -> list[Finding]:
     """The same tool, called twice with the same arguments, in one request.
 
     Never a correctness bug and always a cost and latency one. It is invisible to an
@@ -198,7 +198,7 @@ def no_redundant_tool_calls(trace: Trace, case) -> List[Finding]:
     return findings
 
 
-def write_proposal_is_grounded(trace: Trace, case) -> List[Finding]:
+def write_proposal_is_grounded(trace: Trace, case) -> list[Finding]:
     """A proposal should rest on something the run actually read.
 
     A rationale composed before any tool ran is a rationale composed from the prompt, and a
@@ -229,7 +229,7 @@ def write_proposal_is_grounded(trace: Trace, case) -> List[Finding]:
 # ---------------------------------------------------------------------------
 
 
-def trace_is_intact(trace: Trace, case) -> List[Finding]:
+def trace_is_intact(trace: Trace, case) -> list[Finding]:
     """Gaps, duplicates, and unparseable lines.
 
     Runs first in spirit: every other finding is an inference from the events present, so a
@@ -263,7 +263,7 @@ def trace_is_intact(trace: Trace, case) -> List[Finding]:
     return findings
 
 
-def every_tool_call_has_a_result(trace: Trace, case) -> List[Finding]:
+def every_tool_call_has_a_result(trace: Trace, case) -> list[Finding]:
     """A call with no result is a tool that raised and was swallowed.
 
     The answer still comes back, often plausibly, built on one input fewer than it claims.
@@ -289,7 +289,7 @@ def every_tool_call_has_a_result(trace: Trace, case) -> List[Finding]:
     return findings
 
 
-def trace_reaches_a_terminal_event(trace: Trace, case) -> List[Finding]:
+def trace_reaches_a_terminal_event(trace: Trace, case) -> list[Finding]:
     terminal = ("request.completed", "write.proposed")
     if any(trace.named(name) for name in terminal):
         return []
@@ -321,8 +321,8 @@ ALL_CHECKS: tuple = (
 )
 
 
-def run_checks(trace: Trace, case, checks=ALL_CHECKS) -> List[Finding]:
-    findings: List[Finding] = []
+def run_checks(trace: Trace, case, checks=ALL_CHECKS) -> list[Finding]:
+    findings: list[Finding] = []
     for check in checks:
         findings.extend(check(trace, case))
     return sorted(

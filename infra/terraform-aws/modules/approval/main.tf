@@ -54,11 +54,24 @@ resource "aws_dynamodb_table" "approvals" {
   }
 
   # Answers "what did this request try to do?" during an incident, without a scan.
+  #
+  # `key_schema` rather than the `hash_key`/`range_key` pair those blocks used to take: the
+  # provider deprecated them inside secondary indexes in 6.x, and `terraform validate` says so
+  # on every run. The blocks are an ordered list — HASH first, then RANGE — not a set, so the
+  # order below is load-bearing rather than stylistic.
   global_secondary_index {
     name            = "by-correlation-id"
-    hash_key        = "correlation_id"
-    range_key       = "created_at"
     projection_type = "ALL"
+
+    key_schema {
+      attribute_name = "correlation_id"
+      key_type       = "HASH"
+    }
+
+    key_schema {
+      attribute_name = "created_at"
+      key_type       = "RANGE"
+    }
   }
 
   # Deliberately no TTL. Execution state expires; the approval record is evidence and

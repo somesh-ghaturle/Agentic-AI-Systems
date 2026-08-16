@@ -67,7 +67,7 @@ Agentic-AI-Systems/
 ├── docs/
 │   ├── agentic-system-architecture/   the six building blocks, as prose
 │   ├── agentic-coding-playbook/       working with coding agents day to day
-│   ├── REPO-AUDIT.md                  the 2026-08-14 audit and its 16 fixes
+│   ├── REPO-AUDIT.md                  the 2026-08-14 audit and its 22 tasks
 │   ├── HARDENING-PLAN.md              CI hardening, 11 tasks over 6 phases
 │   ├── CONCEPTS-PLAN.md               adding harness, context, and graph engineering
 │   ├── THREAT-MODEL.md                the write boundary from the adversary's side
@@ -165,7 +165,7 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 
 ## CI
 
-[`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, or `tests/`:
+[`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, `tests/`, `docs/`, the root markdown files, or the workflow's own scripts — seven jobs:
 
 - `terraform fmt -check` across all three trees
 - `terraform validate` on each of the seven environment roots, as a matrix so one broken root does not hide the others
@@ -174,8 +174,11 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 - Deployment package builds for all three trees
 - The example suites under `tests/` — `hermes-agent`, `trace-eval`, and the `starter-agent` smoke tests, via `unittest discover`
 - A syntax check over all eleven examples, including those with no suite of their own
+- A relative-link check over every markdown file, external URLs deliberately excluded
 
-[`.github/workflows/example-deps.yml`](.github/workflows/example-deps.yml) runs only on changes under `examples/` or `tests/`. It installs each example's pinned `requirements.txt` and imports its entry modules — the five examples that carry dependencies, one matrix leg each. It has its own file because it has its own trigger: it downloads Torch, Ray, and FAISS, and has no business running when someone edits a Terraform module.
+Documentation used to run no checks at all. This repository is mostly markdown by volume and by purpose, and a documentation-only commit merged green until the path filters were widened to cover it — the miss that found was two links to a workflow that had been renamed.
+
+[`.github/workflows/example-deps.yml`](.github/workflows/example-deps.yml) runs only on changes under `examples/` or `tests/`. It installs each example's pinned `requirements.txt` and imports its entry modules — the six examples that carry dependencies, one matrix leg each. It has its own file because it has its own trigger: it downloads Torch, Ray, and FAISS, and has no business running when someone edits a Terraform module.
 
 That job exists because of a failure this repository actually had. Two LangChain examples imported an API the pinned version had already deleted, and CI stayed green — the suites did not cover those examples, and a syntax check parses rather than imports, so it happily accepts a module naming a package that no longer exists. A stale pin is invisible to every check that does not install the pin. [`.github/dependabot.yml`](.github/dependabot.yml) covers the other half: the syntax and import checks catch a pin that is *broken*, Dependabot catches one that is merely *old*.
 

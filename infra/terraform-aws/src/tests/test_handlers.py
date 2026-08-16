@@ -11,6 +11,7 @@ import os
 import sys
 import types
 import unittest
+from typing import ClassVar
 
 SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -223,7 +224,7 @@ class TestProcessRefund(unittest.TestCase):
 
 
 class TestValidator(unittest.TestCase):
-    ACTOR = {"user_id": "u-1", "tenant_id": "t-1", "roles": ["refund_agent"]}
+    ACTOR: ClassVar[dict] = {"user_id": "u-1", "tenant_id": "t-1", "roles": ["refund_agent"]}
 
     def _codes(self, checks):
         return {check["code"]: check["passed"] for check in checks}
@@ -527,10 +528,12 @@ class TestDynamoMarshalling(unittest.TestCase):
         self.assertIsInstance(restored["amount_cents"], int)
 
     def test_from_item_makes_records_json_serializable(self):
-        import decimal
+        import decimal  # noqa: PLC0415
 
         record = {"amount": decimal.Decimal("2500"), "rate": decimal.Decimal("0.5")}
-        self.assertEqual(json.loads(json.dumps(ddb.from_item(record))), {"amount": 2500, "rate": 0.5})
+        self.assertEqual(
+            json.loads(json.dumps(ddb.from_item(record))), {"amount": 2500, "rate": 0.5}
+        )
 
 
 class TestEmitTrace(unittest.TestCase):
