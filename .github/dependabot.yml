@@ -73,31 +73,35 @@ updates:
   # ---------------------------------------------------------------------------
   #
   # This entry used to carry a caveat saying it would open approximately zero pull requests,
-  # because every required_providers block declared a floor (`>= 5.0`) and Dependabot only
-  # raises a constraint that actually excludes the newest release. That is no longer true.
-  # Every block in the three trees now pins to a major — `~> 5.0` for aws and azurerm, `~> 3.0`
-  # for azuread, `~> 6.0` for google, `~> 3.6` for random — so a new major opens a PR here.
+  # because every required_providers block declared a floor and Dependabot only raises a
+  # constraint that actually excludes the newest release. Constraints now pin, so it works:
+  # the first run after that change bumped providers across 22 directories.
   #
-  # The decision behind that, recorded in task 21 of docs/REPO-AUDIT.md: these trees are read
-  # and copied more often than they are applied, and a reader running `terraform init` on a
-  # floor gets whatever shipped that morning, against which CI's green check said nothing. The
-  # cost accepted in exchange is that the trees fall behind a major until someone merges the PR
+  # The decision behind the pins, recorded in task 21 of docs/REPO-AUDIT.md: these trees are
+  # read and copied more often than they are applied, and a reader running `terraform init` on
+  # a floor gets whatever shipped that morning, against which CI's green check said nothing.
+  # The cost accepted in exchange is that the trees fall behind until someone merges the PR
   # this entry opens — which is the point of pointing Dependabot at them.
   #
-  # The pin names the major; `.terraform.lock.hcl` in each of the seven roots names the exact
-  # version, and all seven are committed. Both halves are required: the constraint bounds what
-  # `init` may resolve, the lock records what it did.
+  # No version numbers are named here on purpose. The previous version of this comment listed
+  # every constraint, and the first Dependabot merge made it wrong. The constraints live in
+  # the .tf files, the resolved versions live in the seven committed `.terraform.lock.hcl`
+  # files, and `.github/scripts/tfconstraints.py` is what enforces the rule about them.
   #
-  # `/infra/terraform-aws` and `/infra/terraform-azure/modules/*` are absent on purpose. The AWS
-  # tree has no tree-level .tf files (it declares in each main.tf), and the Azure modules
-  # declare no required_providers at all, inheriting from whichever root calls them.
+  # Note that Dependabot writes `~> 6.58`, not `~> 6.0` — it floors at the current *minor*,
+  # so it will keep opening PRs for minor releases and not only majors. That is more churn
+  # than task 21 decided on, and is a live question rather than a settled one.
+  #
+  # Directory list. Only directories that actually declare `required_providers`: the three
+  # trees keep theirs in `envs/*` and `modules/*`, with nothing at tree level (there were two
+  # such files; Dependabot did not maintain them and they were deleted — see task 21).
+  # `/infra/terraform-azure/modules/*` is absent because the Azure modules declare no
+  # required_providers at all, inheriting from whichever root calls them.
   - package-ecosystem: terraform
     directories:
       - /infra/terraform-aws/envs/*
       - /infra/terraform-aws/modules/*
-      - /infra/terraform-azure
       - /infra/terraform-azure/envs/*
-      - /infra/terraform-gcp
       - /infra/terraform-gcp/envs/*
       - /infra/terraform-gcp/modules/*
     schedule:

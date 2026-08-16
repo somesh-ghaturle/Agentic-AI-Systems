@@ -59,6 +59,12 @@ An earlier version of `modules/identity` created a service principal password wi
 
 The Key Vault uses RBAC authorization rather than access policies — role assignments show up in subscription-wide access reviews and in `az role assignment list`, and "Key Vault Secrets User" grants read without granting the ability to overwrite. The access policy it replaced handed out Get/List/Set/Delete in one block.
 
+### Authenticating the Terraform CLI
+
+That covers the workloads. Your own `terraform plan` still needs credentials. Use `az login` for local development, or set `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, `ARM_TENANT_ID`, and `ARM_SUBSCRIPTION_ID` from CI — though OIDC federation is preferable to a client secret there, for the same reason this tree gives every workload a managed identity instead of a password.
+
+These notes used to live in a tree-level `providers.tf` that no root ever loaded. Each root under `envs/` declares its own `provider "azurerm"` and `provider "azuread"` blocks; there is no shared one.
+
 ---
 
 ## Azure OpenAI

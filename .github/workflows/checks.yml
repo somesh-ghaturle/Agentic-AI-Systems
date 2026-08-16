@@ -59,28 +59,29 @@ jobs:
           terraform_version: "1.9.8"
           terraform_wrapper: false
 
+      # For the provider-pins step below. The runner ships a python3, but every other Python
+      # step in this file names its version rather than inheriting whatever the image moved to.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
       # One pass over all three trees — formatting has no per-root component.
       - name: fmt
         run: terraform fmt -recursive -check -diff infra/
 
-      # Guards the decision in REPO-AUDIT task 21: every provider constraint pins a major
-      # (`~> `), never a floor (`>= `). A floor here is invisible to `validate` — it resolves
-      # fine, it just resolves to something different next month — so nothing else in this
-      # workflow would catch a reintroduced one.
+      # Guards the decision in REPO-AUDIT task 21: every provider constraint pins a major,
+      # and every declaration of the same provider agrees. Both failures are invisible to
+      # `validate` — a floor resolves fine, it just resolves to something different next
+      # month, and a half-finished bump resolves fine too — so nothing else here catches
+      # them.
       #
-      # Matches the bare `version` key only. `required_version` is `>= 1.6` throughout and
-      # should stay a floor: capping the Terraform CLI to a major buys nothing.
-      #
-      # Two of these floors survived for months in tree-level versions.tf files that no root
-      # reads and `validate` therefore never loaded, which is exactly the shape of drift a
-      # grep catches and a plan does not.
+      # This started as an inline grep for floors and was not enough. Within a day Dependabot
+      # bumped hashicorp/google across 22 directories and left a tree-level versions.tf
+      # behind on the old major, which is a pin, not a floor, and so passed. The script adds
+      # the agreement rule and is tested in tests/test_tfconstraints.py, because a guard whose
+      # own matching silently breaks reports success.
       - name: provider pins
-        run: |
-          if grep -rnE '^\s+version\s*=\s*">=' infra --include='*.tf'; then
-            echo "::error::Provider constraint uses a floor (>=). Pin the major with ~> — see docs/REPO-AUDIT.md task 21."
-            exit 1
-          fi
-          echo "All provider constraints pin a major."
+        run: python3 .github/scripts/tfconstraints.py infra
 
   validate:
     name: validate

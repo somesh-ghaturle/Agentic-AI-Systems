@@ -70,13 +70,16 @@ Agentic-AI-Systems/
 │   ├── REPO-AUDIT.md                  the 2026-08-14 audit and its 16 fixes
 │   ├── HARDENING-PLAN.md              CI hardening, 11 tasks over 6 phases
 │   ├── CONCEPTS-PLAN.md               adding harness, context, and graph engineering
+│   ├── THREAT-MODEL.md                the write boundary from the adversary's side
 │   └── *.md                           governance, security, privacy, runbook, templates
 ├── tests/                        example suites run by CI
 ├── CONTRIBUTING.md               what a good example looks like here
+├── SECURITY.md                   what counts as a vulnerability here, and how to report it
 ├── LICENSE                       Apache-2.0
 └── .github/
     ├── workflows/checks.yml         fmt, validate, boundary tests, handlers, builds
     ├── workflows/example-deps.yml   installs each example's pins and imports it
+    ├── scripts/                     linkcheck.py, tfconstraints.py — stdlib-only CI guards
     └── dependabot.yml               monthly pip, actions, and provider updates
 ```
 
@@ -150,6 +153,8 @@ Review gates, to run before a system ships rather than after it misbehaves:
 - Security checklist: [docs/security-checklist.md](docs/security-checklist.md)
 - Privacy checklist: [docs/privacy-checklist.md](docs/privacy-checklist.md)
 
+The adversary's view of the write boundary — what a compromised orchestrator reaches, what a prompt-injected model reaches, what a leaked approval claim buys, and which of the three clouds survives each: [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md). It is explicit about what is *not* defended, which is the more useful half.
+
 Documents to fill in per system, and one to reach for when it breaks:
 
 - Model card template: [docs/model-card-template.md](docs/model-card-template.md)
@@ -181,6 +186,10 @@ The write-boundary tests exist because `terraform validate` accepts every mistak
 ## Contributing
 
 Runnable examples, post-mortems, and additional references are welcome via pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) — the short version is that examples should be reproducible and their dependencies pinned.
+
+## Security
+
+If you believe the write boundary can be bypassed — in any of the three Terraform trees or in the two boundary examples — please report it privately rather than opening an issue. Everything here is designed to be copied, so a public report is a working recipe against every copy already in the wild. See [SECURITY.md](SECURITY.md) for what is in scope and how to report.
 
 ## Further reading
 

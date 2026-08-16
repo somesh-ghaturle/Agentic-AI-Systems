@@ -118,6 +118,22 @@ authenticates as the caller's service account, so in this tree there is no key t
 If you find yourself adding a secret to make something work, that is the signal to check
 what identity should have been granted instead.
 
+### Authenticating the Terraform CLI
+
+That covers the workloads. Your own `terraform plan` still needs credentials, and the
+provider takes them from Application Default Credentials:
+
+```bash
+gcloud auth application-default login          # local development
+export GOOGLE_APPLICATION_CREDENTIALS=key.json # a service account key file
+```
+
+From CI, prefer Workload Identity Federation over either — it avoids a long-lived key
+entirely, which is the same argument the rest of this tree makes about workload identity.
+
+These notes used to live in a tree-level `providers.tf` that no root ever loaded. Each root
+under `envs/` declares its own `provider "google"` block; there is no shared one.
+
 ---
 
 ## Claude on Vertex AI

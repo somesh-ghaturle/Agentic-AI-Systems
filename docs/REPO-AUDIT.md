@@ -1249,43 +1249,63 @@ requests — Dependabot raises a constraint only when the constraint excludes th
 and a floor never excludes anything. The accepted cost is that the trees fall a major behind
 until someone merges the PR Dependabot now opens.
 
-Constraints as they stand, in every `required_providers` block across the three trees:
+The five providers the three trees declare are aws, azurerm, azuread, google, and random. No
+version numbers appear in this document. An earlier draft tabulated all five constraints and
+their locked versions, and the first Dependabot merge after it was written made every row
+wrong — which is the argument for reading them from the files instead:
 
-| Provider | Constraint | Locked |
-|---|---|---|
-| `hashicorp/aws` | `~> 5.0` | 5.100.0 |
-| `hashicorp/azurerm` | `~> 5.0` | 5.0.1 |
-| `hashicorp/azuread` | `~> 3.0` | 3.9.0 |
-| `hashicorp/google` | `~> 6.0` | 6.50.0 |
-| `hashicorp/random` | `~> 3.6` | 3.9.0 |
-
-**Two things had to be fixed for that to actually be true**, and both had already produced false
-findings:
-
-- **Two orphaned tree-level `versions.tf` files** — `infra/terraform-azure/versions.tf` and
-  `infra/terraform-gcp/versions.tf` — still carried floors (`>= 3.0`, `>= 5.0`) and
-  `required_version = ">= 1.3.0"` against `>= 1.6` everywhere else. Neither is a root, so
-  `terraform validate` never reads them and the discrepancy could not fail CI. Dependabot *is*
-  pointed at both directories, so the stale floors were also the reason those two entries were
-  inert. Both now match their roots. The AWS tree has no equivalent file: it declares in each
-  `main.tf`.
-- **The AWS lock files were gitignored**, at `infra/terraform-aws/.gitignore` line 5 — not
-  merely unstaged, which is what an earlier pass through this concluded from reading only the
-  root `.gitignore`. Azure and GCP committed theirs. So the two AWS roots were the only two of
-  seven whose provider resolution was unreproducible, which is precisely the thing the pin was
-  supposed to guarantee. The rule is removed and both locks are committed; all seven roots now
-  carry a tracked lock.
+```bash
+python3 .github/scripts/tfconstraints.py infra   # constraints, and whether they agree
+grep -h version infra/*/envs/*/.terraform.lock.hcl  # what init actually resolved
+```
 
 The constraint bounds what `init` may resolve; the lock records what it did. Both halves are
 required, and neither substitutes for the other.
 
+**Three things had to be fixed for the decision to actually hold**, and each had already
+produced a false finding:
+
+- **The AWS lock files were gitignored**, at `infra/terraform-aws/.gitignore` line 5 — not
+  merely unstaged, which is what an earlier pass concluded from reading only the root
+  `.gitignore`. Azure and GCP committed theirs. So the two AWS roots were the only two of seven
+  whose provider resolution was unreproducible, which is precisely what the pin was supposed to
+  guarantee. The rule is removed and all seven roots now carry a tracked lock.
+- **Two orphaned tree-level `versions.tf` files** — `infra/terraform-azure/versions.tf` and
+  `infra/terraform-gcp/versions.tf` — carried floors and `required_version = ">= 1.3.0"`
+  against `>= 1.6` everywhere else. Neither is a root, so `terraform validate` never read them
+  and no CI check could fail on them.
+
+  These were first *aligned* to match their roots, on the reasoning that Dependabot is pointed
+  at both directories and would maintain them. It does not. The very next Dependabot run bumped
+  `hashicorp/google` across 22 directories and left the GCP file behind, so the drift returned
+  one commit after being fixed. They are now **deleted**, along with the equally orphaned
+  tree-level `providers.tf` files: every root under `envs/` declares its own provider block, so
+  neither file was ever loaded by anything. Their CLI-authentication notes moved to each tree's
+  README. All three trees now match AWS, which never had tree-level files.
+- **The guard only checked for floors**, which the partial bump above passed straight through:
+  `~> 6.0` and `~> 7.44` are both pins. It is now
+  [`.github/scripts/tfconstraints.py`](../.github/scripts/tfconstraints.py), which also asserts
+  that every declaration of a given provider agrees, and it has its own suite in
+  [`tests/test_tfconstraints.py`](../tests/test_tfconstraints.py) — a guard whose matching
+  silently breaks reports success, so the tests assert the real tree's constraints are being
+  seen, not merely that it passes.
+
+**Still open, and deliberately not decided here.** Dependabot writes `~> 6.58` rather than
+`~> 6.0` — a pessimistic constraint floored at the current *minor*, so it will open a PR for
+every minor release, not only for majors. That is more churn than "pin to the major" chose, and
+it arrived as a side effect of a merge rather than as a decision. Either accept minor-tracking
+and say so, or normalise the constraint back to the major after each bump.
+
 **Verify.**
 
 ```bash
-# No floors left in any required_providers block. Match the bare `version` key, not
-# `required_version` — the CLI constraint is `>= 1.6` everywhere and should stay a floor,
-# since capping the Terraform CLI to a major buys nothing.
-grep -rnE '^\s+version\s*=\s*">=' infra --include='*.tf'   # expect: no matches
+# Every provider constraint pins a major, and every declaration of one agrees. Exempts
+# `required_version` — that is the CLI, it is `>= 1.6` everywhere, and it should stay a floor.
+python3 .github/scripts/tfconstraints.py infra
+python3 -m unittest tests.test_tfconstraints
+
+# No tree-level .tf files in any of the three trees
+ls infra/terraform-*/*.tf 2>/dev/null                      # expect: no matches
 
 # All seven roots carry a tracked lock file
 git ls-files 'infra/**/.terraform.lock.hcl' | wc -l        # expect: 7

@@ -42,11 +42,11 @@ No task needs cloud credentials. Task 2 needs network access to resolve pins fro
 | 3 | Assert e2e-agent still fails closed without its key | 1 | medium | [x] |
 | 4 | Dependabot for pip, terraform, and github-actions | 2 | high | [x] |
 | 5 | Relative-link check in CI | 3 | medium | [x] |
-| 6 | Add SECURITY.md | 4 | medium | [ ] |
+| 6 | Add SECURITY.md | 4 | medium | [x] |
 | 7 | Ruff config and lint job — parity with `terraform fmt` | 4 | low | [ ] |
 | 8 | tflint and checkov over the three trees | 5 | low | [ ] |
 | 9 | Reconcile the Terraform version pin | 5 | low | [ ] |
-| 10 | Threat model for the write boundary | 6 | medium | [ ] |
+| 10 | Threat model for the write boundary | 6 | medium | [x] |
 | 11 | Single cloud-comparison page | 6 | low | [ ] |
 
 Phases 1 and 2 are the agreed scope. Phases 3 onward are sequenced but not committed to.
