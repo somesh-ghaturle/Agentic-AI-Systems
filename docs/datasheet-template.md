@@ -1,8 +1,8 @@
 # Dataset Datasheet Template
 
-- Dataset name: 
-- Version: 
-- Date collected: 
+- Dataset name:
+- Version:
+- Date collected:
 - Owners / Contacts:
 
 ## Summary

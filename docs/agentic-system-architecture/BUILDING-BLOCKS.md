@@ -349,6 +349,31 @@ rubber stamp with extra steps.
 Log the full record: proposal, validation result, who approved, when, and the outcome.
 That log is your audit trail and your incident evidence.
 
+### Approval Claim Formats by Cloud
+
+The write boundary is enforced by binding approval to a **fingerprint** of the exact action.
+Each cloud implements this differently:
+
+| Cloud | Storage | Claim Format | Validation Method |
+|-------|---------|--------------|-------------------|
+| AWS | DynamoDB | `{"action":"restart_service","args":{"service":"billing"},"fingerprint":"sha256:...","expires_at":1234567890}` | Condition expression on `fingerprint` and `expires_at` |
+| Azure | Cosmos DB | Same JSON structure | ETag-based conditional write |
+| GCP | Firestore | Same JSON structure | Transaction with document existence check |
+
+**Fingerprint Algorithm:**
+```python
+import hashlib, json
+
+def generate_fingerprint(action: str, args: dict) -> str:
+    payload = {"action": action, "args": args}
+    return "sha256:" + hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+```
+
+**Security Properties:**
+- Single-use: A claim is consumed after use
+- Expiring: Default TTL is 15 minutes (configurable)
+- Bound to arguments: Changing any argument invalidates the claim
+
 ---
 
 ## Related

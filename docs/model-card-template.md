@@ -1,9 +1,9 @@
 # Model Card Template
 
-- Model name: 
-- Version: 
-- Date: 
-- Owner / Author: 
+- Model name:
+- Version:
+- Date:
+- Owner / Author:
 
 ## Overview
 
@@ -16,7 +16,7 @@
 
 ## Model Details
 
-- Architecture: 
+- Architecture:
 - Training data summary: (sources, timeframe, preprocessing)
 - Evaluation datasets and metrics:
 
