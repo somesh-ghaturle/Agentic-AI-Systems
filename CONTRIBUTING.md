@@ -160,3 +160,9 @@ trade-off you chose. Architecture changes are worth discussing in an issue first
 
 Reviews look for the same things this file does: is it reproducible, is it verified, does it
 say what it does not do, and would copying it into a real system be safe.
+
+### Good first issues
+
+Look for issues labeled [`GOOD-FIRST-ISSUE`](https://github.com/somesh-ghaturle/Agentic-AI-Systems/labels/GOOD-FIRST-ISSUE)
+(color: #70c87c) if you are new to the repository. These are self-contained, well-defined tasks that are
+great for first-time contributors.

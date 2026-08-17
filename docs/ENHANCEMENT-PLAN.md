@@ -35,12 +35,12 @@ section saying what has to be decided first.
 |---|------|----------|----------|--------|-------|----------|
 | 1 | Add `QUICKSTART.md` | Documentation | High | Done | | 2026-08-20 |
 | 2 | Add pre-commit hooks | Repository | High | Done | | 2026-08-20 |
-| 3 | Label `GOOD-FIRST-ISSUE` in GitHub | Community | High | Not Started | | 2026-08-20 |
-| 4 | Document approval token TTL | Infrastructure | High | Not Started | | 2026-08-23 |
+| 3 | Label `GOOD-FIRST-ISSUE` in GitHub | Community | High | Done | | 2026-08-20 |
+| 4 | Document approval token TTL | Infrastructure | High | Done | | 2026-08-23 |
 | 5 | Add secret scanning to CI | Security | High | Done | | 2026-08-23 |
 | 6 | Add `terraform plan` to CI | CI/CD | High | Blocked | | 2026-08-23 |
 | 7 | Add `MODULES.md` catalog | Documentation | High | Done | | 2026-08-23 |
-| 8 | Add `checkpoint-agent` example | Examples | High | Not Started | | 2026-08-23 |
+| 8 | Add `checkpoint-agent` example | Examples | High | Done | | 2026-08-23 |
 | 9 | Add `SECURITY.md` tests to CI | Security | High | Not Started | | 2026-08-30 |
 | 10 | Document handler packaging divergence | Documentation | Medium | Not Started | | 2026-08-30 |
 | 11 | Add SAST scanning to CI | Security | High | Not Started | | 2026-08-30 |

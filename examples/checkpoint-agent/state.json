@@ -1,0 +1,13 @@
+{
+  "completed_actions": [
+    "action1",
+    "repeated-action",
+    "first",
+    "second",
+    "third",
+    "action2",
+    "test-action",
+    "formatted-action"
+  ],
+  "current_step": 8
+}
