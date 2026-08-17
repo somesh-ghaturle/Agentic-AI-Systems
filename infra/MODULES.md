@@ -265,8 +265,8 @@ gcp: 10 modules
 
 ## Links
 
-- [AWS Terraform Tree](../terraform-aws/README.md)
-- [Azure Terraform Tree](../terraform-azure/README.md)
-- [GCP Terraform Tree](../terraform-gcp/README.md)
-- [Agentic System Architecture](../../docs/agentic-system-architecture/README.md)
-- [Building Blocks](../../docs/agentic-system-architecture/BUILDING-BLOCKS.md)
+- [AWS Terraform Tree](terraform-aws/README.md)
+- [Azure Terraform Tree](terraform-azure/README.md)
+- [GCP Terraform Tree](terraform-gcp/README.md)
+- [Agentic System Architecture](../docs/agentic-system-architecture/README.md)
+- [Building Blocks](../docs/agentic-system-architecture/BUILDING-BLOCKS.md)

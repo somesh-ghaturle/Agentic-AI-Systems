@@ -8,9 +8,16 @@ repos:
       - id: check-added-large-files
   - repo: local
     hooks:
+      # The trailing `--` is load-bearing. pre-commit appends filenames to the entry, and
+      # `bash -c SCRIPT a b` binds a to $0, not $1 — so `"$@"` would drop the first file, and a
+      # commit touching a single .tf file would validate nothing and still report Passed. The
+      # `--` takes the $0 slot so the files start at $1.
+      #
+      # Directories are deduplicated because a module change is usually main.tf + variables.tf +
+      # outputs.tf together, and `terraform init` is far too slow to run three times for one module.
       - id: terraform-validate
         name: terraform validate
-        entry: bash -c 'for file in "$@"; do dir=$(dirname "$file"); (cd "$dir" && terraform init -backend=false -input=false -no-color 2>/dev/null; terraform validate -no-color); done'
+        entry: bash -c 'rc=0; for dir in $(printf "%s\n" "$@" | xargs -n1 dirname | sort -u); do (cd "$dir" && terraform init -backend=false -input=false -no-color >/dev/null && terraform validate -no-color) || rc=1; done; exit $rc' --
         language: system
         pass_filenames: true
         files: ^infra/.*\.(tf|tfvars)$

@@ -1,6 +1,8 @@
 # Agentic AI Systems
 
 [![checks](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/checks.yml/badge.svg)](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/checks.yml)
+[![example deps](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/example-deps.yml/badge.svg)](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/example-deps.yml)
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](QUICKSTART.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Reference implementations of a production agentic architecture: **three parallel Terraform trees** deploying the same system on AWS, Azure, and GCP, **eleven runnable examples**, and the architecture and governance documents behind them. Everything here is meant to be read, copied into your own repository, and adapted.

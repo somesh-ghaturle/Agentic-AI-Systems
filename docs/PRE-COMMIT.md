@@ -35,10 +35,18 @@
 
 #### Terraform Validate
 - **ID:** `terraform-validate`
-- **Purpose:** Validates all Terraform configurations recursively
+- **Purpose:** Validates each Terraform directory that the commit touches
 - **Trigger:** Changes to `.tf` or `.tfvars` files in `infra/`
-- **Command:** `terraform validate -recursive -no-color`
-- **Working Directory:** `infra/`
+- **Command:** `terraform init -backend=false` then `terraform validate -no-color`, per directory
+- **Working Directory:** each changed file's own directory, deduplicated
+
+`terraform validate` has no `-recursive` flag — that flag belongs to `terraform fmt`. Validation is
+also per-directory by nature: it needs an initialized working directory, which is why the hook runs
+`terraform init -backend=false` first. The hook therefore derives the directory list from the staged
+files and validates each one once, rather than making a single recursive call.
+
+Because `init` dominates the runtime, a commit spanning many modules is slow. That is the trade-off
+for catching the errors `terraform fmt` cannot see: a wrong-but-valid value in a valid attribute.
 
 #### Python Compile
 - **ID:** `python-compile`

@@ -13,7 +13,9 @@ security, and community adoption.
 - **Verification** (command or check to confirm it works)
 - **Priority** (High/Medium/Low)
 
-Update the status column as you go: `Not Started` → `In Progress` → `Done` → `Verified`.
+Update the status column as you go: `Not Started` → `In Progress` → `Done` → `Verified`. A task
+whose own Verify block cannot pass as written is marked `Blocked` and carries a note in its
+section saying what has to be decided first.
 
 ---
 
@@ -31,19 +33,19 @@ Update the status column as you go: `Not Started` → `In Progress` → `Done` �
 
 | # | Task | Category | Priority | Status | Owner | Due Date |
 |---|------|----------|----------|--------|-------|----------|
-| 1 | Add `QUICKSTART.md` | Documentation | High | Not Started | | 2026-08-20 |
-| 2 | Add pre-commit hooks | Repository | High | Not Started | | 2026-08-20 |
+| 1 | Add `QUICKSTART.md` | Documentation | High | Done | | 2026-08-20 |
+| 2 | Add pre-commit hooks | Repository | High | Done | | 2026-08-20 |
 | 3 | Label `GOOD-FIRST-ISSUE` in GitHub | Community | High | Not Started | | 2026-08-20 |
 | 4 | Document approval token TTL | Infrastructure | High | Not Started | | 2026-08-23 |
-| 5 | Add secret scanning to CI | Security | High | Not Started | | 2026-08-23 |
-| 6 | Add `terraform plan` to CI | CI/CD | High | Not Started | | 2026-08-23 |
-| 7 | Add `MODULES.md` catalog | Documentation | High | Not Started | | 2026-08-23 |
+| 5 | Add secret scanning to CI | Security | High | Done | | 2026-08-23 |
+| 6 | Add `terraform plan` to CI | CI/CD | High | Blocked | | 2026-08-23 |
+| 7 | Add `MODULES.md` catalog | Documentation | High | Done | | 2026-08-23 |
 | 8 | Add `checkpoint-agent` example | Examples | High | Not Started | | 2026-08-23 |
 | 9 | Add `SECURITY.md` tests to CI | Security | High | Not Started | | 2026-08-30 |
 | 10 | Document handler packaging divergence | Documentation | Medium | Not Started | | 2026-08-30 |
 | 11 | Add SAST scanning to CI | Security | High | Not Started | | 2026-08-30 |
-| 12 | Add issue templates | Community | High | Not Started | | 2026-08-23 |
-| 13 | Document approval claim formats | Documentation | High | Not Started | | 2026-08-23 |
+| 12 | Add issue templates | Community | High | Done | | 2026-08-23 |
+| 13 | Document approval claim formats | Documentation | High | Done | | 2026-08-23 |
 | 14 | Add `envs/staging` | Infrastructure | Medium | Not Started | | 2026-08-30 |
 | 15 | Add Terraform policy-as-code (OPA) | Infrastructure | Medium | Not Started | | 2026-09-13 |
 | 16 | Add `DECISION-LOGS/` with ADRs | Documentation | Medium | Not Started | | 2026-08-30 |
@@ -65,7 +67,7 @@ Update the status column as you go: `Not Started` → `In Progress` → `Done` �
 | 32 | Add `COMPLIANCE.md` | Documentation | Low | Not Started | | 2026-10-11 |
 | 33 | Add discussion topics | Community | Low | Not Started | | 2026-10-04 |
 | 34 | Add `ROADMAP.md` | Community | Low | Not Started | | 2026-09-13 |
-| 35 | Add badges to README | Community | Low | Not Started | | 2026-10-11 |
+| 35 | Add badges to README | Community | Low | Done | | 2026-10-11 |
 | 36 | Add `CITATION.cff` | Community | Low | Not Started | | 2026-10-18 |
 | 37 | Convert Mermaid diagrams to code | Documentation | Low | Not Started | | 2026-10-04 |
 | 38 | Add automated docs preview | CI/CD | Low | Not Started | | 2026-10-04 |
@@ -76,6 +78,52 @@ Update the status column as you go: `Not Started` → `In Progress` → `Done` �
 | 43 | Hybrid cloud proof-of-concept | Future | Low | Not Started | | 2026-11-01 |
 | 44 | Edge agents proof-of-concept | Future | Low | Not Started | | 2026-11-15 |
 | 45 | Human-in-the-loop UX dashboard | Future | Low | Not Started | | 2026-11-01 |
+
+**Status verified 2026-08-16** by running each task's own **Verify** block against the working
+tree. Tasks 1, 7, 12, and 13 shipped in the same commit that created this document, which is why
+they were briefly recorded as `Not Started`. Tasks 2, 5, and 35 were finished the same day and now
+pass in full. Task 6 is `Blocked`. The remaining 37 verified as genuinely absent.
+
+Task 5 is worth a note on how it got to `Done`. A `secret-scan` job matching this document's draft
+had already been added to `checks.yml`, so the task looked finished. It was not: the job installed
+an unpinned scanner, called a subcommand 8.30 had removed, and ran against a shallow clone that
+gave it one commit of history to look at. Copying a plan's YAML is not the same as running it —
+which is the same lesson task 2's terraform hook taught, where the hook reported `Passed` while
+silently skipping the first file it was handed.
+
+Task 35 deliberately ships without a Terraform version badge, because the repository states three
+different Terraform versions and the badge cannot be honest until one wins: `required_version` in
+the `.tf` files says `>= 1.6`, `checks.yml` pins `1.15.8`, and `QUICKSTART.md` tells the reader to
+install `1.9.8+`. Pick the number that is actually supported, reconcile the other two, then add the
+badge.
+
+A related gap the badge exposes rather than causes: the `Python 3.9+` badge repeats the support
+floor that `README.md`, `QUICKSTART.md`, and `CONTRIBUTING.md` all state, but every CI job runs on
+`3.12` alone. Nothing verifies that the examples still import on 3.9. Either add 3.9 to a CI matrix
+or raise the stated floor to the version actually tested.
+
+**Seven tasks need their definition settled before the work starts.** Their Verify block cannot
+pass as written, or describes something that already exists under another name:
+
+- **Task 6** — `terraform plan` needs cloud credentials, which the workflow header rules out on
+  purpose. Filed as a Phase 1 quick win, it is really a decision about granting CI standing access
+  to all three clouds. See the note in its section.
+- **Task 3** — `gh label list` shows GitHub's default `good first issue` (`#7057ff`), not the
+  `GOOD-FIRST-ISSUE` (`#70c87c`) this task specifies. Rename the default or adopt it; creating
+  both leaves two labels meaning one thing.
+- **Task 4** — the Verify block greps `infra/terraform-{aws,azure,gcp}/modules/approval/README.md`,
+  but no module in any of the three trees has a README. The task has to create those files before
+  it can add a section to them.
+- **Task 22** — `examples/context-compaction` already exists. Confirm `context-overflow` is a
+  distinct scenario rather than a second name for the same one.
+- **Task 26** — `.github/workflows/example-deps.yml` already installs each example's pinned
+  requirements in isolation and imports every entry module. The cycle detection is the only
+  coverage `scripts/dependency_graph.py` adds; scope the task against what already runs.
+- **Task 31** — has no detail section, and `docs/THREAT-MODEL.md` was written in the same batch as
+  this plan. What the update should add is undefined.
+- **Task 41** — `examples/hermes-agent/hermes/router.py` already exists, but it holds `Router`,
+  which routes intents to approval and execution. That is not the `ModelRouter` this task's Verify
+  greps for; model routing is a new class, not an edit to the existing one.
 
 ---
 
@@ -122,9 +170,9 @@ repos:
     hooks:
       - id: terraform-validate
         name: terraform validate
-        entry: bash -c 'cd infra && terraform validate -recursive -no-color'
+        entry: bash -c 'rc=0; for dir in $(printf "%s\n" "$@" | xargs -n1 dirname | sort -u); do (cd "$dir" && terraform init -backend=false -input=false -no-color >/dev/null && terraform validate -no-color) || rc=1; done; exit $rc' --
         language: system
-        pass_filenames: false
+        pass_filenames: true
         files: ^infra/.*\.(tf|tfvars)$
       - id: python-compile
         name: python compile
@@ -132,6 +180,16 @@ repos:
         language: system
         files: \.py$
 ```
+
+The terraform entry is intricate for two reasons, both found by testing it rather than reading it:
+
+`terraform validate` has no `-recursive` flag — that belongs to `terraform fmt` — and it requires an
+initialized working directory. So the hook cannot make one call from `infra/`; it has to init and
+validate each changed directory, deduplicated so a three-file module change does not init three times.
+
+The trailing `--` is load-bearing. pre-commit appends filenames to the entry, and `bash -c SCRIPT a b`
+binds `a` to `$0` rather than `$1`, so `"$@"` silently drops the first file. A commit touching one
+`.tf` file would have validated nothing and still reported `Passed`.
 
 Add a `PRE-COMMIT.md` in `docs/` explaining how to install and use hooks.
 
@@ -207,32 +265,78 @@ done
 **Goal.** Prevent accidental credential commits.
 
 **Action.**
-Add a new job to `.github/workflows/checks.yml`:
-```yaml
-  secret-scan:
-    name: Secret scanning
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-      - name: Install gitleaks
-        run: go install github.com/gitleaks/gitleaks/v8@latest
-      - name: Scan for secrets
-        run: gitleaks detect --source . --verbose
-```
+Add a `secret-scan` job to `.github/workflows/checks.yml` that installs a pinned, checksummed
+gitleaks release binary and scans full history, plus a `.gitleaks.toml` at the repository root.
+Add `.gitleaks.toml` to both path filters so a change to the allowlist retriggers the workflow.
+
+Four corrections were needed against the first draft of this task, each found by running it:
+
+**`fetch-depth: 0` is required.** `actions/checkout` defaults to a single-commit shallow clone.
+gitleaks scans history, so the default hands it one commit and a credential committed then
+deleted three commits later scans clean — the one case history scanning exists to catch. This
+repo reports 56 commits scanned at full depth and 1 at `--depth 1`.
+
+**`gitleaks detect` no longer exists.** 8.30 lists `git`, `dir`, and `stdin`; `detect` is gone
+from the command list. Use `gitleaks git .`.
+
+**`go install ...@latest` is both unpinned and slower than needed.** It pulls in the Go toolchain
+to compile from source a binary the project already publishes prebuilt, and `@latest` means the
+ruleset can change between two runs of the same commit — a green build becomes unreproducible and
+the failure lands on whoever pushes next. Pin the version and verify the SHA256.
+
+**`--redact` is not optional.** Build logs are public. The run that catches a live key must not be
+the run that republishes it.
 
 **Verify.**
 ```bash
-# Test locally first
-gitleaks detect --source . --dry-run
-echo $?  # Expect 0 if clean
+gitleaks git . --redact --verbose
+echo $?  # 0 when clean, 1 when leaks are found
 ```
+
+The original `gitleaks detect --source . --dry-run` cannot pass: `--dry-run` is not a gitleaks
+flag in any 8.x release.
+
+**Why `.gitleaks.toml` is part of this task, not a follow-up.** On a clean repository this job
+still fails. Two documented placeholders in `examples/e2e-agent/README.md` match the
+`curl-auth-header` rule — `x-api-key: local-test-key`, the value the README tells the reader to
+export one line earlier. gitleaks cannot distinguish a documented placeholder from a live
+credential, so the job exits 1 on first run with nothing actually wrong. The allowlist is scoped
+to that literal value in that one file rather than to the path, so a real key pasted into the
+same README is still caught; this was confirmed by substituting an AWS-shaped key and watching
+the scan fail.
 
 ---
 
 ### Task 6 — Add `terraform plan` to CI
+
+> **Blocked — needs a decision before any of the YAML below is worth writing.** The Verify block
+> was run against `infra/terraform-aws/envs/dev` on Terraform 1.15.8 and fails twice over, and the
+> second failure is not a bug in the snippet but a property of `terraform plan`.
+>
+> **1. No variable values.** `plan` stops at `No value for required variable` for `project`,
+> `approval_validator`, and `approval_executor`. `terraform.tfvars` is gitignored by design — only
+> `.example` files are committed — so CI has nothing to supply unless it passes
+> `-var-file=terraform.tfvars.example`.
+>
+> **2. No credentials, and this one is structural.** Given the example tfvars, the AWS root then
+> fails with `No valid credential sources found` after trying the EC2 IMDS endpoint. `validate`
+> works offline; `plan` contacts the provider. Making this job pass means federating CI into AWS,
+> Azure, and GCP — three OIDC trust relationships granting read access to real environments.
+>
+> That directly contradicts the constraint this workflow is built on, stated in its own header:
+> *"Everything here runs without cloud credentials. That is a constraint worth keeping: a check
+> that needs a subscription is a check that gets disabled the first time a secret expires."*
+> Task 6 is filed as a Phase 1 quick win, but it is a security-architecture decision about giving
+> CI standing cloud access. Resolve it deliberately or close it in favour of the `validate`
+> coverage that already runs.
+>
+> **3. A smaller trap in the snippet.** `-out=tfplan` writes a file that `.gitignore` does not
+> cover — the pattern is `*.tfplan`, which does not match a file named exactly `tfplan`
+> (`git check-ignore` confirms it is untracked). The same `.gitignore` notes plan output "can
+> contain resolved secret values". Whatever this task becomes, name the output `*.tfplan`.
+>
+> The `terraform_version: 1.9.8` below is also inconsistent with the `1.15.8` that `checks.yml`
+> pins and that the modules resolve against — see the three-way version drift noted under Progress.
 
 **Goal.** Catch unintended infrastructure changes before merge.
 
@@ -899,6 +1003,10 @@ test -f docs/MIGRATION-GUIDE.md && grep -c "building blocks\|write boundary\|tra
 
 **Goal.** Reduce repetitive questions and improve discoverability.
 
+> `QUICKSTART.md` shipped with a **Get Help** link to `docs/FAQ.md` before the file existed, which
+> broke the `docs` CI job. The dead link was removed on 2026-08-16; restore it under **Get Help**
+> as part of this task.
+
 **Action.**
 Create `docs/FAQ.md` with sections:
 
@@ -1415,9 +1523,12 @@ git status --short
 
 ## Changelog
 
-| Date | Change | Author |
-|------|--------|--------|
-| 2026-08-16 | Initial enhancement plan created with 45 tasks across 8 categories | somesh-ghaturle |
+| Date       | Change                                                                | Author          |
+|------------|-----------------------------------------------------------------------|-----------------|
+| 2026-08-16 | Initial enhancement plan created with 45 tasks across 8 categories    | somesh-ghaturle |
+| 2026-08-16 | Reconciled progress table against working tree; 4 Done, 2 In Progress | somesh-ghaturle |
+| 2026-08-16 | Completed tasks 2 and 35; fixed a terraform hook that skipped files    | somesh-ghaturle |
+| 2026-08-16 | Completed task 5 (pinned gitleaks, full history, allowlist); task 6 blocked | somesh-ghaturle |
 
 ---
 

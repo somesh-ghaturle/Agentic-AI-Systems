@@ -350,7 +350,6 @@ done
 
 ### Get Help
 
-- **FAQ:** [docs/FAQ.md](docs/FAQ.md)
 - **Architecture:** [docs/agentic-system-architecture/](docs/agentic-system-architecture/README.md)
 - **Threat Model:** [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md)
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)

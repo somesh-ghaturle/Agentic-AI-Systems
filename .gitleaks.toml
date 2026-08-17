@@ -1,0 +1,23 @@
+# Configuration for gitleaks, the secret scanner run by the `secret-scan` job in
+# .github/workflows/checks.yml.
+#
+# The default ruleset is the point of the job, so it is extended rather than replaced.
+# What this file adds is a single narrow allowlist, and the reason it has to exist is
+# worth stating: a repository that teaches people to run an agent locally has to show
+# them the request that does it, and that request carries an API key header. gitleaks
+# cannot tell a documented placeholder from a live credential, so it flags
+# `x-api-key: local-test-key` in examples/e2e-agent/README.md and exits 1.
+#
+# The allowlist is deliberately scoped to that literal placeholder in that one file
+# rather than to the file as a whole. Allowlisting the path would mean a real key
+# pasted into the same README on a bad afternoon scans clean — which is the failure
+# mode the job exists to prevent. The placeholder is matched by value, so it stops
+# covering anything the moment the value changes.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Documented placeholder key in the e2e-agent local-run instructions"
+paths = ['''examples/e2e-agent/README\.md''']
+regexes = ['''local-test-key''']

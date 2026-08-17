@@ -129,6 +129,30 @@ python3 .github/scripts/linkcheck.py .
 terraform fmt -recursive -check infra/     # if you touched infra/
 ```
 
+### Pre-commit hooks
+
+[`.pre-commit-config.yaml`](.pre-commit-config.yaml) runs a subset of the above automatically on
+`git commit` — whitespace and end-of-file fixes, YAML syntax, a large-file guard, `py_compile` on
+changed Python, and `terraform validate` on the directories whose `.tf` files you touched:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files     # optional: check everything once, up front
+```
+
+The hooks are a convenience, not a gate. CI is the authority, and nothing here can be enforced on
+a contributor's machine — `git commit --no-verify` skips all of it. Install them because a
+two-second local failure beats a four-minute red pipeline, not because the repository requires it.
+
+One trade-off worth knowing before you install: the terraform hook runs `terraform init
+-backend=false` in each changed directory, because `validate` needs an initialized working
+directory and has no `-recursive` flag. Directories are deduplicated, but a commit spanning several
+modules is still slow. If that bites, drop that one hook with
+`SKIP=terraform-validate git commit` and let CI cover it.
+
+See [`docs/PRE-COMMIT.md`](docs/PRE-COMMIT.md) for the full hook reference.
+
 ## Pull requests
 
 Branch from `main`, keep commits focused, and describe the change, how to run it, and the
