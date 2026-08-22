@@ -26,3 +26,10 @@ Next steps
 
 - Replace the rule-based `respond()` with calls to model APIs or orchestration frameworks.
 - Add a `docker-compose.yml` or CI smoke test for reproducibility.
+
+## Security
+
+This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The
+read/write boundary this repository is organised around is demonstrated by `hermes-agent` and
+`graph-agent`; nothing here enforces one, and none of this would be adequate as a production
+service as written.

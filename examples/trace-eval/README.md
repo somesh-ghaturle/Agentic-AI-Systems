@@ -230,3 +230,10 @@ now has its own test.
 - [examples/hermes-agent/](../hermes-agent/README.md) — the system being evaluated, and where the trace format comes from
 - [docs/agentic-system-architecture/PRODUCTION-PRINCIPLES.md](../../docs/agentic-system-architecture/PRODUCTION-PRINCIPLES.md) — observability and trace-level evaluation as production concerns
 - [infra/](../../infra/) — the same write boundary enforced by cloud IAM rather than by code
+
+## Security
+
+This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The
+read/write boundary this repository is organised around is demonstrated by `hermes-agent` and
+`graph-agent`; nothing here enforces one, and none of this would be adequate as a production
+service as written.

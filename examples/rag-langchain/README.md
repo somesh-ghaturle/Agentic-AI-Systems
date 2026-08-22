@@ -29,3 +29,10 @@ Notes
 
 - The script will not call OpenAI unless `OPENAI_API_KEY` is set. CI can run the example safely without secrets.
 - For production, replace FAISS with a managed vector DB and add metadata for provenance.
+
+## Security
+
+This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The
+read/write boundary this repository is organised around is demonstrated by `hermes-agent` and
+`graph-agent`; nothing here enforces one, and none of this would be adequate as a production
+service as written.
