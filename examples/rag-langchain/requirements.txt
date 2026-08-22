@@ -5,8 +5,8 @@
 # reproducible, but this file is meant to be read as well as installed.
 #
 # Resolved 2026-08-14 on Python 3.14.
-sentence-transformers==5.7.0
+sentence-transformers==6.0.0
 faiss-cpu==1.15.0
 numpy==2.5.2
-langchain-core==1.5.4
-langchain-openai==1.5.1
+langchain-core==1.6.0
+langchain-openai==1.6.0
