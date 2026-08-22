@@ -47,8 +47,10 @@ git treated as binary and would not diff. The fix was one parameter:
 
 It is a small thing that matters when you are debugging a checkpoint from yesterday.
 
-**Tests pin this now**: the test file verifies the state file is valid JSON and
-contains the expected structure.
+**Tests pin this now**: `tests/test_checkpoint_agent.py` verifies the state file is valid
+JSON and contains the expected structure. The suite lives in `tests/` with every other example's,
+because the `examples` CI job discovers that directory — a suite kept next to the example is
+compiled but never run.
 
 ## What is simplified
 
@@ -64,3 +66,10 @@ state is restored, actions are not lost.
 - [Harness engineering](../../docs/agentic-system-architecture/HARNESS-ENGINEERING.md) — what survives between windows
 - [harness-agent](../harness-agent/README.md) — the worked example of persistence
 - [Building blocks §3](../../docs/agentic-system-architecture/BUILDING-BLOCKS.md#3-state) — state as a building block
+
+## Security
+
+This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The
+read/write boundary this repository is organised around is demonstrated by `hermes-agent` and
+`graph-agent`; nothing here enforces one, and none of this would be adequate as a production
+service as written.

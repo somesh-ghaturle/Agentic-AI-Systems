@@ -163,6 +163,12 @@ say what it does not do, and would copying it into a real system be safe.
 
 ### Good first issues
 
-Look for issues labeled [`GOOD-FIRST-ISSUE`](https://github.com/somesh-ghaturle/Agentic-AI-Systems/labels/GOOD-FIRST-ISSUE)
-(color: #70c87c) if you are new to the repository. These are self-contained, well-defined tasks that are
-great for first-time contributors.
+Look for issues labeled [`good first issue`](https://github.com/somesh-ghaturle/Agentic-AI-Systems/labels/good%20first%20issue)
+if you are new to the repository. These are self-contained, well-defined tasks that are great for
+first-time contributors.
+
+The label keeps GitHub's default name deliberately. That exact string is the one GitHub reads for
+its own contributor discovery — the repository's [Contribute
+page](https://github.com/somesh-ghaturle/Agentic-AI-Systems/contribute) and the newcomer search
+filters are keyed to it — so a renamed variant would take the repository off the surfaces that
+send first-time contributors here in the first place.

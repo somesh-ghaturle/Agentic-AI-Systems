@@ -87,3 +87,10 @@ complete, which is the failure mode arriving through the front door.
 - [context engineering](../../docs/agentic-system-architecture/CONTEXT-ENGINEERING.md) — the other half of harness work
 - [hermes-agent](../hermes-agent/README.md) — whether an agent is *allowed* to act, rather than whether it is finished
 - [trace-eval](../trace-eval/README.md) — scoring the path rather than the answer
+
+## Security
+
+This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The
+read/write boundary this repository is organised around is demonstrated by `hermes-agent` and
+`graph-agent`; nothing here enforces one, and none of this would be adequate as a production
+service as written.

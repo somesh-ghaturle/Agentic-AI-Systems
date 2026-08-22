@@ -70,3 +70,10 @@ with, and it is legible here in about thirty lines.
 - [Harness engineering](../../docs/agentic-system-architecture/HARNESS-ENGINEERING.md) — what survives *between* windows, rather than within one
 - [harness-agent](../harness-agent/README.md) — the worked example of that
 - [Building blocks §3](../../docs/agentic-system-architecture/BUILDING-BLOCKS.md) — memory and state
+
+## Security
+
+This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The
+read/write boundary this repository is organised around is demonstrated by `hermes-agent` and
+`graph-agent`; nothing here enforces one, and none of this would be adequate as a production
+service as written.

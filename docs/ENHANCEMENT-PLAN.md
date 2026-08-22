@@ -35,15 +35,15 @@ section saying what has to be decided first.
 |---|------|----------|----------|--------|-------|----------|
 | 1 | Add `QUICKSTART.md` | Documentation | High | Done | | 2026-08-20 |
 | 2 | Add pre-commit hooks | Repository | High | Done | | 2026-08-20 |
-| 3 | Label `GOOD-FIRST-ISSUE` in GitHub | Community | High | Done | | 2026-08-20 |
+| 3 | Label good first issues in GitHub | Community | High | Done | | 2026-08-20 |
 | 4 | Document approval token TTL | Infrastructure | High | Done | | 2026-08-23 |
 | 5 | Add secret scanning to CI | Security | High | Done | | 2026-08-23 |
 | 6 | Add `terraform plan` to CI | CI/CD | High | Blocked | | 2026-08-23 |
 | 7 | Add `MODULES.md` catalog | Documentation | High | Done | | 2026-08-23 |
 | 8 | Add `checkpoint-agent` example | Examples | High | Done | | 2026-08-23 |
-| 9 | Add `SECURITY.md` tests to CI | Security | High | Not Started | | 2026-08-30 |
-| 10 | Document handler packaging divergence | Documentation | Medium | Not Started | | 2026-08-30 |
-| 11 | Add SAST scanning to CI | Security | High | Not Started | | 2026-08-30 |
+| 9 | Add `SECURITY.md` tests to CI | Security | High | Done | | 2026-08-30 |
+| 10 | Document handler packaging divergence | Documentation | Medium | Done | | 2026-08-30 |
+| 11 | Add SAST scanning to CI | Security | High | Done | | 2026-08-30 |
 | 12 | Add issue templates | Community | High | Done | | 2026-08-23 |
 | 13 | Document approval claim formats | Documentation | High | Done | | 2026-08-23 |
 | 14 | Add `envs/staging` | Infrastructure | Medium | Not Started | | 2026-08-30 |
@@ -80,9 +80,14 @@ section saying what has to be decided first.
 | 45 | Human-in-the-loop UX dashboard | Future | Low | Not Started | | 2026-11-01 |
 
 **Status verified 2026-08-16** by running each task's own **Verify** block against the working
-tree. Tasks 1, 7, 12, and 13 shipped in the same commit that created this document, which is why
-they were briefly recorded as `Not Started`. Tasks 2, 5, and 35 were finished the same day and now
-pass in full. Task 6 is `Blocked`. The remaining 37 verified as genuinely absent.
+tree, and kept current as tasks have landed since. Thirteen tasks now pass: 1, 2, 3, 4, 5, 7,
+8, 9, 10, 11, 12, 13, and 35. Task 6 is `Blocked`. The remaining 31 verified as genuinely
+absent.
+
+Tasks 4 and 8 were verified rather than written — their artifacts already existed. Task 4 passes
+cleanly: all three `modules/approval/README.md` files carry the `Token Lifetime and Rotation`
+section, which also clears the blocker recorded against it earlier. Task 8 needed two fixes before
+it passed; see its Verify block.
 
 Task 5 is worth a note on how it got to `Done`. A `secret-scan` job matching this document's draft
 had already been added to `checks.yml`, so the task looked finished. It was not: the job installed
@@ -102,18 +107,12 @@ floor that `README.md`, `QUICKSTART.md`, and `CONTRIBUTING.md` all state, but ev
 `3.12` alone. Nothing verifies that the examples still import on 3.9. Either add 3.9 to a CI matrix
 or raise the stated floor to the version actually tested.
 
-**Seven tasks need their definition settled before the work starts.** Their Verify block cannot
+**Five tasks need their definition settled before the work starts.** Their Verify block cannot
 pass as written, or describes something that already exists under another name:
 
 - **Task 6** — `terraform plan` needs cloud credentials, which the workflow header rules out on
   purpose. Filed as a Phase 1 quick win, it is really a decision about granting CI standing access
   to all three clouds. See the note in its section.
-- **Task 3** — `gh label list` shows GitHub's default `good first issue` (`#7057ff`), not the
-  `GOOD-FIRST-ISSUE` (`#70c87c`) this task specifies. Rename the default or adopt it; creating
-  both leaves two labels meaning one thing.
-- **Task 4** — the Verify block greps `infra/terraform-{aws,azure,gcp}/modules/approval/README.md`,
-  but no module in any of the three trees has a README. The task has to create those files before
-  it can add a section to them.
 - **Task 22** — `examples/context-compaction` already exists. Confirm `context-overflow` is a
   distinct scenario rather than a second name for the same one.
 - **Task 26** — `.github/workflows/example-deps.yml` already installs each example's pinned
@@ -201,23 +200,41 @@ grep -q "pre-commit" CONTRIBUTING.md || echo "Add pre-commit setup to CONTRIBUTI
 
 ---
 
-### Task 3 — Label `GOOD-FIRST-ISSUE` in GitHub
+### Task 3 — Label good first issues in GitHub
 
 **Goal.** Encourage community contributions by tagging beginner-friendly tasks.
 
+**Resolved 2026-08-19.** This task originally specified a new `GOOD-FIRST-ISSUE` label
+(`#70c87c`), and creating it produced exactly the outcome the task was warned about: the
+repository carried two labels with the identical description "Good for newcomers", so a
+contributor filtering on either saw half the queue. The custom label has been deleted and
+GitHub's default `good first issue` (`#7057ff`) kept.
+
+The direction of that fix is not a style preference. `good first issue` is the exact string
+GitHub reads for its own contributor discovery — the repository's `/contribute` page and the
+newcomer search filters key on it. A renamed variant is invisible to all of them, so adopting a
+custom name would have cost the repository the surfaces that bring first-time contributors to it.
+Neither label was applied to any issue at the time, so nothing was reclassified.
+
 **Action.**
-1. Create a `GOOD-FIRST-ISSUE` label in the GitHub repository (color: `#70c87c`, green)
-2. Label these tasks as `GOOD-FIRST-ISSUE`:
+1. Use GitHub's default `good first issue` label (`#7057ff`). Do not create a renamed variant.
+2. Label these tasks:
    - Add `MODULES.md` catalog (Task 7)
    - Add pre-commit hooks (Task 2)
    - Add `FAQ.md` (Task 39)
    - Convert Mermaid diagrams to code (Task 37)
 3. Document the label in `CONTRIBUTING.md`
 
+Tasks 2 and 7 are now `Done`, so of the four listed only 37 and 39 are still available to label.
+
 **Verify.**
 ```bash
-# Check if label exists (requires GitHub CLI)
-gh label list | grep -q "GOOD-FIRST-ISSUE" && echo "Label exists" || echo "Label missing"
+# The label exists...
+gh label list --limit 100 | grep -q "good first issue" && echo "Label exists" || echo "Label missing"
+
+# ...and it is the only newcomer label, which is the condition that actually broke.
+test "$(gh label list --limit 100 | grep -ci 'good.first.issue')" -eq 1 \
+  && echo "exactly one newcomer label" || echo "duplicate newcomer labels"
 ```
 
 ---
@@ -619,6 +636,230 @@ grep -A 10 "Approval Claim Formats by Cloud" docs/agentic-system-architecture/BU
 
 This phase focuses on **expanding functionality** with new examples and infrastructure improvements.
 
+### Task 9 — Add `SECURITY.md` tests to CI
+
+**Goal.** Stop the security policy's scope list from silently going stale.
+
+**Why this needed writing at all.** `SECURITY.md` divides the repository into what is worth
+reporting and what is not. That list decays without any visible symptom: nothing fails when an
+example is added and nobody classifies it, and the person who eventually notices is a researcher
+who spent an afternoon on something the maintainers never considered in scope.
+
+Two such decays were live when the task was picked up:
+
+- **`checkpoint-agent` and `e2e-agent` were in neither list.** checkpoint-agent had just landed.
+  `e2e-agent` had been unclassified for longer and matters more — its own README advertises
+  "security gating" while the example implements no approval step, so a reader has every reason
+  to treat it as in scope, and the policy never said otherwise.
+- **The out-of-scope paragraph asserted something untrue.** It said each of those examples "says
+  in its own README that it makes no security claim." None of the nine did. `starter-agent` and
+  `langchain-agent` did not mention security, production, or claims anywhere.
+
+**Action.**
+1. Classify every example in `SECURITY.md`. `e2e-agent` is the judgement call, and it resolves
+   the opposite way to the rest: it goes **in** scope. It advertises itself as "Secure,
+   Observable, Auditable" with "security gating", exposes an HTTP service behind an API-key
+   header, and writes audit and provenance records — while implementing no approval step at all.
+   A pattern that looks correct and is not, sitting in a directory whose title invites copying,
+   is the harm this policy exists to catch. So reports that its gating is weaker than its README
+   implies are in scope, and it is the one example that owes no disclaimer.
+2. Add the promised `## Security` section to the nine out-of-scope example READMEs.
+3. Add `tests/test_security_policy.py`, which reads `SECURITY.md` and asserts the tree matches it.
+
+The module-name check parses the names out of `SECURITY.md` rather than hardcoding them. A
+hardcoded list would let a typo introduced into the policy sail past the test meant to catch it.
+Parsing needs the section collapsed before matching, because the list wraps mid-sentence and
+reading it line by line drops whichever names land on the first line — which is exactly what the
+first version did, silently returning three of the five names.
+
+`identity` is named by the policy but has no AWS module; that tree keeps its identity policy in
+`modules/orchestration` (see terraform-aws `ARCHITECTURE.md`, "Identity policy |
+`modules/orchestration`"). So the test requires four modules in all three trees and requires
+`identity` only to resolve somewhere. Asserting uniformity there would fail on a deliberate design
+difference.
+
+**Verify.**
+```bash
+python3 -m unittest tests.test_security_policy -v   # 5 tests
+```
+
+And confirm the tests constrain something, rather than passing by construction:
+```bash
+mkdir -p examples/zzz && echo "# tmp" > examples/zzz/README.md
+python3 -m unittest tests.test_security_policy   # FAILS: unclassified example
+rm -rf examples/zzz
+```
+All three failure modes were exercised this way — an unclassified example, a README with the
+disclaimer stripped, and a phantom module name in the policy. Each fails with a message naming
+the offending file.
+
+---
+
+### Task 10 — Document handler packaging divergence
+
+**Goal.** Give the three-way packaging difference one place to be read, so a reader comparing the
+trees can tell a deliberate divergence from an inconsistency somebody forgot to clean up.
+
+**What was already there, and why the task still had work in it.** This was not an undocumented
+area, and the task is smaller than its title suggests. Every tree states the build-before-plan
+requirement in its own `README.md`. Every tree's `HOW-TO-DEPLOY.md` covers its own build step.
+`terraform-aws/src/README.md` goes into handler-level detail. The Azure and GCP `build.sh` headers
+each already carry a section explaining how that script differs from the others and why.
+
+Two gaps survived all of that:
+
+- **No cross-cloud page.** `infra/MODULES.md` is the catalog for exactly this kind of question —
+  it already carries an Overview table, a Module Comparison Matrix, and per-cloud notes — and it
+  said nothing about packaging at all. Someone comparing the three trees had to open three shell
+  scripts and assemble the comparison themselves.
+- **AWS's `build.sh` pointed nowhere.** Azure's header explains how it differs from AWS and GCP;
+  GCP's explains how it differs from AWS. AWS's explained only its own choice. The divergence was
+  therefore discoverable from two of three directions, and the direction it was invisible from is
+  the tree with the most documentation and the likeliest entry point for a reader.
+
+**The divergence itself.** One rule generates all of it: *whoever installs the packages must be
+the same thing that runs them.*
+
+- **AWS vendors**, because a Lambda zip is the final artifact — Lambda does not build it, so
+  whatever is not inside the zip does not exist at runtime. Wheels are resolved with an explicit
+  `--platform manylinux2014_x86_64 --python-version 3.12 --only-binary=:all:` for the Lambda
+  runtime rather than for the build machine.
+- **Azure and GCP must not vendor**, because their zips are source rather than artifact. Oryx
+  (via `SCM_DO_BUILD_DURING_DEPLOYMENT` and `ENABLE_ORYX_BUILD`) and Cloud Build respectively
+  install `requirements.txt` against the real runtime image. Vendoring locally would push a
+  developer machine's binaries into a Linux build.
+
+The visible consequence, and what the new section leads with: the same `reason` handler ships as
+**4.2 MB on AWS and 20 KB on Azure**, and neither number is a mistake. The cost of the split falls
+on Azure and GCP, where an undeclared import is not caught by the build at all — it surfaces at
+cold start, on a deployment that reported success. That is why both of those scripts treat a
+missing `requirements.txt` as fatal, and why all six of GCP's packages carry one where AWS needs
+exactly one.
+
+**Action.**
+1. Add a `## Handler Packaging` section to `infra/MODULES.md`, between the Module Comparison
+   Matrix and the Dependency Graph — a nine-row comparison table plus the reasoning above.
+2. Add the missing cross-reference block to `terraform-aws/src/build.sh`, matching the sections
+   Azure's and GCP's already carry.
+3. Point all three scripts at `MODULES.md`, so the comparison is reachable from whichever tree a
+   reader opens first.
+
+**Deliberately not done.** No new `src/README.md` for Azure or GCP. AWS has one because it
+documents that tree's handlers, stubs, and environment variables — per-cloud content rather than
+divergence — and writing two more of those is a separate task, not this one. Recording it here so
+the asymmetry is a known choice rather than an oversight the next reader has to rediscover.
+
+**Verify.**
+
+That the documented sizes are real rather than copied from a stale build:
+```bash
+for t in aws azure gcp; do (cd "infra/terraform-$t/src" && ./build.sh); done
+```
+`reason.zip` should print `4.2M` for AWS, `20K` for Azure, `16K` for GCP. Only AWS's needs
+network — it is the one that pip-installs.
+
+That the divergence is reachable from every entry point, which was the actual gap:
+```bash
+grep -l "MODULES.md" infra/terraform-*/src/build.sh      # expect all three
+grep -c "How this differs" infra/terraform-*/src/build.sh # expect 1 for each
+```
+
+---
+
+### Task 11 — Add SAST scanning to CI
+
+**Goal.** Have something read this repository's Python and its workflows for security defects,
+rather than only checking that they parse.
+
+**What was missing.** Nothing scanned code for vulnerabilities. The `examples` job runs
+`compileall`, which parses without importing and so catches a syntax error and nothing else, and
+the `secret-scan` job looks for committed credentials, which is a different question entirely.
+Between them the repository had no check that would notice an injection, an unsafe
+deserialisation, or a workflow handing a fork's code a writable token.
+
+That last one is the sharp edge. `SECURITY.md` names "this repository's supply chain — the
+workflows and scripts under `.github/`" as in scope, and until this task nothing tested that
+claim in either direction. The policy was making a promise CI could not keep — the same failure
+mode task 9 found in the scope lists, one directory over.
+
+**Why CodeQL.** The constraint that decides it is already written in `checks.yml`'s header:
+everything runs without cloud credentials, because a check that needs a secret is a check that
+gets switched off the first time one expires. CodeQL is GitHub-native and free on public
+repositories, so it needs no account, no token, and no third-party service that can start
+charging or disappear. Semgrep and Checkov each mean a `pip install` in CI; that is not
+disqualifying, but neither buys anything here that CodeQL does not already cover for Python.
+
+The `actions` language is why this is two analyses rather than one. It reads the workflow files
+themselves, catching expression injection through `${{ }}` interpolated into a `run` block and
+the `pull_request_target`-plus-checkout pattern. Those are the vulnerabilities a public
+repository taking pull requests actually has, and they live in exactly the files `SECURITY.md`
+had already claimed were in scope.
+
+**Why a separate workflow file.** CodeQL uploads to the code-scanning API, which needs
+`security-events: write`. Top-level `permissions` are inherited by every job in a file, so
+putting this in `checks.yml` would grant write access to the security tab to nine unrelated jobs
+— including the one that downloads a binary over the network and runs it against the whole
+repository. A separate file keeps the grant at job level where it belongs.
+
+The schedule is the second reason. CodeQL is the only check here whose value includes "the
+queries GitHub shipped this month still find nothing in code nobody has touched since August",
+and a push trigger cannot answer that, because the finding arrives with the query rather than
+with the commit. `gitleaks` re-reads the same history every run and gains nothing from a timer,
+which is why it stays in `checks.yml`.
+
+**The gap this does not close, stated because the task title hides it.** CodeQL has no Terraform
+or HCL analyzer. By volume roughly half of this repository is `infra/` across three clouds, and
+none of it is scanned by this workflow. What guards those trees is the write-boundary suite,
+which asserts exactly three properties by reading `.tf` files as text — it is not a general IaC
+scan and does not become one because this task is marked `Done`. A reader who takes "SAST
+scanning: Done" to mean the Terraform is covered has been misled by this table. Closing that gap
+needs Checkov, tfsec, or `trivy config`, and belongs beside task 15 rather than folded in here.
+
+**Action.**
+1. Add `.github/workflows/codeql.yml` with a two-entry matrix — `python` and `actions`, both
+   `build-mode: none`, `fail-fast: false` so one language's extraction error cannot discard the
+   other's result.
+2. Grant `security-events: write` at job level only; leave the workflow default at
+   `contents: read`.
+3. Trigger on push and pull request against `examples/`, `tests/`, `.github/scripts/` and
+   `.github/workflows/`, plus a weekly cron.
+4. Use the `security-extended` query suite rather than the default. The default is tuned to stay
+   quiet in large production codebases, where a false positive costs a team an afternoon. This
+   tree is small and mostly stdlib, so the extra queries have little surface to be noisy against,
+   and the repository's whole subject is which patterns are safe to copy. If it does turn noisy,
+   drop back to `security` — do not switch the workflow off.
+
+**Verify.**
+
+Structure, locally. Deliberately stdlib-only: `pyyaml` is not installed by any of this
+repository's Python paths, and a Verify block that needs a dependency nobody has is the defect
+tasks 2, 3 and 5 each shipped in turn.
+```bash
+pre-commit run check-yaml --files .github/workflows/codeql.yml
+
+python3 - << 'PY'
+src = open('.github/workflows/codeql.yml').read()
+assert '\npermissions:\n  contents: read\n' in src, 'workflow-level permissions widened'
+assert '      security-events: write' in src, 'missing job-level code-scanning grant'
+assert '- language: python' in src and '- language: actions' in src, 'matrix incomplete'
+assert 'queries: security-extended' in src, 'query suite not set'
+assert 'schedule:' in src and 'cron:' in src, 'no weekly trigger'
+print('ok')
+PY
+```
+
+That the analysis actually ran, after the first push to `main`. This half matters more than it
+looks: in the security tab, "scanned and found nothing" and "never uploaded" render identically.
+```bash
+gh api repos/somesh-ghaturle/Agentic-AI-Systems/code-scanning/analyses \
+  --jq '[.[] | {category, created_at, results_count}] | .[0:4]'
+```
+Two categories should appear, `/language:python` and `/language:actions`. One category means the
+matrix half-failed silently; `no analysis found` means nothing uploaded at all, which is the case
+this second check exists to tell apart from a clean scan.
+
+---
+
 ### Task 14 — Add `envs/staging`
 
 **Goal.** Provide a canary deployment environment between dev and prod.
@@ -814,10 +1055,33 @@ class CheckpointAgent:
 
 **Verify.**
 ```bash
-python3 examples/checkpoint-agent/agent.py "action1"
-python3 -c "from checkpoint_agent.agent import CheckpointAgent; a = CheckpointAgent(); print(a.resume())"
+rm -f examples/checkpoint-agent/state.json   # the example is about first-run behaviour
+python3 examples/checkpoint-agent/agent.py "deploy-model"
+python3 -c "import sys; sys.path.insert(0, 'examples/checkpoint-agent'); from agent import CheckpointAgent; print(CheckpointAgent().resume())"
 test -f examples/checkpoint-agent/state.json
+python3 -m unittest tests.test_checkpoint_agent
 ```
+
+Two corrections against the first draft of this block, both found by running it.
+
+**There is no `checkpoint_agent` package.** The draft's
+`from checkpoint_agent.agent import CheckpointAgent` raises `ModuleNotFoundError`. This example is
+a single `agent.py`, matching `e2e-agent` and `context-compaction`; only the multi-file examples
+(`hermes/`, `traceeval/`, `harness/`) have a package directory, and a 70-line demo does not need
+one. Import it by putting the example directory on `sys.path`, as above.
+
+**The example's tests were never run.** They shipped as
+`examples/checkpoint-agent/test_checkpoint.py`, but the `examples` CI job runs
+`unittest discover -s tests` and `compileall examples/` — so the suite was syntax-checked and
+never executed. checkpoint-agent was the only example keeping tests outside `tests/`; they now
+live in `tests/test_checkpoint_agent.py` like every other example's, and CI runs 7 of them.
+
+**The draft's first command was `agent.py "action1"`, which demonstrated the opposite of the
+example.** `state.json` had been committed holding eight actions left from a test run —
+`action1` among them — so the command printed `Already completed: action1` and executed nothing.
+A checkpoint file is a run artifact: it is now gitignored alongside `state.tmp`, the scratch file
+the atomic write renames from, and the example regenerates it on first run. Keep the `rm -f` in
+the Verify block so the check always exercises the cold-start path.
 
 ---
 
@@ -1529,6 +1793,11 @@ git status --short
 | 2026-08-16 | Reconciled progress table against working tree; 4 Done, 2 In Progress | somesh-ghaturle |
 | 2026-08-16 | Completed tasks 2 and 35; fixed a terraform hook that skipped files    | somesh-ghaturle |
 | 2026-08-16 | Completed task 5 (pinned gitleaks, full history, allowlist); task 6 blocked | somesh-ghaturle |
+| 2026-08-16 | Verified tasks 4 and 8; untracked checkpoint state artifact; task 3 label clash noted | somesh-ghaturle |
+| 2026-08-18 | Completed task 9; classified 2 unlisted examples, added 9 disclaimers | somesh-ghaturle |
+| 2026-08-19 | Task 3 resolved: deleted duplicate `GOOD-FIRST-ISSUE`, kept GitHub's default | somesh-ghaturle |
+| 2026-08-22 | Completed task 11: CodeQL over Python and workflows; Terraform gap recorded | somesh-ghaturle |
+| 2026-08-22 | Completed task 10: packaging divergence catalogued in `infra/MODULES.md` | somesh-ghaturle |
 
 ---
 

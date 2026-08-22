@@ -2,7 +2,7 @@
 
 > **Purpose:** Central reference for all Terraform modules across the three cloud implementations.
 > **Scope:** AWS, Azure, and GCP trees.
-> **Last Updated:** 2026-08-16
+> **Last Updated:** 2026-08-22
 
 This document lists every module in the repository, its purpose, dependencies, and status.
 
@@ -137,6 +137,66 @@ All modules are in `infra/terraform-gcp/modules/`.
 | **Audit Storage** | S3 | Storage Tables | Cloud Storage |
 | **Identity Model** | Per-module IAM roles | Centralized identities | Centralized service accounts |
 | **Security Controls** | IAM + Lambda policies + Guardrails | RBAC + Entra alerts | IAM Deny policies |
+
+---
+
+## Handler Packaging
+
+All three trees build their deployment zips the same way — `src/build.sh`, writing to
+`build/*.zip` — and all three read those zips **at plan time**, so a missing package stops
+`terraform plan` rather than failing halfway through an apply. Each tree's `README.md` says so
+for its own case; the build step is not optional in any of them.
+
+What the three scripts do with *dependencies* is deliberately not uniform. The rule underneath
+the difference is the same in every tree: **whoever installs the packages must be the same thing
+that runs them.** Which platform that is changes, so the correct build changes with it.
+
+| | AWS | Azure | GCP |
+|---|---|---|---|
+| **The zip is** | the final artifact | source | source |
+| **Who installs dependencies** | `build.sh`, before upload | Oryx, on the build server | Cloud Build, from the runtime image |
+| **So the script** | vendors wheels in | must **not** vendor | must **not** vendor |
+| **Runtime preinstalls** | `boto3`, `botocore` | `azure-functions` | little beyond `functions-framework` |
+| **Packages with `requirements.txt`** | 1 of 6 (`reason`) | 6 of 6 | 6 of 6 |
+| **Entry point filename** | `index.py` | `function_app.py` (logic in `handler.py`) | `main.py` |
+| **Other required files** | — | `host.json` | — |
+| **Terraform reads it via** | `filebase64sha256()` | `zip_deploy_file` + `fileexists()` | `filemd5()` → GCS object |
+| **Resulting `reason.zip`** | 4.2 MB | 20 KB | 16 KB |
+
+That last row is the divergence made visible. The same handler, doing the same job, ships as
+4.2 MB on one cloud and 20 KB on another — and neither number is a mistake.
+
+**AWS vendors because Lambda does not build.** A Lambda zip is what runs: whatever is not inside
+it does not exist at runtime. So `build.sh` pip-installs with an explicit
+`--platform manylinux2014_x86_64 --python-version 3.12 --only-binary=:all:`, resolving wheels for
+the *Lambda* runtime rather than for the machine running the script. Building on a Mac and
+shipping native wheels to Amazon Linux is the classic way to get an `ImportError` that appears
+only after deploy. `--only-binary=:all:` is what stops pip quietly falling back to compiling from
+source against the local interpreter, which reintroduces the same bug by a longer route. One
+vendored dependency — the Anthropic SDK in `reason` — accounts for the entire 4.2 MB.
+
+**Azure and GCP must not vendor, which is the same rule inverted.** Azure sets
+`SCM_DO_BUILD_DURING_DEPLOYMENT` and `ENABLE_ORYX_BUILD`, handing the zip to Oryx, which runs pip
+on the build server. GCP stages the zip into a GCS bucket and lets Cloud Build install against
+the real runtime image. In both cases vendoring locally would push a developer machine's binaries
+into a Linux build and shadow what the platform resolves correctly on its own.
+
+**The cost of that split lands on Azure and GCP, and it is worth knowing before you debug it.**
+Because they declare rather than vendor, an undeclared import is not caught by the build at all.
+It is caught at cold start, on a deployment that reported success. Both scripts therefore treat a
+missing `requirements.txt` as a fatal error rather than a warning, and it is why all six GCP
+packages carry one where AWS needs exactly one: the `python312` Cloud Functions runtime preinstalls
+almost nothing, so every `google-cloud` import has to be declared.
+
+**Why the entry point filenames differ** is platform discovery, not preference. Cloud Functions
+resolves the entry point from a top-level `main.py`; Azure Functions v2 discovers bindings from a
+file named `function_app.py`. Neither is configurable in the way the other tree's name would need.
+A package missing the file its platform looks for deploys successfully and then 404s on every
+invocation — which is why both scripts check for it and exit rather than building a zip that will
+fail silently in production.
+
+Full reasoning lives in each script's header. `terraform-aws/src/README.md` covers the AWS side
+at handler level, and each tree's `HOW-TO-DEPLOY.md` covers its own build step.
 
 ---
 

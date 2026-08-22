@@ -21,3 +21,10 @@ Notes
 
 - This example is intentionally small to lower the barrier for experimentation.
 - For production, use a persistent vector store (Milvus, Weaviate), chunking, metadata, and secure model endpoints.
+
+## Security
+
+This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The
+read/write boundary this repository is organised around is demonstrated by `hermes-agent` and
+`graph-agent`; nothing here enforces one, and none of this would be adequate as a production
+service as written.
