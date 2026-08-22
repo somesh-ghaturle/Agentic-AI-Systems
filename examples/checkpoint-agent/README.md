@@ -47,8 +47,10 @@ git treated as binary and would not diff. The fix was one parameter:
 
 It is a small thing that matters when you are debugging a checkpoint from yesterday.
 
-**Tests pin this now**: the test file verifies the state file is valid JSON and
-contains the expected structure.
+**Tests pin this now**: `tests/test_checkpoint_agent.py` verifies the state file is valid
+JSON and contains the expected structure. The suite lives in `tests/` with every other example's,
+because the `examples` CI job discovers that directory — a suite kept next to the example is
+compiled but never run.
 
 ## What is simplified
 
