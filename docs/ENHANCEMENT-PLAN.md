@@ -43,7 +43,7 @@ section saying what has to be decided first.
 | 8 | Add `checkpoint-agent` example | Examples | High | Done | | 2026-08-23 |
 | 9 | Add `SECURITY.md` tests to CI | Security | High | Done | | 2026-08-30 |
 | 10 | Document handler packaging divergence | Documentation | Medium | Not Started | | 2026-08-30 |
-| 11 | Add SAST scanning to CI | Security | High | Not Started | | 2026-08-30 |
+| 11 | Add SAST scanning to CI | Security | High | Done | | 2026-08-30 |
 | 12 | Add issue templates | Community | High | Done | | 2026-08-23 |
 | 13 | Document approval claim formats | Documentation | High | Done | | 2026-08-23 |
 | 14 | Add `envs/staging` | Infrastructure | Medium | Not Started | | 2026-08-30 |
@@ -80,8 +80,8 @@ section saying what has to be decided first.
 | 45 | Human-in-the-loop UX dashboard | Future | Low | Not Started | | 2026-11-01 |
 
 **Status verified 2026-08-16** by running each task's own **Verify** block against the working
-tree. Eleven tasks now pass: 1, 2, 3, 4, 5, 7, 8, 9, 12, 13, and 35. Task 6 is `Blocked`. The
-remaining 33 verified as genuinely absent.
+tree, and kept current as tasks have landed since. Twelve tasks now pass: 1, 2, 3, 4, 5, 7, 8,
+9, 11, 12, 13, and 35. Task 6 is `Blocked`. The remaining 32 verified as genuinely absent.
 
 Tasks 4 and 8 were verified rather than written — their artifacts already existed. Task 4 passes
 cleanly: all three `modules/approval/README.md` files carry the `Token Lifetime and Rotation`
@@ -691,6 +691,100 @@ rm -rf examples/zzz
 All three failure modes were exercised this way — an unclassified example, a README with the
 disclaimer stripped, and a phantom module name in the policy. Each fails with a message naming
 the offending file.
+
+---
+
+### Task 11 — Add SAST scanning to CI
+
+**Goal.** Have something read this repository's Python and its workflows for security defects,
+rather than only checking that they parse.
+
+**What was missing.** Nothing scanned code for vulnerabilities. The `examples` job runs
+`compileall`, which parses without importing and so catches a syntax error and nothing else, and
+the `secret-scan` job looks for committed credentials, which is a different question entirely.
+Between them the repository had no check that would notice an injection, an unsafe
+deserialisation, or a workflow handing a fork's code a writable token.
+
+That last one is the sharp edge. `SECURITY.md` names "this repository's supply chain — the
+workflows and scripts under `.github/`" as in scope, and until this task nothing tested that
+claim in either direction. The policy was making a promise CI could not keep — the same failure
+mode task 9 found in the scope lists, one directory over.
+
+**Why CodeQL.** The constraint that decides it is already written in `checks.yml`'s header:
+everything runs without cloud credentials, because a check that needs a secret is a check that
+gets switched off the first time one expires. CodeQL is GitHub-native and free on public
+repositories, so it needs no account, no token, and no third-party service that can start
+charging or disappear. Semgrep and Checkov each mean a `pip install` in CI; that is not
+disqualifying, but neither buys anything here that CodeQL does not already cover for Python.
+
+The `actions` language is why this is two analyses rather than one. It reads the workflow files
+themselves, catching expression injection through `${{ }}` interpolated into a `run` block and
+the `pull_request_target`-plus-checkout pattern. Those are the vulnerabilities a public
+repository taking pull requests actually has, and they live in exactly the files `SECURITY.md`
+had already claimed were in scope.
+
+**Why a separate workflow file.** CodeQL uploads to the code-scanning API, which needs
+`security-events: write`. Top-level `permissions` are inherited by every job in a file, so
+putting this in `checks.yml` would grant write access to the security tab to nine unrelated jobs
+— including the one that downloads a binary over the network and runs it against the whole
+repository. A separate file keeps the grant at job level where it belongs.
+
+The schedule is the second reason. CodeQL is the only check here whose value includes "the
+queries GitHub shipped this month still find nothing in code nobody has touched since August",
+and a push trigger cannot answer that, because the finding arrives with the query rather than
+with the commit. `gitleaks` re-reads the same history every run and gains nothing from a timer,
+which is why it stays in `checks.yml`.
+
+**The gap this does not close, stated because the task title hides it.** CodeQL has no Terraform
+or HCL analyzer. By volume roughly half of this repository is `infra/` across three clouds, and
+none of it is scanned by this workflow. What guards those trees is the write-boundary suite,
+which asserts exactly three properties by reading `.tf` files as text — it is not a general IaC
+scan and does not become one because this task is marked `Done`. A reader who takes "SAST
+scanning: Done" to mean the Terraform is covered has been misled by this table. Closing that gap
+needs Checkov, tfsec, or `trivy config`, and belongs beside task 15 rather than folded in here.
+
+**Action.**
+1. Add `.github/workflows/codeql.yml` with a two-entry matrix — `python` and `actions`, both
+   `build-mode: none`, `fail-fast: false` so one language's extraction error cannot discard the
+   other's result.
+2. Grant `security-events: write` at job level only; leave the workflow default at
+   `contents: read`.
+3. Trigger on push and pull request against `examples/`, `tests/`, `.github/scripts/` and
+   `.github/workflows/`, plus a weekly cron.
+4. Use the `security-extended` query suite rather than the default. The default is tuned to stay
+   quiet in large production codebases, where a false positive costs a team an afternoon. This
+   tree is small and mostly stdlib, so the extra queries have little surface to be noisy against,
+   and the repository's whole subject is which patterns are safe to copy. If it does turn noisy,
+   drop back to `security` — do not switch the workflow off.
+
+**Verify.**
+
+Structure, locally. Deliberately stdlib-only: `pyyaml` is not installed by any of this
+repository's Python paths, and a Verify block that needs a dependency nobody has is the defect
+tasks 2, 3 and 5 each shipped in turn.
+```bash
+pre-commit run check-yaml --files .github/workflows/codeql.yml
+
+python3 - << 'PY'
+src = open('.github/workflows/codeql.yml').read()
+assert '\npermissions:\n  contents: read\n' in src, 'workflow-level permissions widened'
+assert '      security-events: write' in src, 'missing job-level code-scanning grant'
+assert '- language: python' in src and '- language: actions' in src, 'matrix incomplete'
+assert 'queries: security-extended' in src, 'query suite not set'
+assert 'schedule:' in src and 'cron:' in src, 'no weekly trigger'
+print('ok')
+PY
+```
+
+That the analysis actually ran, after the first push to `main`. This half matters more than it
+looks: in the security tab, "scanned and found nothing" and "never uploaded" render identically.
+```bash
+gh api repos/somesh-ghaturle/Agentic-AI-Systems/code-scanning/analyses \
+  --jq '[.[] | {category, created_at, results_count}] | .[0:4]'
+```
+Two categories should appear, `/language:python` and `/language:actions`. One category means the
+matrix half-failed silently; `no analysis found` means nothing uploaded at all, which is the case
+this second check exists to tell apart from a clean scan.
 
 ---
 
@@ -1630,6 +1724,7 @@ git status --short
 | 2026-08-16 | Verified tasks 4 and 8; untracked checkpoint state artifact; task 3 label clash noted | somesh-ghaturle |
 | 2026-08-18 | Completed task 9; classified 2 unlisted examples, added 9 disclaimers | somesh-ghaturle |
 | 2026-08-19 | Task 3 resolved: deleted duplicate `GOOD-FIRST-ISSUE`, kept GitHub's default | somesh-ghaturle |
+| 2026-08-22 | Completed task 11: CodeQL over Python and workflows; Terraform gap recorded | somesh-ghaturle |
 
 ---
 

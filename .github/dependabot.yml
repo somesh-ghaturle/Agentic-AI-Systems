@@ -51,10 +51,14 @@ updates:
   # GitHub Actions
   # ---------------------------------------------------------------------------
   #
-  # The ecosystem people forget. checks.yml pins actions/checkout@v4,
-  # actions/setup-python@v5, and hashicorp/setup-terraform@v3, and those age exactly the way
-  # a requirements.txt does — with the added property that a deprecated runner action starts
-  # emitting warnings and then stops working, rather than failing cleanly.
+  # The ecosystem people forget. The workflows pin every action to a major tag, and those age
+  # exactly the way a requirements.txt does — with the added property that a deprecated runner
+  # action starts emitting warnings and then stops working, rather than failing cleanly.
+  #
+  # No versions are named here, for the same reason the Terraform section below gives. This
+  # comment used to list checkout@v4, setup-python@v5 and setup-terraform@v3; Dependabot's own
+  # pull requests then moved them to v7, v7 and v4, and the comment sat wrong until someone
+  # read it. The pins live in the workflow files.
   - package-ecosystem: github-actions
     directory: /
     schedule:

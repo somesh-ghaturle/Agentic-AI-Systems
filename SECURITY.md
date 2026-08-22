@@ -46,7 +46,9 @@ incident.
   is not, sitting in a directory whose title invites copying. Reports that its gating is weaker
   than its README implies are in scope.
 - **This repository's supply chain** — the workflows and scripts under `.github/`, and the
-  pinned dependencies.
+  pinned dependencies. `.github/workflows/codeql.yml` runs CodeQL's `actions` queries over the
+  workflow files themselves, so expression injection and the `pull_request_target` checkout
+  pattern are checked here rather than only claimed.
 
 ## Out of scope
 

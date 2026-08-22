@@ -1,0 +1,112 @@
+# CodeQL static analysis for the Python under examples/, tests/ and .github/scripts/, and for
+# the workflow files in .github/workflows/ themselves.
+#
+# Separate from checks.yml for two structural reasons rather than stylistic ones.
+#
+# CodeQL uploads findings to the code-scanning API, which needs `security-events: write`.
+# Top-level permissions are inherited by every job in a workflow, so granting it in checks.yml
+# would hand write access to the security tab to nine jobs that have no use for it — including
+# the one that downloads a binary over the network and runs it against the whole repository.
+# It is granted below at job level instead.
+#
+# And CodeQL is the only check here that earns a timer. The others answer "is this diff
+# broken", which a push trigger answers completely. CodeQL also answers "do the queries GitHub
+# shipped this month find anything in code nobody has touched since August", and a
+# push-triggered scan cannot answer that at all — the finding arrives with the query, not with
+# the commit. gitleaks re-reads the same history every run and gains nothing from a schedule,
+# which is why it stays in checks.yml and this does not.
+#
+# WHAT THIS DOES NOT COVER, said plainly because the gap is wide and the phrase "SAST scanning
+# in CI" implies otherwise to a reader skimming the badge: CodeQL has no Terraform or HCL
+# analyzer, and by volume roughly half of this repository is infra/ across three clouds. None
+# of that is scanned here. What guards those trees is the write-boundary suite in checks.yml,
+# and it guards exactly three properties by reading .tf files as text — it is not a general
+# IaC scan and does not become one because this file exists. Closing that gap needs a
+# different tool (Checkov, tfsec, or trivy config) and is its own decision, not something to
+# smuggle in under a task titled "add SAST scanning".
+
+name: codeql
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "examples/**"
+      - "tests/**"
+      - ".github/scripts/**"
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - "examples/**"
+      - "tests/**"
+      - ".github/scripts/**"
+      - ".github/workflows/**"
+  schedule:
+    # Mondays, 07:00 UTC. The day and hour are arbitrary; that it is weekly is not. See the
+    # header — this trigger is the one that catches a newly shipped query against unchanged
+    # code, which is most of this repository most of the time.
+    - cron: "0 7 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      # The narrow grant this whole file is arranged around. Job level, not workflow level.
+      security-events: write
+      # Lets the analyzer resolve workflow run data and reusable workflow references. Read.
+      actions: read
+      contents: read
+
+    strategy:
+      # One language failing must not cancel the other. These are independent analyses that
+      # report to independent categories, and a Python extraction error is not a reason to
+      # throw away a clean actions result — or to hide a dirty one.
+      fail-fast: false
+      matrix:
+        include:
+          # The examples, the test suites, and the scripts under .github/scripts/. Both
+          # linkcheck.py and tfconstraints.py run against repository contents on the
+          # unfiltered path, which puts them in the blast radius SECURITY.md describes.
+          - language: python
+            build-mode: none
+
+          # Workflow analysis, and the reason it is here rather than assumed unnecessary:
+          # SECURITY.md names "this repository's supply chain — the workflows and scripts
+          # under .github/" as in scope, and until this line existed nothing checked that
+          # claim. The actions queries catch the class that matters for a public repository
+          # taking pull requests — expression injection through ${{ }} interpolated into a
+          # run block, and the pull_request_target/checkout pattern that hands a fork's code
+          # a writable token.
+          - language: actions
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          # Both languages here are interpreted or declarative; there is nothing to compile,
+          # and `none` says so explicitly rather than leaving it to autodetection.
+          build-mode: ${{ matrix.build-mode }}
+          # `security-extended` rather than the default `security` suite. The default is tuned
+          # to stay quiet in large production codebases, where a false positive costs a team
+          # an afternoon. The trade reads differently here: this tree is small and mostly
+          # stdlib, so the extra queries have little surface to be noisy against, and the
+          # repository's whole subject is which patterns are safe to copy. If this does turn
+          # noisy, the fix is to drop back to `security` — not to switch the workflow off.
+          queries: security-extended
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          # Keeps the two languages' results in separate code-scanning categories. Without it
+          # the second upload replaces the first rather than joining it.
+          category: "/language:${{ matrix.language }}"
