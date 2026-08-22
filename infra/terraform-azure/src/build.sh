@@ -22,6 +22,8 @@
 # caught at cold start, on an app that deployed successfully. Hence the requirements.txt
 # check below being fatal rather than a warning.
 #
+# The three-way comparison is in infra/MODULES.md, "Handler Packaging".
+#
 # ---------------------------------------------------------------------------
 # What each package must contain
 # ---------------------------------------------------------------------------

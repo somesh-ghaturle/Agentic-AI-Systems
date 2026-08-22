@@ -25,6 +25,8 @@
 # essentially nothing beyond functions-framework, so here every package has a
 # requirements.txt and every google-cloud import is declared. An undeclared import is a
 # cold-start failure on a deploy that reported success.
+#
+# The three-way comparison is in infra/MODULES.md, "Handler Packaging".
 
 set -euo pipefail
 

@@ -42,7 +42,7 @@ section saying what has to be decided first.
 | 7 | Add `MODULES.md` catalog | Documentation | High | Done | | 2026-08-23 |
 | 8 | Add `checkpoint-agent` example | Examples | High | Done | | 2026-08-23 |
 | 9 | Add `SECURITY.md` tests to CI | Security | High | Done | | 2026-08-30 |
-| 10 | Document handler packaging divergence | Documentation | Medium | Not Started | | 2026-08-30 |
+| 10 | Document handler packaging divergence | Documentation | Medium | Done | | 2026-08-30 |
 | 11 | Add SAST scanning to CI | Security | High | Done | | 2026-08-30 |
 | 12 | Add issue templates | Community | High | Done | | 2026-08-23 |
 | 13 | Document approval claim formats | Documentation | High | Done | | 2026-08-23 |
@@ -80,8 +80,9 @@ section saying what has to be decided first.
 | 45 | Human-in-the-loop UX dashboard | Future | Low | Not Started | | 2026-11-01 |
 
 **Status verified 2026-08-16** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. Twelve tasks now pass: 1, 2, 3, 4, 5, 7, 8,
-9, 11, 12, 13, and 35. Task 6 is `Blocked`. The remaining 32 verified as genuinely absent.
+tree, and kept current as tasks have landed since. Thirteen tasks now pass: 1, 2, 3, 4, 5, 7,
+8, 9, 10, 11, 12, 13, and 35. Task 6 is `Blocked`. The remaining 31 verified as genuinely
+absent.
 
 Tasks 4 and 8 were verified rather than written — their artifacts already existed. Task 4 passes
 cleanly: all three `modules/approval/README.md` files carry the `Token Lifetime and Rotation`
@@ -691,6 +692,77 @@ rm -rf examples/zzz
 All three failure modes were exercised this way — an unclassified example, a README with the
 disclaimer stripped, and a phantom module name in the policy. Each fails with a message naming
 the offending file.
+
+---
+
+### Task 10 — Document handler packaging divergence
+
+**Goal.** Give the three-way packaging difference one place to be read, so a reader comparing the
+trees can tell a deliberate divergence from an inconsistency somebody forgot to clean up.
+
+**What was already there, and why the task still had work in it.** This was not an undocumented
+area, and the task is smaller than its title suggests. Every tree states the build-before-plan
+requirement in its own `README.md`. Every tree's `HOW-TO-DEPLOY.md` covers its own build step.
+`terraform-aws/src/README.md` goes into handler-level detail. The Azure and GCP `build.sh` headers
+each already carry a section explaining how that script differs from the others and why.
+
+Two gaps survived all of that:
+
+- **No cross-cloud page.** `infra/MODULES.md` is the catalog for exactly this kind of question —
+  it already carries an Overview table, a Module Comparison Matrix, and per-cloud notes — and it
+  said nothing about packaging at all. Someone comparing the three trees had to open three shell
+  scripts and assemble the comparison themselves.
+- **AWS's `build.sh` pointed nowhere.** Azure's header explains how it differs from AWS and GCP;
+  GCP's explains how it differs from AWS. AWS's explained only its own choice. The divergence was
+  therefore discoverable from two of three directions, and the direction it was invisible from is
+  the tree with the most documentation and the likeliest entry point for a reader.
+
+**The divergence itself.** One rule generates all of it: *whoever installs the packages must be
+the same thing that runs them.*
+
+- **AWS vendors**, because a Lambda zip is the final artifact — Lambda does not build it, so
+  whatever is not inside the zip does not exist at runtime. Wheels are resolved with an explicit
+  `--platform manylinux2014_x86_64 --python-version 3.12 --only-binary=:all:` for the Lambda
+  runtime rather than for the build machine.
+- **Azure and GCP must not vendor**, because their zips are source rather than artifact. Oryx
+  (via `SCM_DO_BUILD_DURING_DEPLOYMENT` and `ENABLE_ORYX_BUILD`) and Cloud Build respectively
+  install `requirements.txt` against the real runtime image. Vendoring locally would push a
+  developer machine's binaries into a Linux build.
+
+The visible consequence, and what the new section leads with: the same `reason` handler ships as
+**4.2 MB on AWS and 20 KB on Azure**, and neither number is a mistake. The cost of the split falls
+on Azure and GCP, where an undeclared import is not caught by the build at all — it surfaces at
+cold start, on a deployment that reported success. That is why both of those scripts treat a
+missing `requirements.txt` as fatal, and why all six of GCP's packages carry one where AWS needs
+exactly one.
+
+**Action.**
+1. Add a `## Handler Packaging` section to `infra/MODULES.md`, between the Module Comparison
+   Matrix and the Dependency Graph — a nine-row comparison table plus the reasoning above.
+2. Add the missing cross-reference block to `terraform-aws/src/build.sh`, matching the sections
+   Azure's and GCP's already carry.
+3. Point all three scripts at `MODULES.md`, so the comparison is reachable from whichever tree a
+   reader opens first.
+
+**Deliberately not done.** No new `src/README.md` for Azure or GCP. AWS has one because it
+documents that tree's handlers, stubs, and environment variables — per-cloud content rather than
+divergence — and writing two more of those is a separate task, not this one. Recording it here so
+the asymmetry is a known choice rather than an oversight the next reader has to rediscover.
+
+**Verify.**
+
+That the documented sizes are real rather than copied from a stale build:
+```bash
+for t in aws azure gcp; do (cd "infra/terraform-$t/src" && ./build.sh); done
+```
+`reason.zip` should print `4.2M` for AWS, `20K` for Azure, `16K` for GCP. Only AWS's needs
+network — it is the one that pip-installs.
+
+That the divergence is reachable from every entry point, which was the actual gap:
+```bash
+grep -l "MODULES.md" infra/terraform-*/src/build.sh      # expect all three
+grep -c "How this differs" infra/terraform-*/src/build.sh # expect 1 for each
+```
 
 ---
 
@@ -1725,6 +1797,7 @@ git status --short
 | 2026-08-18 | Completed task 9; classified 2 unlisted examples, added 9 disclaimers | somesh-ghaturle |
 | 2026-08-19 | Task 3 resolved: deleted duplicate `GOOD-FIRST-ISSUE`, kept GitHub's default | somesh-ghaturle |
 | 2026-08-22 | Completed task 11: CodeQL over Python and workflows; Terraform gap recorded | somesh-ghaturle |
+| 2026-08-22 | Completed task 10: packaging divergence catalogued in `infra/MODULES.md` | somesh-ghaturle |
 
 ---
 

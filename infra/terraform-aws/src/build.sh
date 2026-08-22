@@ -10,6 +10,28 @@
 # Python runtime, and a zip you can still read in the console during an incident is worth
 # protecting. A package that genuinely needs a library declares it in its own
 # requirements.txt and only that package pays the cost; today only `reason` does.
+#
+# ---------------------------------------------------------------------------
+# How this differs from the Azure and GCP scripts, and why
+# ---------------------------------------------------------------------------
+#
+# This is the only one of the three that vendors dependencies. That is not a style choice —
+# it follows from what each platform does with the zip after it is handed over.
+#
+# AWS   (here) the zip is the FINAL ARTIFACT. Lambda does not build it, so whatever is not
+#       inside it does not exist at runtime, and wheels have to be resolved for the Lambda
+#       platform rather than for whatever machine ran this script.
+# Azure the zip is SOURCE. `zip_deploy_file` with SCM_DO_BUILD_DURING_DEPLOYMENT hands it to
+#       Oryx, which runs pip on the build server.
+# GCP   the zip is SOURCE. Gen2 functions stage it into GCS and Cloud Build installs it
+#       against the real runtime image.
+#
+# So neither of those scripts may vendor — doing so would ship a developer machine's binaries
+# into a Linux build and shadow what the platform resolves correctly on its own. The trade
+# runs in both directions: they catch an undeclared import only at cold start, on a deploy
+# that reported success, where this script fails at build time instead.
+#
+# The three-way comparison is in infra/MODULES.md, "Handler Packaging".
 
 set -euo pipefail
 
