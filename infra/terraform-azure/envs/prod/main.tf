@@ -209,6 +209,10 @@ module "model_integration" {
   create_account        = var.create_openai_account
   azure_openai_endpoint = var.azure_openai_endpoint
 
+  # Declared by all three roots and passed by none of them until 2026-08-23, which
+  # meant a reader who set it in their tfvars got silence. See HARDENING-PLAN task 8.
+  azure_openai_key_secret_name = var.azure_openai_key_secret_name
+
   model_name            = var.model_name
   model_version         = var.model_version
   model_deployment_name = var.model_deployment_name

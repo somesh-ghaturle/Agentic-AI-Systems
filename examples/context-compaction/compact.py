@@ -33,7 +33,10 @@ HISTORY = [
     ("assistant", "find_by_customer, find_by_status, find_recent all map cleanly."),
     ("assistant", "find_by_customer_and_date_range needs the SK prefix — resolved, works."),
     ("tool", "test run: 41 passed"),
-    ("assistant", "OPEN QUESTION: refunds table has an FK to orders. Denormalize or keep separate?"),
+    (
+        "assistant",
+        "OPEN QUESTION: refunds table has an FK to orders. Denormalize or keep separate?",
+    ),
     ("assistant", "Reading refunds usage ..."),
     ("tool", "refunds: 3 call sites, all read-only"),
     ("assistant", "Wrote adapters/dynamo_orders.py."),

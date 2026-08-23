@@ -26,6 +26,17 @@
 #
 # which Terraform correctly refuses to resolve.
 
+terraform {
+  required_version = ">= 1.6"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 5.0"
+    }
+  }
+}
+
+
 resource "azurerm_user_assigned_identity" "this" {
   for_each = var.identities
 

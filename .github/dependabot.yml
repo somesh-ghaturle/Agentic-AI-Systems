@@ -89,7 +89,7 @@ updates:
   #
   # No version numbers are named here on purpose. The previous version of this comment listed
   # every constraint, and the first Dependabot merge made it wrong. The constraints live in
-  # the .tf files, the resolved versions live in the seven committed `.terraform.lock.hcl`
+  # the .tf files, the resolved versions live in the 40 committed `.terraform.lock.hcl`
   # files, and `.github/scripts/tfconstraints.py` is what enforces the rule about them.
   #
   # Note that Dependabot writes `~> 6.58`, not `~> 6.0` — it floors at the current *minor*,

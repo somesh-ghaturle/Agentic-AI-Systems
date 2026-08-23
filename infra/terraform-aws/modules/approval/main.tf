@@ -25,7 +25,6 @@ terraform {
   }
 }
 
-data "aws_caller_identity" "current" {}
 
 # ---------------------------------------------------------------------------
 # Audit record — "Log the full record: proposal, validation result, who approved,

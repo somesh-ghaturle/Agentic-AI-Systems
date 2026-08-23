@@ -35,6 +35,9 @@ on:
       - ".github/scripts/**"
       - ".github/workflows/checks.yml"
       - ".gitleaks.toml"
+      - "pyproject.toml"
+      - ".tflint.hcl"
+      - ".checkov.yaml"
   pull_request:
     paths:
       - "infra/**"
@@ -45,6 +48,9 @@ on:
       - ".github/scripts/**"
       - ".github/workflows/checks.yml"
       - ".gitleaks.toml"
+      - "pyproject.toml"
+      - ".tflint.hcl"
+      - ".checkov.yaml"
 
 permissions:
   contents: read
@@ -95,6 +101,47 @@ jobs:
       - name: provider pins
         run: python3 .github/scripts/tfconstraints.py infra
 
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Pinned for the same reason `terraform_version` above is pinned, and the reason bites
+      # harder here: ruff adds rules to existing groups between releases, so an unpinned
+      # install is a moving rule set and not just a moving bug-fix stream. `select` in
+      # pyproject.toml names groups — E, F, I, B, UP, SIM, C4, RUF — and one new rule inside
+      # any of them turns a commit red that nobody touched, on whoever pushes next.
+      #
+      # Raise this deliberately: run `ruff check .` locally on the new version first and fix
+      # what it finds in the same change. Dependabot does not watch this pin, because it is a
+      # `pip install` inside a run step rather than a manifest — the same trade the pinned
+      # gitleaks version further down already makes.
+      - name: Install ruff
+        run: pip install ruff==0.16.4
+
+      # The Python half of the parity `terraform fmt -check` above has had all along. Every
+      # .tf file in this repository was gated on formatting while 86 Python files across
+      # examples/, infra/*/src/, tests/ and .github/scripts/ were gated on nothing, and that
+      # asymmetry is visible to anyone who opens both halves of the repo.
+      #
+      # No flags on purpose. Every rule lives in pyproject.toml at the root, so the command
+      # here is the command a contributor runs locally and reaches the same verdict. A flag
+      # set only in the workflow is a rule that fails for the first time in CI, on someone
+      # who had no way to see it coming.
+      #
+      # `ruff format` is deliberately NOT run. It would rewrite 54 of the 86 Python files in one
+      # commit, and in a repository whose Python exists to be read — where `git blame` is the
+      # record of why each example looks the way it does — that costs more than the uniformity
+      # buys. E501 at line-length 100 already holds the one formatting property that matters
+      # for reading two files side by side.
+      - name: Lint
+        run: ruff check .
+
   validate:
     name: validate
     runs-on: ubuntu-latest
@@ -131,6 +178,105 @@ jobs:
 
       - name: validate
         run: terraform -chdir="${{ matrix.root }}" validate -no-color
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install tflint
+        env:
+          # Pinned with a checksum for the same two reasons the gitleaks pin below is:
+          # this step downloads a binary over the network and then runs it against the
+          # whole `infra/` tree, and a linter whose rule set can change between two runs
+          # of the same commit turns a green build into an unreproducible one. tflint
+          # ships the `terraform` ruleset bundled, so there is no `tflint --init` and no
+          # second network hop for a plugin.
+          #
+          # Raise this deliberately: run the sweep below locally on the new version first
+          # and fix what it finds in the same change.
+          TFLINT_VERSION: "0.64.0"
+          TFLINT_SHA256: "cca9d13e2e1d7a2c627af60ff899a3c9b74212899416aeb96ec764d2ef954537"
+        run: |
+          curl -sSfL -o tflint.zip \
+            "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip"
+          echo "${TFLINT_SHA256}  tflint.zip" | sha256sum -c -
+          unzip -o -q tflint.zip tflint
+          sudo install tflint /usr/local/bin/tflint
+
+      # Every module directory and every env root, not just the roots. `validate` above
+      # already covers the roots, and only the roots — a module is checked there through
+      # whichever root happens to call it, with that root's variables. tflint reads each
+      # directory on its own terms, which is the only way `modules/networking` gets told
+      # it declares no `required_version`: no root was ever going to report that on its
+      # behalf.
+      #
+      # Env roots get --var-file. Without it tflint evaluates `var.tools` as its empty
+      # default, `local.tool_members` derives from it and comes out empty, and every
+      # `local.tool_members["retrieve"]` in the file reports as an invalid index — six
+      # errors across Azure and GCP that describe the empty default rather than the code.
+      # terraform.tfvars.example is the file the QUICKSTART tells a reader to copy, so
+      # linting against it lints the configuration people actually apply.
+      #
+      # Rules live in .tflint.hcl at the repository root, so the command a contributor
+      # runs locally reaches the same verdict as this one.
+      - name: Lint every module and root
+        run: |
+          failed=0
+          for dir in infra/terraform-*/modules/*/ infra/terraform-*/envs/*/; do
+            args=(--chdir="$dir" --config="$PWD/.tflint.hcl" --format=compact)
+            if [ -f "$dir/terraform.tfvars.example" ]; then
+              args+=(--var-file=terraform.tfvars.example)
+            fi
+            if ! tflint "${args[@]}"; then
+              failed=$((failed + 1))
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::tflint reported issues in ${failed} directories"
+            exit 1
+          fi
+          echo "tflint clean across all module directories and env roots"
+
+  checkov:
+    name: checkov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Pinned for the reason the ruff pin above spells out, and one more that is specific
+      # to a policy scanner: checkov ships new checks continuously. An unpinned install
+      # means the rule set changes under a commit nobody touched, and the failure lands on
+      # whoever pushes next rather than whoever caused it.
+      #
+      # Raise this deliberately. New checks in a new version are the point of raising it —
+      # run `checkov --config-file .checkov.yaml` locally first, then either fix what it
+      # found or add it to the skip list with a reason, in the same change.
+      - name: Install checkov
+        run: pip install checkov==3.3.13
+
+      # No `--soft-fail`. This job fails the build on any finding that is not skipped by
+      # name in .checkov.yaml, which is what makes the skip list readable as a statement
+      # about the architecture rather than as a way to get green. There were 110 findings
+      # when this job was written; 9 were fixed and 101 are skipped with a stated reason,
+      # grouped by what the reason is.
+      #
+      # LOG_LEVEL=ERROR because checkov logs a WARNING for every HCL interpolation its
+      # Python evaluator cannot parse — several dozen here, all benign, all in front of
+      # the result. A failure nobody can find in the log is a failure nobody acts on.
+      #
+      # Everything else — which directories, which framework, which checks are skipped —
+      # lives in .checkov.yaml, so the command a contributor runs locally reaches the same
+      # verdict as this one.
+      - name: Scan the Terraform trees
+        env:
+          LOG_LEVEL: ERROR
+        run: checkov --config-file .checkov.yaml
 
   write-boundary:
     name: write boundary

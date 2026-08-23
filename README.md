@@ -45,9 +45,9 @@ It scores the same runs twice — one grader reads the final answer, one reads t
 ```text
 Agentic-AI-Systems/
 ├── infra/                        three Terraform trees, same architecture per cloud
-│   ├── terraform-aws/            8 modules · envs/{dev,prod}
-│   ├── terraform-azure/          12 modules · envs/{dev,prod,tenant}
-│   └── terraform-gcp/            10 modules · envs/{dev,prod}
+│   ├── terraform-aws/            8 modules · envs/{dev,staging,prod}
+│   ├── terraform-azure/          12 modules · envs/{dev,staging,prod,tenant}
+│   └── terraform-gcp/            10 modules · envs/{dev,staging,prod}
 │       ├── README.md             entry point for that cloud
 │       ├── ARCHITECTURE.md       mermaid diagrams in that cloud's own terms
 │       ├── HOW-TO-DEPLOY.md      ordered deploy steps and prerequisites
@@ -80,8 +80,9 @@ Agentic-AI-Systems/
 ├── SECURITY.md                   what counts as a vulnerability here, and how to report it
 ├── LICENSE                       Apache-2.0
 └── .github/
-    ├── workflows/checks.yml         fmt, validate, boundary tests, handlers, builds
+    ├── workflows/checks.yml         fmt, lint, validate, tflint, checkov, boundary tests, builds
     ├── workflows/example-deps.yml   installs each example's pins and imports it
+    ├── workflows/codeql.yml         CodeQL over the Python and the workflows, weekly
     ├── scripts/                     linkcheck.py, tfconstraints.py — stdlib-only CI guards
     └── dependabot.yml               monthly pip, actions, and provider updates
 ```
@@ -170,16 +171,20 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 
 ## CI
 
-[`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, `tests/`, `docs/`, the root markdown files, or the workflow's own scripts — seven jobs:
+[`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, `tests/`, `docs/`, the root markdown files, `pyproject.toml`, or the workflow's own scripts — eleven jobs, checking:
 
-- `terraform fmt -check` across all three trees
-- `terraform validate` on each of the seven environment roots, as a matrix so one broken root does not hide the others
+- `terraform fmt -check` across all three trees, plus a provider-pin check that `terraform validate` cannot see
+- `ruff check` over all 86 Python files, against the rules in `pyproject.toml` — the same command and the same verdict a contributor gets locally
+- `terraform validate` on each of the ten environment roots, as a matrix so one broken root does not hide the others
+- `tflint` over all thirty modules and ten roots — `validate` only ever sees a module through a root that calls it, which is why nothing reported that twelve Azure modules pinned no provider version
+- `checkov` over the three trees, failing on any finding not skipped by name and with a reason in [`.checkov.yaml`](.checkov.yaml)
 - Write-boundary tests for all three trees — stdlib `unittest` reading `.tf` files as text
 - Handler logic tests for all three trees
 - Deployment package builds for all three trees
 - The example suites under `tests/` — `hermes-agent`, `trace-eval`, and the `starter-agent` smoke tests, via `unittest discover`
 - A syntax check over all eleven examples, including those with no suite of their own
 - A relative-link check over every markdown file, external URLs deliberately excluded
+- A gitleaks scan over the full git history rather than the tip commit, because a credential committed and later deleted is the case history scanning exists to catch
 
 Documentation used to run no checks at all. This repository is mostly markdown by volume and by purpose, and a documentation-only commit merged green until the path filters were widened to cover it — the miss that found was two links to a workflow that had been renamed.
 

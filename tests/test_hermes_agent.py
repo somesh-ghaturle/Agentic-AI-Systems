@@ -22,7 +22,11 @@ import unittest
 
 sys.path.insert(
     0,
-    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "examples", "hermes-agent"),
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "examples",
+        "hermes-agent",
+    ),
 )
 
 from hermes import (

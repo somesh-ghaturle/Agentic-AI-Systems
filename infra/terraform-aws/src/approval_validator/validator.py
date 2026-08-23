@@ -199,7 +199,8 @@ def _write_record(record):
 
 
 def _approval_id(correlation_id, decision):
-    seed = f"{correlation_id}:{decision.get('action')}:{fingerprint(decision.get('arguments') or {})}"
+    arguments_fingerprint = fingerprint(decision.get('arguments') or {})
+    seed = f"{correlation_id}:{decision.get('action')}:{arguments_fingerprint}"
     return str(uuid.uuid5(_APPROVAL_NAMESPACE, seed))
 
 

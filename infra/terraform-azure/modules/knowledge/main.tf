@@ -46,6 +46,17 @@
 # deploy principal do that.
 # ---------------------------------------------------------------------------
 
+terraform {
+  required_version = ">= 1.6"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 5.0"
+    }
+  }
+}
+
+
 resource "azurerm_search_service" "knowledge" {
   name                = "${var.name_prefix}-search"
   resource_group_name = var.resource_group_name

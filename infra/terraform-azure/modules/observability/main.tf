@@ -35,6 +35,25 @@
 # tool would put a thing that writes audit records on the liberally-available side of the
 # read/write split.
 
+terraform {
+  required_version = ">= 1.6"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 5.0"
+    }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 3.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
+  }
+}
+
+
 resource "azurerm_log_analytics_workspace" "law" {
   name                = "${var.name_prefix}-law"
   location            = var.location
@@ -146,6 +165,19 @@ resource "azurerm_storage_account" "observability" {
   min_tls_version                 = "TLS1_2"
   https_traffic_only_enabled      = true
   allow_nested_items_to_be_public = false
+
+  blob_properties {
+    # Soft delete, not versioning. Versioning answers "what did this look like before the
+    # overwrite"; this answers "the delete was a mistake, put it back" — and a delete is
+    # the accident that has no other recovery path here.
+    delete_retention_policy {
+      days = var.soft_delete_retention_days
+    }
+
+    container_delete_retention_policy {
+      days = var.soft_delete_retention_days
+    }
+  }
 
   tags = var.tags
 }

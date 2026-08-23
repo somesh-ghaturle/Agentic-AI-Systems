@@ -30,6 +30,25 @@
 # means coordinating every caller at once. Identity-based auth has none of those
 # properties, which is why the credential-free path is the only one wired here.
 
+terraform {
+  required_version = ">= 1.6"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 5.0"
+    }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 3.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
+  }
+}
+
+
 data "azuread_client_config" "current" {}
 
 locals {
@@ -121,6 +140,19 @@ resource "azurerm_storage_account" "tools" {
   shared_access_key_enabled       = var.storage_shared_access_key_enabled
 
   public_network_access_enabled = var.storage_public_network_access_enabled
+
+  blob_properties {
+    # Soft delete, not versioning. Versioning answers "what did this look like before the
+    # overwrite"; this answers "the delete was a mistake, put it back" — and a delete is
+    # the accident that has no other recovery path here.
+    delete_retention_policy {
+      days = var.soft_delete_retention_days
+    }
+
+    container_delete_retention_policy {
+      days = var.soft_delete_retention_days
+    }
+  }
 
   tags = var.tags
 }
