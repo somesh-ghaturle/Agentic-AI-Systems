@@ -1,0 +1,165 @@
+# Copy to terraform.tfvars and fill in. Do not commit terraform.tfvars.
+#
+# ---------------------------------------------------------------------------
+# Before this plans: the handler packages must exist
+#
+# Every package_path below is checked with fileexists() at plan time, because the zip is
+# read to compute its deployment hash. There is no Azure handler source tree in this repo
+# yet — infra/terraform-aws/src holds the AWS handlers, and they are written against
+# boto3, DynamoDB, and Step Functions task tokens. They will not run on Functions
+# unmodified. See ARCHITECTURE.md section "Remaining work".
+#
+# Until that source exists, this environment validates but does not plan.
+# ---------------------------------------------------------------------------
+#
+# Staging is a release rehearsal. Values match prod wherever a difference would make the
+# rehearsal unrepresentative — plan tier, Service Bus SKU, search SKU, step budgets — and
+# match dev wherever prod's choice is irreversible or is pure durability.
+#
+# Note the project name. Seven characters, not prod's ten: storage account names strip
+# hyphens and cap at 24, and "staging" costs three more than "prod". Copying prod's
+# `project = "acme-agent"` fails validation here.
+
+project         = "acme"
+subscription_id = "00000000-0000-0000-0000-000000000000"
+location        = "eastus"
+
+# ---------------------------------------------------------------------------
+# Cost — the two lines that make staging expensive, both defaulting to prod's value
+#
+# Left commented because the defaults are the recommended settings. Uncomment only after
+# reading why they are what they are in variables.tf: Y1 cannot join a VNet, and a Service
+# Bus namespace cannot be upgraded from Standard to Premium in place. Both overrides trade
+# away a rehearsal that prod depends on.
+# ---------------------------------------------------------------------------
+
+# function_service_plan_sku = "Y1"
+# servicebus_sku            = "Standard"
+
+# ---------------------------------------------------------------------------
+# Tools
+#
+# `access` decides the invocation path and nothing else in this file matters more:
+#
+#   read  → the orchestrator holds the invoke app role and calls it directly
+#   write → ONLY the approval executor holds it; the orchestrator cannot obtain a token
+#
+# Classify by what the handler DOES, not by what it is called. A tool named
+# "lookup_account" that also writes an audit row is a write tool.
+# ---------------------------------------------------------------------------
+
+tools = {
+  # Retrieval over the knowledge corpus.
+  retrieve = {
+    access       = "read"
+    package_path = "../../build/retrieve.zip"
+
+    environment = {
+      KNOWLEDGE_INDEX = "knowledge"
+
+      # Without this the handler refuses rather than guessing at an embedding model.
+      EMBEDDING_DEPLOYMENT = "text-embedding-3-large"
+    }
+  }
+
+  # The model step. Classified `read` because it proposes and never executes — a proposal
+  # reaches a write tool only through validation and human approval.
+  reason = {
+    access       = "read"
+    package_path = "../../build/reason.zip"
+
+    environment = {
+      MODEL_DEPLOYMENT = "gpt-4o"
+    }
+  }
+
+  # A write tool: moves money, so it is irreversible and customer-visible. Gated.
+  #
+  # Point this at a sandbox payment provider. Everything else in this file is arranged to
+  # make staging behave like prod; this is the one place where that would move real money.
+  process_refund = {
+    access       = "write"
+    package_path = "../../build/process_refund.zip"
+
+    # Prod's ceiling. A tool that permits in staging what it would refuse in prod turns
+    # the rehearsal into a false pass.
+    environment = {
+      MAX_REFUND_CENTS = "50000"
+    }
+
+    # Agents retry. Bounding scale-out limits the blast radius of a retry storm.
+    max_instances = 5
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Approval gate
+# ---------------------------------------------------------------------------
+
+approval_validator = {
+  package_path = "../../build/approval_validator.zip"
+
+  # Prod's limit, for the same reason as the tool ceiling above.
+  environment = {
+    POLICY_MAX_REFUND_CENTS = "50000"
+  }
+}
+
+approval_executor = {
+  package_path = "../../build/approval_executor.zip"
+
+  environment = {
+    # How long a claimed-but-unfinished record waits before the reaper may reclaim it.
+    STALE_CLAIM_SECONDS = "900"
+  }
+}
+
+# A staging approver group, not the prod rotation. Empty means every gated action sits
+# until its window closes and is recorded as abandoned, which reads as a gate defect.
+approver_principal_ids = {
+  # staging_approvers = "00000000-0000-0000-0000-000000000000"
+}
+
+# ---------------------------------------------------------------------------
+# Observability
+# ---------------------------------------------------------------------------
+
+trace_emitter = {
+  package_path = "../../build/emit_trace.zip"
+}
+
+# A staging channel. Alert routing is worth rehearsing; paging the prod on-call for a
+# rehearsal is how people learn to ignore the alert.
+alert_email_receivers = {
+  # staging = "agentic-staging@example.com"
+}
+
+daily_cost_threshold_usd = 50
+
+# ---------------------------------------------------------------------------
+# Retention — dev-scale. Nothing here is read after the next release.
+# ---------------------------------------------------------------------------
+
+log_retention_days      = 30
+archive_expiration_days = 90
+
+# ---------------------------------------------------------------------------
+# Model layer
+#
+# Create the Azure OpenAI account out of band — provisioning one requires tenant-level
+# enrollment that Terraform cannot request — then paste its endpoint here. Use the same
+# model and version prod will use; a rehearsal against a different model measures a
+# different system.
+# ---------------------------------------------------------------------------
+
+azure_openai_endpoint = ""
+model_deployment_name = ""
+
+# ---------------------------------------------------------------------------
+# Knowledge layer networking
+#
+# Supply these. Null keeps the search service on its public endpoint, which skips the
+# rehearsal this environment pays for EP1 plans to perform.
+# ---------------------------------------------------------------------------
+
+# knowledge_private_dns_zone_ids = ["/subscriptions/.../privatelink.search.windows.net"]

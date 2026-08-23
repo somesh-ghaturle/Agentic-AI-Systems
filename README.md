@@ -101,7 +101,9 @@ Three parallel Terraform trees under [infra/](infra/), implementing the same age
 | [terraform-azure/](infra/terraform-azure/) | Logic Apps | Functions | Storage Tables / Cosmos DB | AI Search |
 | [terraform-gcp/](infra/terraform-gcp/) | Cloud Workflows | Cloud Functions gen2 | Firestore | Vertex AI Vector Search |
 
-Each tree has its own `ARCHITECTURE.md` with mermaid diagrams drawn in that cloud's terms, a `HOW-TO-DEPLOY.md`, and `envs/dev` plus `envs/prod` roots. Azure has a third root, `envs/tenant`, because the Entra audit alert it applies is tenant-scoped — two roots managing it would revert each other.
+Each tree has its own `ARCHITECTURE.md` with mermaid diagrams drawn in that cloud's terms, a `HOW-TO-DEPLOY.md`, and `envs/dev`, `envs/staging` and `envs/prod` roots. Azure has a fourth root, `envs/tenant`, because the Entra audit alert it applies is tenant-scoped — two roots managing it would revert each other.
+
+`envs/staging` is a release rehearsal rather than a smaller prod: it takes every one of prod's *reversible* controls — private networking, payloads kept out of logs, strict alert thresholds, prod's step budgets — and none of its irreversible ones, so it can be destroyed and rebuilt. Each tree's `envs/staging/main.tf` opens with what it takes from where and why.
 
 **The property they all enforce:** a state-changing action cannot reach production without a human approving that specific action, and that is enforced by the identity platform — not by the prompt, and not by the model choosing to behave. Tools are split into `read` and `write`; only the approval executor can invoke a write tool, and the orchestrator cannot.
 

@@ -106,11 +106,14 @@ jobs:
         root:
           - infra/terraform-aws/envs/dev
           - infra/terraform-aws/envs/prod
+          - infra/terraform-aws/envs/staging
           - infra/terraform-azure/envs/dev
           - infra/terraform-azure/envs/prod
+          - infra/terraform-azure/envs/staging
           - infra/terraform-azure/envs/tenant
           - infra/terraform-gcp/envs/dev
           - infra/terraform-gcp/envs/prod
+          - infra/terraform-gcp/envs/staging
     steps:
       - uses: actions/checkout@v7
 

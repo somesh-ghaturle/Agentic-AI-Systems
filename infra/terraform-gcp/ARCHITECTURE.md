@@ -12,7 +12,8 @@ service carries its own IAM policy. `roles/run.invoker` on that policy is the AW
 resource policy in different words. Section 2 is where that comparison is made precisely,
 including the one place GCP is *stronger* than AWS and the one place it is weaker.
 
-> **Implementation status.** Both roots validate: `envs/dev` and `envs/prod`. Every module
+> **Implementation status.** All three roots validate: `envs/dev`, `envs/staging` and
+> `envs/prod`. Every module
 > in section 6 is built, and so is the handler source (`src/`). Everything in the diagrams
 > exists in Terraform.
 >
@@ -382,10 +383,16 @@ point of view:
 | `observability` | Four log metrics, alert policies, trace emitter, archive sink | The emitter is not optional in practice. Its absence is indistinguishable from health. |
 | `orchestration` | Workflow, callback endpoint, IAM Deny policy | **Lock 2.** The deny policy validates at apply, not at plan. |
 
-Environment roots: [`envs/dev`](envs/dev) and [`envs/prod`](envs/prod). They are
-structurally identical — every difference is a variable, and each is annotated in
-`envs/prod/main.tf` with what it costs and what it buys. An approval gate you only exercise
-in prod is an approval gate you have not tested.
+Environment roots: [`envs/dev`](envs/dev), [`envs/staging`](envs/staging) and
+[`envs/prod`](envs/prod). They are structurally identical — every difference is a variable,
+and each is annotated in `envs/prod/main.tf` with what it costs and what it buys. An
+approval gate you only exercise in prod is an approval gate you have not tested.
+
+Staging takes prod's reversible controls and dev's disposability. The one that matters most
+here is the Vertex AI floor setting: it is enforced on every `generateContent` in the
+project, so enabling it for the first time in prod means the first request it ever blocks is
+a real one. It does not take prod's locked archive retention, because that commits the
+bucket for seven years and no principal can undo it.
 
 **Built, with one ordering constraint:** the handler source tree lives in `src/` and is
 written against the Google Cloud SDKs — the AWS handlers use boto3, DynamoDB, OpenSearch,
