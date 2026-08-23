@@ -10,13 +10,13 @@ Get the Agentic-AI-Systems repository running locally and deployed in under 30 m
 |------|---------|---------|-----------------|
 | Python | 3.9+ | Run examples | `brew install python` (macOS) / `sudo apt install python3.9` (Ubuntu) |
 | pip | Latest | Python package manager | `python3 -m ensurepip --upgrade` |
-| Terraform | 1.9.8+ | Infrastructure as code | `brew install terraform` (macOS) / See [HashiCorp docs](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) |
+| Terraform | 1.6+ | Infrastructure as code | `brew install terraform` (macOS) / See [HashiCorp docs](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) |
 | Git | Latest | Version control | `brew install git` / `sudo apt install git` |
 
 **Verify your environment:**
 ```bash
 python3 --version        # Should be 3.9 or higher
-terraform version        # Should be 1.9.8 or higher
+terraform version        # Should be 1.6 or higher
 git --version
 ```
 

@@ -96,11 +96,16 @@ gave it one commit of history to look at. Copying a plan's YAML is not the same 
 which is the same lesson task 2's terraform hook taught, where the hook reported `Passed` while
 silently skipping the first file it was handed.
 
-Task 35 deliberately ships without a Terraform version badge, because the repository states three
-different Terraform versions and the badge cannot be honest until one wins: `required_version` in
-the `.tf` files says `>= 1.6`, `checks.yml` pins `1.15.8`, and `QUICKSTART.md` tells the reader to
-install `1.9.8+`. Pick the number that is actually supported, reconcile the other two, then add the
-badge.
+Task 35 shipped without a Terraform version badge, because the repository stated three different
+Terraform versions and the badge could not be honest until one won: `required_version` in the
+`.tf` files said `>= 1.6`, `checks.yml` pinned `1.15.8`, and `QUICKSTART.md` told the reader to
+install `1.9.8+`.
+
+**Resolved 2026-08-23, and the badge is now in `README.md`.** `QUICKSTART.md` was the number with
+nothing behind it: `1.9.8+` matched neither the declared floor nor the pin CI proves. It now says
+`1.6+`, and the badge states the same. The other two stay as they are on purpose — a floor and a
+CI pin answer different questions, and hardening Task 9 in [HARDENING-PLAN.md](HARDENING-PLAN.md)
+records why, along with the one thing still unproven: nothing actually tests 1.6.
 
 A related gap the badge exposes rather than causes: the `Python 3.9+` badge repeats the support
 floor that `README.md`, `QUICKSTART.md`, and `CONTRIBUTING.md` all state, but every CI job runs on
@@ -141,7 +146,10 @@ Create `QUICKSTART.md` at the repository root with three sections:
 2. **Deploy to dev:** Step-by-step for `infra/terraform-aws/envs/dev`
 3. **Trace end-to-end:** Using `trace-eval` to verify the write boundary
 
-Include prerequisites (Python 3.9+, Terraform 1.9.8+) and expected output.
+Include prerequisites (Python 3.9+, Terraform 1.6+) and expected output. The Terraform floor
+was written here as `1.9.8+` and shipped that way; it was corrected to `1.6+` on 2026-08-23,
+when that number turned out to match neither the declared floor nor the version CI proves —
+see the note under Progress.
 
 **Verify.**
 ```bash
@@ -352,8 +360,11 @@ the scan fail.
 > (`git check-ignore` confirms it is untracked). The same `.gitignore` notes plan output "can
 > contain resolved secret values". Whatever this task becomes, name the output `*.tfplan`.
 >
-> The `terraform_version: 1.9.8` below is also inconsistent with the `1.15.8` that `checks.yml`
-> pins and that the modules resolve against — see the three-way version drift noted under Progress.
+> **4. The version pin below was wrong and has been corrected.** It read `1.9.8`, which matched
+> neither `checks.yml` nor the declared floor. It now reads `1.15.8`, matching the pin the `fmt`
+> and `validate` jobs already use — a plan job proving a different CLI version than the rest of
+> CI is drift being introduced rather than caught. The wider reconciliation closed on 2026-08-23;
+> see the note under Progress and hardening Task 9.
 
 **Goal.** Catch unintended infrastructure changes before merge.
 
@@ -387,7 +398,7 @@ Use a matrix strategy:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.9.8
+          terraform_version: 1.15.8
       - name: Terraform init
         run: terraform -chdir=infra/terraform-${{ matrix.tree }}/envs/${{ matrix.env }} init -backend=false -input=false
       - name: Terraform plan
@@ -506,7 +517,7 @@ If applicable, add screenshots or log output to help explain your problem.
 **Environment:**
 - OS: [e.g., Ubuntu 22.04]
 - Python version: [e.g., 3.12.0]
-- Terraform version: [e.g., 1.9.8]
+- Terraform version: [e.g., 1.15.8]
 - Cloud: [AWS/Azure/GCP/None]
 
 **Additional context**
