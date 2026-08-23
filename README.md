@@ -3,6 +3,7 @@
 [![checks](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/checks.yml/badge.svg)](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/checks.yml)
 [![example deps](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/example-deps.yml/badge.svg)](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/example-deps.yml)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](QUICKSTART.md)
+[![Terraform 1.6+](https://img.shields.io/badge/Terraform-1.6%2B-blue.svg)](QUICKSTART.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 Reference implementations of a production agentic architecture: **three parallel Terraform trees** deploying the same system on AWS, Azure, and GCP, **eleven runnable examples**, and the architecture and governance documents behind them. Everything here is meant to be read, copied into your own repository, and adapted.
@@ -101,7 +102,9 @@ Three parallel Terraform trees under [infra/](infra/), implementing the same age
 | [terraform-azure/](infra/terraform-azure/) | Logic Apps | Functions | Storage Tables / Cosmos DB | AI Search |
 | [terraform-gcp/](infra/terraform-gcp/) | Cloud Workflows | Cloud Functions gen2 | Firestore | Vertex AI Vector Search |
 
-Each tree has its own `ARCHITECTURE.md` with mermaid diagrams drawn in that cloud's terms, a `HOW-TO-DEPLOY.md`, and `envs/dev` plus `envs/prod` roots. Azure has a third root, `envs/tenant`, because the Entra audit alert it applies is tenant-scoped — two roots managing it would revert each other.
+Each tree has its own `ARCHITECTURE.md` with mermaid diagrams drawn in that cloud's terms, a `HOW-TO-DEPLOY.md`, and `envs/dev`, `envs/staging` and `envs/prod` roots. Azure has a fourth root, `envs/tenant`, because the Entra audit alert it applies is tenant-scoped — two roots managing it would revert each other.
+
+`envs/staging` is a release rehearsal rather than a smaller prod: it takes every one of prod's *reversible* controls — private networking, payloads kept out of logs, strict alert thresholds, prod's step budgets — and none of its irreversible ones, so it can be destroyed and rebuilt. Each tree's `envs/staging/main.tf` opens with what it takes from where and why.
 
 **The property they all enforce:** a state-changing action cannot reach production without a human approving that specific action, and that is enforced by the identity platform — not by the prompt, and not by the model choosing to behave. Tools are split into `read` and `write`; only the approval executor can invoke a write tool, and the orchestrator cannot.
 

@@ -45,7 +45,7 @@ No task needs cloud credentials. Task 2 needs network access to resolve pins fro
 | 6 | Add SECURITY.md | 4 | medium | [x] |
 | 7 | Ruff config and lint job — parity with `terraform fmt` | 4 | low | [ ] |
 | 8 | tflint and checkov over the three trees | 5 | low | [ ] |
-| 9 | Reconcile the Terraform version pin | 5 | low | [ ] |
+| 9 | Reconcile the Terraform version pin | 5 | low | [x] |
 | 10 | Threat model for the write boundary | 6 | medium | [x] |
 | 11 | Single cloud-comparison page | 6 | low | [ ] |
 
@@ -313,14 +313,40 @@ disabling the job.
 
 ### Task 9 — Reconcile the Terraform CLI version pin
 
+**Done 2026-08-23.** Both halves of the ask landed, one of them earlier than this note:
+`checks.yml` pins `1.15.8` in the `fmt` and `validate` jobs, and the comment above the pin now
+says why — it is the version the repository is developed on, not a floor, and raising it means
+raising both jobs together. `QUICKSTART.md` was the piece still outstanding, and it now names
+`1.6+` rather than a third number.
+
 **This is the CLI, not the providers.** `.github/dependabot.yml` used to point here for the
 provider-constraint decision; that was task 21 in [REPO-AUDIT.md](REPO-AUDIT.md), and it closed
-on 2026-08-15 by pinning every provider to its major. Nothing below is affected by it.
+on 2026-08-15 by pinning every provider to its major. Nothing here was affected by it.
 
-**Severity: low.** CI pins 1.9.8. Local development is on 1.15.8. `fmt` agrees across that gap
-and all seven roots validate on both, but the two are not guaranteed to stay agreed, and a
-divergence found during a release is found at the worst time. Either raise the CI pin or state
-the floor deliberately in the workflow comment.
+**Severity: low.** As written, this task said CI pinned 1.9.8 against local development on
+1.15.8, and that `fmt` agreed across the gap while all seven roots validated on both. Two of
+those numbers have moved since: CI pins 1.15.8, and there are ten roots rather than seven —
+`envs/staging` was added to all three trees on 2026-08-23. The finding itself was real, and
+the resolution is the one this task offered second: state the floor deliberately rather than
+collapse the three numbers into one.
+
+**What the three numbers now mean,** because keeping two of them is the point rather than an
+unfinished reconciliation:
+
+| Number | Where | What it claims |
+|---|---|---|
+| `>= 1.6` | `required_version`, 32 files | The floor a consumer copying this HCL must clear |
+| `1.15.8` | `checks.yml`, both jobs | The single version CI proves the trees against |
+| `1.6+` | `QUICKSTART.md` | The floor, restated for a reader installing the tool |
+
+The floor and the CI pin answer different questions and should not be collapsed. What was
+wrong was the fourth number — `QUICKSTART.md` told readers to install `1.9.8+`, which matched
+neither and was backed by nothing.
+
+**Residual, recorded rather than fixed:** nothing tests 1.6. The floor is declared, not proven,
+so a change using syntax newer than 1.6 would pass CI and break a consumer who took the README
+at its word. Adding 1.6 to the `fmt` and `validate` matrices would close that; it doubles a
+ten-root matrix, which is why it is noted here rather than done.
 
 ---
 

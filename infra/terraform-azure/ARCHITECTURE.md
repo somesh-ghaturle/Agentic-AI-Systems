@@ -10,8 +10,8 @@ What differs is the machinery. Azure has no equivalent of a Lambda resource poli
 the boundary is drawn with Entra app roles instead. That substitution is not free, and
 Section 2 is explicit about where it is weaker than the AWS original.
 
-> **Implementation status.** Three roots validate: `envs/dev`, `envs/prod`, and
-> `envs/tenant`. The Logic App workflow definition, the archive immutability policy, the
+> **Implementation status.** Four roots validate: `envs/dev`, `envs/staging`, `envs/prod`,
+> and `envs/tenant`. The Logic App workflow definition, the archive immutability policy, the
 > observability wiring, the write-boundary guards in section 2, and the handler source
 > (`src/`) are all built. Everything in the diagrams exists in Terraform.
 >

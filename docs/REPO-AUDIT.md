@@ -23,7 +23,7 @@ matches, trust the quoted text over the number and search for it.
 
 ```bash
 python3 --version        # 3.9+ for the examples; CI pins 3.12
-terraform version        # CI pins 1.9.8 — needed for the Definition of done only
+terraform version        # CI pins 1.15.8 — needed for the Definition of done only
 docker --version         # tasks 13 and 16 only
 ```
 
@@ -1322,9 +1322,10 @@ terraform fmt -recursive -check infra/
 version pin.
 
 Hardening Task 9 is not Task 21 above, though the two have been conflated. Task 21 was about
-*provider* constraints and is now closed; hardening Task 9 is about the *CLI* — CI pins 1.9.8,
-local development is on 1.15.8, and `required_version = ">= 1.6"` floors both. That one is
-still open.
+*provider* constraints; hardening Task 9 was about the *CLI*. Both are now closed. Task 9 closed
+on 2026-08-23: CI pins 1.15.8 in both jobs, the workflow comment states why `>= 1.6` stays a
+floor rather than following the pin, and `QUICKSTART.md` now names that floor instead of a third
+number.
 
 Note that hardening Task 5 and round-two Task 17 are the same work. Task 17 supersedes it and
 carries the two false-positive findings that hardening Task 5 was written without.

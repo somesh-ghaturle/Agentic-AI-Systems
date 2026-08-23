@@ -1,0 +1,200 @@
+# Copy to terraform.tfvars and fill in. Do not commit terraform.tfvars.
+#
+# ---------------------------------------------------------------------------
+# Before this plans: the handler packages must exist
+#
+# Every package_path below is read at plan time to compute its deployment hash, so a
+# missing zip is a plan-time error rather than an apply-time one. There is no GCP handler
+# source tree in this repo yet — infra/terraform-aws/src holds the AWS handlers, and they
+# are written against boto3, DynamoDB, OpenSearch, and Step Functions task tokens. They
+# will not run on Cloud Functions unmodified.
+#
+# Until that source exists, this environment validates but does not plan. See
+# ARCHITECTURE.md section "Remaining work".
+#
+# ---------------------------------------------------------------------------
+# Before this applies: three manual pre-steps
+#
+#   1. Accept the Anthropic Model Garden terms for `model_id` in this project. There is no
+#      Terraform resource for it, and without it every model call returns 403.
+#   2. Enable the APIs this root does not manage: cloudfunctions, run, workflows,
+#      firestore, cloudkms, storage, pubsub, logging, monitoring. Only aiplatform is
+#      enabled here, via modules/model-integration.
+#   3. Confirm your principal can create IAM Deny policies
+#      (roles/iam.denyAdmin at the project or organization level). Without it the apply
+#      fails at the very last resource, after everything else exists.
+#
+# Prod has a fourth pre-step — reading the archive note, because prod locks a 7-year
+# retention policy nobody can undo. This root does not lock anything, which is the whole
+# reason it can be torn down and rebuilt.
+#
+# See HOW-TO-DEPLOY.md.
+# ---------------------------------------------------------------------------
+#
+# Staging is a release rehearsal. Values match prod wherever a difference would make the
+# rehearsal unrepresentative — the Vertex floor setting, call logging, alert thresholds,
+# step and approval budgets — and match dev wherever prod's choice is irreversible or is
+# pure durability.
+
+# 3-7 characters, NOT prod's 3-10. The ceiling is the 30-character service account ID
+# limit: this root derives IDs as "<project>-staging-<tool name>", `process_refund` is 14
+# characters, and "staging" spends three more than "prod". A project name valid in
+# envs/prod can be invalid here.
+project = "acme"
+
+# Its own project. The Vertex AI floor setting this root enables is enforced on every
+# caller in the project, so sharing one with dev would apply staging's blocking guardrail
+# to dev's traffic.
+project_id = "acme-agent-staging"
+
+# Prod's region. Region determines which machine types and model versions exist, so a
+# rehearsal elsewhere can pass on capacity prod does not have.
+region = "us-central1"
+
+# Immutable after creation. Match prod: changing it later means a new database and a data
+# migration, and rehearsing against a single region when prod runs a multi-region tests
+# different latency and different failure behaviour.
+firestore_location = "nam5"
+
+# Not `region`. Anthropic model availability on Vertex AI is region-specific — us-east5
+# and europe-west1 carry the broadest selection. Match prod exactly.
+vertex_location = "us-east5"
+model_id        = "claude-opus-4-5@20251101"
+
+# ---------------------------------------------------------------------------
+# Cost
+#
+# Vector Search has no scale-to-zero, so min_replicas is a continuous bill and the largest
+# standing cost here. One replica rather than prod's two; the maximum stays above the
+# minimum so autoscaling is still exercised.
+# ---------------------------------------------------------------------------
+
+knowledge_min_replicas   = 1
+knowledge_max_replicas   = 3
+daily_cost_threshold_usd = 50
+
+# Finite, unlike prod's null. See variables.tf.
+archive_expiration_days = 90
+
+# ---------------------------------------------------------------------------
+# Tools
+#
+# `access` decides the invocation path and nothing else in this file matters more:
+#
+#   read  → the orchestrator holds run.invoker and calls the function directly
+#   write → ONLY the approval executor holds it, and the orchestrator is separately denied
+#           it by an IAM Deny policy
+#
+# Classify by what the handler DOES, not by what it is called. A tool named
+# "lookup_account" that also writes an audit row is a write tool. Terraform cannot check
+# this for you — it is a property of your handler code.
+# ---------------------------------------------------------------------------
+
+tools = {
+  # Retrieval over the Vector Search corpus.
+  retrieve = {
+    access          = "read"
+    entry_point     = "handler"
+    runtime         = "python312"
+    package_path    = "../../build/retrieve.zip"
+    timeout_seconds = 30
+    max_instances   = 20
+
+    environment = {
+      # Tenant scoping is applied as a namespace restrict inside the query, not as a
+      # post-filter. Filtering after the fact means the neighbours were already chosen
+      # across tenants and the result set is short rather than wrong-tenant — which looks
+      # like poor recall. Rehearse this with a multi-tenant corpus or it goes untested.
+      TENANT_NAMESPACE = "tenant_id"
+    }
+  }
+
+  # The model step. Classified `read` because it proposes and never executes — a proposal
+  # reaches a write tool only through validation and human approval.
+  reason = {
+    access          = "read"
+    entry_point     = "handler"
+    runtime         = "python312"
+    package_path    = "../../build/reason.zip"
+    timeout_seconds = 120
+    max_instances   = 10
+  }
+
+  # A write tool: moves money, so it is irreversible and customer-visible. Gated.
+  #
+  # Point this at a sandbox payment provider. Everything else in this file is arranged to
+  # make staging behave like prod; this is the one place where that would move real money.
+  process_refund = {
+    access       = "write"
+    entry_point  = "handler"
+    runtime      = "python312"
+    package_path = "../../build/process_refund.zip"
+
+    # Must be under the executor's timeout, or the refund completes and the executor is
+    # killed before recording that it did.
+    timeout_seconds = 60
+
+    # Agents retry. Bounding scale-out limits the blast radius of a retry storm against a
+    # path that moves money.
+    max_instances = 5
+
+    environment = {
+      # Prod's ceiling, checked independently of the validator's policy limit. A tool that
+      # permits in staging what it would refuse in prod turns the rehearsal into a false
+      # pass.
+      MAX_REFUND_CENTS = "50000"
+    }
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Approval gate
+# ---------------------------------------------------------------------------
+
+approval_validator = {
+  package_path = "../../build/approval_validator.zip"
+
+  environment = {
+    # Prod's limit, for the same reason as the tool ceiling above.
+    POLICY_MAX_REFUND_CENTS = "50000"
+  }
+}
+
+approval_executor = {
+  package_path = "../../build/approval_executor.zip"
+
+  environment = {
+    # How long a claimed-but-unfinished record waits before another executor may reclaim
+    # it. Safe only because write tools are idempotent on the approval ID.
+    STALE_CLAIM_SECONDS = "900"
+  }
+}
+
+trace_emitter = {
+  package_path = "../../build/emit_trace.zip"
+}
+
+# ---------------------------------------------------------------------------
+# People
+#
+# A staging approver group, not the prod rotation. Whether approvals reach a human is part
+# of what a rehearsal verifies, but rehearsing against the real rotation trains those
+# people to click through prompts that do not matter.
+#
+# Empty means every gated write sits until its 24-hour window closes and is then abandoned
+# — in a staging run that reads as a gate defect rather than as the configuration it is.
+# ---------------------------------------------------------------------------
+
+approver_members = {
+  staging = "group:agent-approvers-staging@example.com"
+}
+
+# Whoever starts executions. No workload in this tree holds it.
+caller_members = {
+  # api = "serviceAccount:gateway@acme-agent-staging.iam.gserviceaccount.com"
+}
+
+# A staging channel, not the prod on-call rotation.
+alert_email_receivers = {
+  # staging = "agent-staging@example.com"
+}

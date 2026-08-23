@@ -1,0 +1,201 @@
+# Copy to terraform.tfvars and fill in. Do not commit terraform.tfvars.
+#
+# Staging is a release rehearsal. The values below match prod wherever a difference would
+# make the rehearsal unrepresentative — network posture, step budgets, model effort — and
+# match dev wherever prod's choice is irreversible or merely expensive.
+#
+# The one setting prod has and this file does not is `archive_object_lock_days`. It is not
+# omitted by oversight; see the note in variables.tf.
+
+project = "acme-agent"
+region  = "us-east-1"
+
+# Left at "internal" on the assumption that staging runs a synthetic or scrubbed corpus.
+# If you load a production corpus to make the rehearsal realistic — a reasonable thing to
+# do, and what the VPC-only collection below is for — raise this to match prod, because at
+# that point the tag is the only thing still saying otherwise.
+data_classification = "internal"
+
+# ---------------------------------------------------------------------------
+# Network — the knowledge collection is VPC-only here, so these are required
+#
+# Use the subnets and security groups prod will use. Rehearsing against a different
+# network path tests a route prod will never take.
+# ---------------------------------------------------------------------------
+
+vpc_id             = "vpc-0123456789abcdef0"
+subnet_ids         = ["subnet-0123456789abcdef0", "subnet-0123456789abcdef1"]
+security_group_ids = ["sg-0123456789abcdef0"]
+
+# ---------------------------------------------------------------------------
+# Tools
+#
+# `access` is the load-bearing field: "write" means only the approval executor can
+# invoke it. Classify by what the handler does. When unsure, classify as write — the
+# cost of an unnecessary gate is an extra click; the cost of a missing one is an
+# irreversible action nobody authorized.
+# ---------------------------------------------------------------------------
+
+tools = {
+  retrieve = {
+    access          = "read"
+    handler         = "index.handler"
+    runtime         = "python3.12"
+    package_path    = "../../build/retrieve.zip"
+    timeout_seconds = 30
+
+    environment = {
+      KNOWLEDGE_INDEX    = "knowledge"
+      EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
+
+      # Prod's value, not dev's. Retrieved text is the largest and least predictable input
+      # to the context window, so a staging run under a looser cap exercises a context
+      # size prod will never see.
+      MAX_DOCUMENT_CHARS = "1500"
+    }
+
+    policy_json = <<-JSON
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": ["aoss:APIAccessAll"],
+            "Resource": "*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": ["aoss:BatchGetCollection"],
+            "Resource": "*"
+          },
+          {
+            "Effect": "Allow",
+            "Action": ["bedrock:InvokeModel"],
+            "Resource": "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0"
+          }
+        ]
+      }
+    JSON
+  }
+
+  # The model step. Classified `read` because it proposes and never executes — the
+  # proposal reaches a write tool only through validation and human approval.
+  reason = {
+    access          = "read"
+    handler         = "index.handler"
+    runtime         = "python3.12"
+    package_path    = "../../build/reason.zip"
+    timeout_seconds = 120
+    memory_mb       = 1024
+
+    environment = {
+      MODEL_ID = "anthropic.claude-opus-5"
+
+      # Prod's setting. Effort changes latency, spend and decision quality together, so a
+      # rehearsal at a lower effort measures a system prod will not run. This is the
+      # single largest cost line in a staging environment and it is still the right call —
+      # if spend is the problem, run staging less often rather than running it differently.
+      MODEL_EFFORT = "xhigh"
+
+      # Bedrock prices separately from the first-party API — take these from the Bedrock
+      # pricing page for your region. Unset means traces carry tokens but no cost, and
+      # the daily-cost alarm has nothing to count.
+      INPUT_COST_PER_MTOK  = "5.00"
+      OUTPUT_COST_PER_MTOK = "25.00"
+    }
+
+    policy_json = <<-JSON
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": [
+              "bedrock:InvokeModel",
+              "bedrock:InvokeModelWithResponseStream"
+            ],
+            "Resource": "arn:aws:bedrock:*::foundation-model/anthropic.claude-opus-5"
+          }
+        ]
+      }
+    JSON
+  }
+
+  process_refund = {
+    access               = "write"
+    handler              = "index.handler"
+    runtime              = "python3.12"
+    package_path         = "../../build/process_refund.zip"
+    timeout_seconds      = 60
+    reserved_concurrency = 5
+
+    # Point this at a sandbox payment provider, not the real one. Everything else in this
+    # file is arranged to make staging behave like prod; this is the one place where that
+    # would move real money.
+    environment = {
+      MAX_REFUND_CENTS = "50000"
+    }
+  }
+}
+
+approval_validator = {
+  handler         = "validator.handler"
+  runtime         = "python3.12"
+  package_path    = "../../build/approval_validator.zip"
+  timeout_seconds = 30
+
+  # Prod's limit. A validator that approves in staging what it would reject in prod turns
+  # the rehearsal into a false pass.
+  environment = {
+    POLICY_MAX_REFUND_CENTS = "50000"
+  }
+}
+
+approval_executor = {
+  handler              = "executor.handler"
+  runtime              = "python3.12"
+  package_path         = "../../build/approval_executor.zip"
+  timeout_seconds      = 60
+  reserved_concurrency = 5
+}
+
+# How the state machine's own records reach the trace log group. Required, as in prod: the
+# loop-bound and cost filters match nothing without it, and an alarm that cannot fire is
+# indistinguishable from a system that is behaving.
+trace_emitter = {
+  handler      = "index.handler"
+  runtime      = "python3.12"
+  package_path = "../../build/emit_trace.zip"
+}
+
+# ---------------------------------------------------------------------------
+# Retention — dev-scale. Nothing here is read after the next release.
+# ---------------------------------------------------------------------------
+
+log_retention_days          = 30
+approval_log_retention_days = 90
+
+# Must be finite. Unlike prod, null is rejected — see variables.tf.
+archive_expiration_days = 90
+
+# ---------------------------------------------------------------------------
+# Security and alarms
+# ---------------------------------------------------------------------------
+
+# Whatever prod will run. Guardrails are reversible, so this is the environment to find
+# out that one blocks a legitimate request.
+create_guardrail = false
+
+pii_entities = [
+  # { type = "EMAIL", action = "ANONYMIZE" },
+  # { type = "CREDIT_DEBIT_CARD_NUMBER", action = "BLOCK" },
+]
+
+# Lower than prod's 500. Staging load is a rehearsal, so a day that costs this much is a
+# runaway loop rather than growth.
+daily_cost_threshold_usd = 50
+
+# Required. Send these to a staging channel rather than the prod on-call rotation —
+# alarm routing is part of what staging verifies, but waking the on-call for a rehearsal
+# teaches people to ignore the alert.
+alarm_topic_arns = ["arn:aws:sns:us-east-1:123456789012:agentic-staging-alerts"]

@@ -55,10 +55,17 @@ application code decides" rendered as IAM.
 | [modules/observability/](modules/observability/) | Traces, cost and token metrics, alarms |
 | [src/](src/README.md) | Reference handlers — the half of the architecture that only code can enforce |
 | [envs/dev/](envs/dev/) | Cheaper, more permissive, synthetic data |
+| [envs/staging/](envs/staging/) | Prod's reversible controls, dev's disposability — a release rehearsal |
 | [envs/prod/](envs/prod/) | VPC-only, PITR, no execution data in logs |
 
-Both environments use the **same modules and the same wiring**. Only variables differ — an
+All three environments use the **same modules and the same wiring**. Only variables differ — an
 approval gate exercised only in prod is a gate nobody has tested.
+
+Staging exists because the dev/prod gap here is posture, not scale. Dev runs a public
+knowledge collection and logs execution data; prod does neither, and the first apply is a
+bad place to find out that a VPC-only collection is unreachable from the retrieve tool.
+Staging turns those on and leaves Object Lock, 7-year retention and the 30-day KMS window
+to prod, so it stays destroyable. See the header of `envs/staging/main.tf`.
 
 **Where the model layer lives.** AWS has no `model-integration/` module, unlike the Azure
 and GCP trees. Bedrock model access and the guardrail are declared in `modules/security/`,

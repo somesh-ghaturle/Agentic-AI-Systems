@@ -46,7 +46,7 @@ section saying what has to be decided first.
 | 11 | Add SAST scanning to CI | Security | High | Done | | 2026-08-30 |
 | 12 | Add issue templates | Community | High | Done | | 2026-08-23 |
 | 13 | Document approval claim formats | Documentation | High | Done | | 2026-08-23 |
-| 14 | Add `envs/staging` | Infrastructure | Medium | Not Started | | 2026-08-30 |
+| 14 | Add `envs/staging` | Infrastructure | Medium | Done | | 2026-08-30 |
 | 15 | Add Terraform policy-as-code (OPA) | Infrastructure | Medium | Not Started | | 2026-09-13 |
 | 16 | Add `DECISION-LOGS/` with ADRs | Documentation | Medium | Not Started | | 2026-08-30 |
 | 17 | Add cost monitoring module | Infrastructure | Medium | Not Started | | 2026-09-20 |
@@ -80,9 +80,9 @@ section saying what has to be decided first.
 | 45 | Human-in-the-loop UX dashboard | Future | Low | Not Started | | 2026-11-01 |
 
 **Status verified 2026-08-16** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. Thirteen tasks now pass: 1, 2, 3, 4, 5, 7,
-8, 9, 10, 11, 12, 13, and 35. Task 6 is `Blocked`. The remaining 31 verified as genuinely
-absent.
+tree, and kept current as tasks have landed since. Fourteen tasks now pass: 1, 2, 3, 4, 5, 7,
+8, 9, 10, 11, 12, 13, 14, and 35. Task 6 is `Blocked`. The remaining 30 verified as
+genuinely absent.
 
 Tasks 4 and 8 were verified rather than written — their artifacts already existed. Task 4 passes
 cleanly: all three `modules/approval/README.md` files carry the `Token Lifetime and Rotation`
@@ -96,11 +96,16 @@ gave it one commit of history to look at. Copying a plan's YAML is not the same 
 which is the same lesson task 2's terraform hook taught, where the hook reported `Passed` while
 silently skipping the first file it was handed.
 
-Task 35 deliberately ships without a Terraform version badge, because the repository states three
-different Terraform versions and the badge cannot be honest until one wins: `required_version` in
-the `.tf` files says `>= 1.6`, `checks.yml` pins `1.15.8`, and `QUICKSTART.md` tells the reader to
-install `1.9.8+`. Pick the number that is actually supported, reconcile the other two, then add the
-badge.
+Task 35 shipped without a Terraform version badge, because the repository stated three different
+Terraform versions and the badge could not be honest until one won: `required_version` in the
+`.tf` files said `>= 1.6`, `checks.yml` pinned `1.15.8`, and `QUICKSTART.md` told the reader to
+install `1.9.8+`.
+
+**Resolved 2026-08-23, and the badge is now in `README.md`.** `QUICKSTART.md` was the number with
+nothing behind it: `1.9.8+` matched neither the declared floor nor the pin CI proves. It now says
+`1.6+`, and the badge states the same. The other two stay as they are on purpose — a floor and a
+CI pin answer different questions, and hardening Task 9 in [HARDENING-PLAN.md](HARDENING-PLAN.md)
+records why, along with the one thing still unproven: nothing actually tests 1.6.
 
 A related gap the badge exposes rather than causes: the `Python 3.9+` badge repeats the support
 floor that `README.md`, `QUICKSTART.md`, and `CONTRIBUTING.md` all state, but every CI job runs on
@@ -141,7 +146,10 @@ Create `QUICKSTART.md` at the repository root with three sections:
 2. **Deploy to dev:** Step-by-step for `infra/terraform-aws/envs/dev`
 3. **Trace end-to-end:** Using `trace-eval` to verify the write boundary
 
-Include prerequisites (Python 3.9+, Terraform 1.9.8+) and expected output.
+Include prerequisites (Python 3.9+, Terraform 1.6+) and expected output. The Terraform floor
+was written here as `1.9.8+` and shipped that way; it was corrected to `1.6+` on 2026-08-23,
+when that number turned out to match neither the declared floor nor the version CI proves —
+see the note under Progress.
 
 **Verify.**
 ```bash
@@ -352,8 +360,11 @@ the scan fail.
 > (`git check-ignore` confirms it is untracked). The same `.gitignore` notes plan output "can
 > contain resolved secret values". Whatever this task becomes, name the output `*.tfplan`.
 >
-> The `terraform_version: 1.9.8` below is also inconsistent with the `1.15.8` that `checks.yml`
-> pins and that the modules resolve against — see the three-way version drift noted under Progress.
+> **4. The version pin below was wrong and has been corrected.** It read `1.9.8`, which matched
+> neither `checks.yml` nor the declared floor. It now reads `1.15.8`, matching the pin the `fmt`
+> and `validate` jobs already use — a plan job proving a different CLI version than the rest of
+> CI is drift being introduced rather than caught. The wider reconciliation closed on 2026-08-23;
+> see the note under Progress and hardening Task 9.
 
 **Goal.** Catch unintended infrastructure changes before merge.
 
@@ -387,7 +398,7 @@ Use a matrix strategy:
       - uses: actions/checkout@v4
       - uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.9.8
+          terraform_version: 1.15.8
       - name: Terraform init
         run: terraform -chdir=infra/terraform-${{ matrix.tree }}/envs/${{ matrix.env }} init -backend=false -input=false
       - name: Terraform plan
@@ -506,7 +517,7 @@ If applicable, add screenshots or log output to help explain your problem.
 **Environment:**
 - OS: [e.g., Ubuntu 22.04]
 - Python version: [e.g., 3.12.0]
-- Terraform version: [e.g., 1.9.8]
+- Terraform version: [e.g., 1.15.8]
 - Cloud: [AWS/Azure/GCP/None]
 
 **Additional context**
@@ -862,24 +873,128 @@ this second check exists to tell apart from a clean scan.
 
 ### Task 14 — Add `envs/staging`
 
-**Goal.** Provide a canary deployment environment between dev and prod.
+**Goal.** A canary environment between dev and prod — one that catches, cheaply, the class
+of failure that otherwise gets its first exercise during a production apply.
+
+**The task as originally written did not describe this repository.** It called for copying
+`envs/dev`, reducing Lambda memory to 512 MB and "Step Functions concurrency" to 10. Three
+problems with that, all found by reading the trees rather than the plan:
+
+- **There is no Step Functions concurrency setting.** The only concurrency control in the
+  AWS tree is `reserved_concurrency` on write tools, and it is already 5 in *both* dev and
+  prod. Nothing to reduce.
+- **512 MB contradicts a documented decision.** `envs/dev` sets the `reason` function to
+  1024 MB deliberately — it is the one package that vendors a dependency, and cold-start
+  import time scales with memory. Halving it in staging would make cold starts slower there
+  than in either neighbour.
+- **Scale is not what separates dev from prod here.** Diff the two roots in any tree and the
+  differences are posture: a public knowledge collection versus VPC-only, execution payloads
+  in logs versus not, PITR off versus on, shared storage keys enabled versus disabled, no
+  purge protection versus 90 days. "Smaller-scale prod" describes none of it, and a staging
+  built to the letter of the plan would exercise nothing dev does not already exercise.
+
+**What was built instead.** One rule, applied in all three trees:
+
+> Staging takes every one of prod's **reversible** controls, and none of its
+> **irreversible** ones.
+
+The first half is what makes staging worth running: those settings are where a first prod
+apply actually fails. The second half is what keeps it worth running — an environment that
+inherits prod's one-way doors cannot be destroyed and rebuilt, and a staging environment
+that is not rebuilt regularly stops resembling anything.
+
+| | Taken from prod (reversible) | Taken from dev (irreversible or pure durability) |
+|---|---|---|
+| **AWS** | VPC-only collection, `log_execution_data = false`, PITR on, alarm topic required, trace emitter required, prod's step budgets | Object Lock never (hard-coded `null`, not a variable), 7-day KMS window, 30-day retention, archive expires at 90 days |
+| **Azure** | EP1 plans, storage shared keys off, Service Bus local auth off, private search endpoint, schema threshold 0, prod's step budgets | Vault purge protection off, no WORM lock, Cosmos continuous backup off, LRS not ZRS/GRS |
+| **GCP** | Vertex floor setting on **and blocking**, `LOG_ERRORS_ONLY` call logging, prod's alert thresholds, Firestore PITR on, prod's budgets | No locked retention policy, delete protection off, SOFTWARE not HSM keys, 1 replica not 2 |
+
+**Three settings are load-bearing and worth naming.** Each is a silent failure that only a
+real environment can surface:
+
+- **Azure EP1.** Y1 (Consumption) cannot join a VNet, so on a Consumption plan every private
+  endpoint in the stack is unreachable. Rehearsing on Y1 would prove nothing about whether
+  prod can reach its own search service. This is the largest cost line in the Azure staging
+  environment and it is not optional — `function_service_plan_sku` exists so the trade is
+  visible, not so it is taken lightly.
+- **GCP's floor setting.** It is enforced by Vertex AI on every `generateContent` in the
+  project, so enabling it for the first time in prod means the first request it ever blocks
+  is a real one. It also reaches every Vertex AI caller in the project, which is why the
+  root documents that staging wants its own project.
+- **A private endpoint with no DNS zone.** On Azure, the service name resolves to its public
+  IP from inside the VNet: traffic leaves the network while every resource reports healthy.
+  Nothing in `terraform plan` sees this, which is exactly why it needs an environment.
+
+**Deliberately not exposed as variables.** `archive_object_lock_days` (AWS),
+`immutability_period_days` / `lock_immutability_policy` (Azure), and `retention_days` /
+`lock_retention_policy` (GCP) are all present in the prod roots and absent from staging. Each
+would let a single `terraform.tfvars` line permanently strand the storage of the one
+environment whose value depends on being destroyable — none of the three can be undone by
+any principal, including the account owner. The modules receive hard-coded nulls, and each
+`variables.tf` carries a comment saying why the variable is missing rather than leaving the
+omission to be read as an oversight.
+
+**A naming constraint this surfaced.** `staging` is three characters longer than `prod`, and
+all three trees derive resource names from `<project>-<env>-...` against a hard platform
+limit. The maximum project name is therefore *shorter* in staging than in prod — the
+opposite of the usual direction, and a validation failure for anyone copying prod's tfvars:
+
+| | prod allows | staging allows | Limit being hit |
+|---|---|---|---|
+| AWS | 16 chars | 13 chars | 32-char OpenSearch collection name |
+| Azure | 10 chars | 7 chars | 24-char storage account name (hyphens stripped) |
+| GCP | 10 chars | 7 chars | 30-char service account ID |
+
+Each `variables.tf` states this in its validation error rather than letting the platform
+reject a half-finished apply.
 
 **Action.**
-For each cloud tree (`terraform-aws`, `terraform-azure`, `terraform-gcp`):
-1. Copy `envs/dev` to `envs/staging`
-2. Update variable values to be production-like but with smaller scale:
-   - AWS: Reduce Lambda memory to 512MB, Step Functions concurrency to 10
-   - Azure: Reduce Function App memory to 512MB, Logic Apps concurrency to 10
-   - GCP: Reduce Cloud Functions memory to 512MB, Workflows concurrency to 10
-3. Add a `staging` entry to the CI matrix in `checks.yml`
+1. Add `envs/staging` to all three trees — same file set as that tree's `envs/prod`,
+   including AWS's separate `state-machine.json.tftpl` (prod's step budgets, not dev's).
+2. Add the three staging roots to the `validate` matrix in `checks.yml`.
+3. Update the docs that enumerate environment roots: `README.md`,
+   `terraform-aws/README.md`, `terraform-gcp/ARCHITECTURE.md`,
+   `terraform-azure/ARCHITECTURE.md`.
 
 **Verify.**
+
+That the roots exist and CI covers them:
 ```bash
 for cloud in aws azure gcp; do
-  test -d infra/terraform-$cloud/envs/staging && echo "$cloud/staging: OK" || echo "$cloud/staging: MISSING"
+  test -d "infra/terraform-$cloud/envs/staging" && echo "$cloud/staging: OK" || echo "$cloud/staging: MISSING"
 done
-grep -q "staging" .github/workflows/checks.yml && echo "CI updated" || echo "CI not updated"
+grep -c "envs/staging" .github/workflows/checks.yml   # expect 3
 ```
+
+That they validate, which is what CI will run:
+```bash
+for cloud in aws azure gcp; do
+  terraform -chdir="infra/terraform-$cloud/envs/staging" init -backend=false -input=false -no-color >/dev/null
+  terraform -chdir="infra/terraform-$cloud/envs/staging" validate -no-color
+done
+terraform fmt -recursive -check infra/
+```
+
+That staging is not a renamed dev — the check the original Verify block was missing, and the
+one that would have passed for a wrong implementation:
+```bash
+# Prod's reversible controls are present.
+grep -q "log_execution_data = false"  infra/terraform-aws/envs/staging/main.tf
+grep -q "allow_public_access = false" infra/terraform-aws/envs/staging/main.tf
+grep -q "storage_shared_access_key_enabled = false" infra/terraform-azure/envs/staging/main.tf
+grep -q "create_floor_setting = true"  infra/terraform-gcp/envs/staging/main.tf
+echo "posture: OK"
+
+# Prod's irreversible ones are not.
+grep -q "object_lock_retention_days = null" infra/terraform-aws/envs/staging/main.tf
+grep -q "lock_immutability_policy = false"  infra/terraform-azure/envs/staging/main.tf
+grep -q "lock_retention_policy = false"     infra/terraform-gcp/envs/staging/main.tf
+echo "destroyable: OK"
+```
+
+**Not done, and not in scope.** No `terraform plan` against a real subscription — that needs
+cloud credentials and is task 6's blocked decision, not this one. These roots validate; they
+have never been applied, which is the same status every other root in this repository has.
 
 ---
 
