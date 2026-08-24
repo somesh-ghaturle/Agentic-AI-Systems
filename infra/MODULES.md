@@ -126,9 +126,12 @@ All modules are in `infra/terraform-gcp/modules/`.
 
 ## Module Comparison Matrix
 
+Choosing between the three is a decision this table does not make; see
+[CHOOSING-A-TREE.md](CHOOSING-A-TREE.md).
+
 | Feature | AWS | Azure | GCP |
 |---------|-----|-------|-----|
-| **Write Boundary Strength** | ⭐⭐⭐⭐⭐ (Dual-lock) | ⭐⭐⭐ (Single lock + mitigations) | ⭐⭐⭐⭐⭐ (Deny policy) |
+| **Write boundary** | Two allow-shaped locks — identity policy **and** Lambda resource policy | One load-bearing lock (`app_role_assignment_required`) plus two mitigations | One allow **and** one deny — the only tree a later broad grant cannot reopen |
 | **Model Provider** | Bedrock (Claude) | Azure OpenAI | Vertex AI (Claude) |
 | **State Storage** | DynamoDB | Cosmos DB + Storage Tables | Firestore |
 | **Orchestrator** | Step Functions | Logic Apps | Cloud Workflows |
@@ -137,6 +140,17 @@ All modules are in `infra/terraform-gcp/modules/`.
 | **Audit Storage** | S3 | Storage Tables | Cloud Storage |
 | **Identity Model** | Per-module IAM roles | Centralized identities | Centralized service accounts |
 | **Security Controls** | IAM + Lambda policies + Guardrails | RBAC + Entra alerts | IAM Deny policies |
+
+**On the write boundary row.** It used to rate AWS and GCP equally, at five stars each. They
+are not equal, and [docs/THREAT-MODEL.md](../docs/THREAT-MODEL.md) §6 is the reason: both hold
+against a compromised orchestrator, but only GCP holds once someone adds a broad invoke grant
+later, because a deny rule evaluates before allow policies. A star rating could not carry that,
+which is why the row now says what each tree actually has.
+
+Azure's single lock is genuinely thinner, and `modules/entra-audit` exists because of it. That
+module also buys Azure the one row in THREAT-MODEL §6 where it is the *only* tree with a
+control at all: a cloud admin acting out of band is detected there and undefended on the other
+two.
 
 ---
 

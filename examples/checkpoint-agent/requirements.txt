@@ -1,0 +1,3 @@
+# No external dependencies. Checkpointing is the subject, and a checkpoint that a framework
+# writes for you demonstrates the framework rather than the pattern — see
+# docs/DECISION-LOGS/0004-stdlib-only-examples.md.

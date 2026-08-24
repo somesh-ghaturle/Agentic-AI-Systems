@@ -335,17 +335,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Both example suites, one runner, no dependencies — the same reasoning as the
+      # Nine example suites, one runner, no dependencies — the same reasoning as the
       # write-boundary job above. hermes-agent asserts that a write cannot happen by the
       # router's path; trace-eval asserts that its own checks still catch a run that
-      # bypasses it. Neither needs a model, a network, or a cloud account, which is what
-      # makes them safe to gate merges on.
-      - name: Example suites — hermes-agent, trace-eval, starter-agent
+      # bypasses it. None of the nine needs a model, a network, or a cloud account, which is
+      # what makes them safe to gate merges on.
+      - name: Example suites — nine of the twelve examples
         run: python3 -m unittest discover -s tests -v
 
-      # Every example, not just the three with suites. Five of the eight — e2e-agent,
-      # langchain-agent, rag-faiss, rag-langchain, ray-orchestrator — were verified by nothing
-      # at all until this step, which is how two of them sat here importing a LangChain v0.x
+      # Every example, not just the nine with suites. langchain-agent, rag-langchain, and
+      # ray-orchestrator still have none. Before this step existed, five of the then-eight were
+      # verified by nothing at all, which is how two of them sat here importing a LangChain v0.x
       # API that the pinned version had already deleted while this workflow stayed green.
       #
       # compileall parses without importing, so it needs none of their dependencies and

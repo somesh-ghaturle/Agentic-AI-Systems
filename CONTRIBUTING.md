@@ -32,7 +32,7 @@ tier sets the bar.
 
 ### Dependencies
 
-Seven of eleven examples have an empty `requirements.txt` carrying only a comment explaining
+Six of twelve examples have an empty `requirements.txt` carrying only a comment explaining
 why. Match that. The question is not "would a framework be convenient here" but "is the
 framework the thing being demonstrated":
 

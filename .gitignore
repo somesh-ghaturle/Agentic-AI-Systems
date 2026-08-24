@@ -24,7 +24,13 @@ terraform.tfvars
 *.auto.tfvars
 
 # Plan output — can contain resolved secret values.
+#
+# Both patterns are needed. `*.tfplan` does not match a file named exactly `tfplan`, and
+# `-out=tfplan` is the form every tutorial uses — including the snippet in
+# docs/ENHANCEMENT-PLAN.md task 6. `git check-ignore tfplan` returned nothing until this line
+# existed, which means the one file the comment above is about was the one file not covered.
 *.tfplan
+tfplan
 
 crash.log
 crash.*.log

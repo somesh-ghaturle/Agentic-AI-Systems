@@ -47,7 +47,7 @@ No task needs cloud credentials. Task 2 needs network access to resolve pins fro
 | 8 | tflint and checkov over the three trees | 5 | low | [x] |
 | 9 | Reconcile the Terraform version pin | 5 | low | [x] |
 | 10 | Threat model for the write boundary | 6 | medium | [x] |
-| 11 | Single cloud-comparison page | 6 | low | [ ] |
+| 11 | Single cloud-comparison page | 6 | low | [x] |
 
 Phases 1 and 2 are the agreed scope. Phases 3 onward are sequenced but not committed to.
 
@@ -55,7 +55,7 @@ Phases 1 and 2 are the agreed scope. Phases 3 onward are sequenced but not commi
 
 ## Phase 1 — Verify the examples (the gap that already bit)
 
-Three of eight examples were covered by `tests/` when this plan was written (seven of eleven now): `starter-agent`, `hermes-agent`, and
+Three of eight examples were covered by `tests/` when this plan was written (nine of twelve now): `starter-agent`, `hermes-agent`, and
 `trace-eval`. The other five — `e2e-agent`, `langchain-agent`, `rag-faiss`, `rag-langchain`,
 `ray-orchestrator` — are covered by nothing.
 
@@ -481,6 +481,58 @@ agentic-architecture repository, none of which have one.
 **Severity: low.** The differences are documented per-tree, so a reader choosing between AWS and
 GCP must read three `ARCHITECTURE.md` files and diff them mentally. The root README's table is a
 service mapping, not a decision aid.
+
+**Done 2026-08-23 — and the premise needed correcting first.** Written on 2026-08-14, this task
+assumed no cross-tree comparison existed. By the time it was built, **five** did:
+`infra/MODULES.md` had a comparison matrix, `docs/THREAT-MODEL.md` §6 had "which cloud survives
+what", the root README had grown a write-boundary narrative and a divergence paragraph, and the
+Azure and GCP `ARCHITECTURE.md` files each ended with "Divergences from the AWS tree".
+
+So the gap was not *no comparison*. It was that comparison was scattered across five documents,
+two of which **contradicted each other**, and none of which answered the decision question.
+
+**The contradiction, which is the finding worth keeping.** `MODULES.md` rated write-boundary
+strength AWS ⭐⭐⭐⭐⭐ and GCP ⭐⭐⭐⭐⭐ — equal. `THREAT-MODEL.md` §6 says GCP is the only tree that
+holds once someone adds a broad invoke grant later, because a deny rule evaluates before allow
+policies; GCP's own `ARCHITECTURE.md` §2 "Where GCP is stronger than AWS" agrees with it. Both
+could not be right. The star rating was the thing that could not carry the distinction, so the
+row now states what each tree actually has and the note under the table says why it changed.
+
+**What shipped.**
+
+| Piece | Where | Note |
+|---|---|---|
+| [`infra/CHOOSING-A-TREE.md`](../infra/CHOOSING-A-TREE.md) | new | A decision aid that routes rather than restates — it links THREAT-MODEL §6 rather than copying its table |
+| Prerequisites side by side | §1 of that page | The strongest decision input and the only part genuinely absent before: Azure needs an **Entra directory role**, not just subscription Contributor; GCP needs **`roles/iam.denyAdmin`** or the apply dies on the last resource, one project per environment, eleven APIs enabled by hand, and a **Model Garden terms click with no API behind it**; AWS needs nothing outside the account |
+| Write-boundary row rewritten | `MODULES.md` | Stars replaced with what each tree has, plus a note naming THREAT-MODEL §6 as the authority |
+| "seven environment roots" → ten | `README.md` | A live status claim left stale by task 14's staging roots |
+| Link from the infra section | `README.md` | Placed where a reader is already choosing |
+
+**What the page deliberately does not do.** No pricing, no region availability, and no security
+ranking of its own — §5 reports only which resources have no scale-to-zero, because that is a
+property of the HCL rather than of a price list, and it says outright that AWS makes no
+standing-cost claim rather than inventing one. THREAT-MODEL stays the authority on adversaries.
+
+**Residual.** `docs/ENHANCEMENT-PLAN.md` still describes a future job running `terraform plan`
+on "all seven roots". That is a forward-looking task definition rather than a historical record,
+so it will mislead whoever picks it up; the `seven` in `REPO-AUDIT.md` and in task 9's
+retrospective above is correctly historical and was left alone.
+
+**Verify.**
+
+```bash
+python3 .github/scripts/linkcheck.py .          # 94 files, 0 broken relative links
+
+# Every count and absence claim in the new page
+for c in aws azure gcp; do echo "$c: $(ls infra/terraform-$c/modules | wc -l)"; done
+ls -d infra/terraform-*/envs/*/ | wc -l         # 10
+grep -rn "vpc_config" infra/terraform-aws/modules/                  # none
+grep -rn "vpc_connector\|vpc_access" infra/terraform-gcp/modules/   # none
+grep -rln "private_endpoint_subnet_id" infra/terraform-azure/modules/  # knowledge only
+
+# The contradiction is gone
+grep -n "⭐" infra/MODULES.md                     # no matches
+```
 
 ---
 
