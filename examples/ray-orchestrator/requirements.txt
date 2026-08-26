@@ -2,4 +2,4 @@
 # across the examples.
 #
 # Resolved 2026-08-14 on Python 3.14.
-ray[default]==2.57.0
+ray[default]==2.58.0

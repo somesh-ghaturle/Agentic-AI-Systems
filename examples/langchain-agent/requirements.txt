@@ -6,4 +6,4 @@
 #
 # Resolved 2026-08-14 on Python 3.14.
 langchain-core==1.6.0
-langchain-openai==1.5.2
+langchain-openai==1.6.0
