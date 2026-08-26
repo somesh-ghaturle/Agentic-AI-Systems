@@ -58,7 +58,7 @@ section saying what has to be decided first.
 | 22 | Add `context-overflow` example | Examples | Medium | Not Started | | 2026-09-20 |
 | 23 | Add `eval-red-teaming` example | Examples | Medium | Not Started | | 2026-09-27 |
 | 24 | Update `graph-agent` for production | Examples | Medium | Done | | 2026-09-06 |
-| 25 | Add `MIGRATION-GUIDE.md` | Documentation | Medium | Not Started | | 2026-09-13 |
+| 25 | Add `MIGRATION-GUIDE.md` | Documentation | Medium | Done | | 2026-09-13 |
 | 26 | Add example dependency graph to CI | CI/CD | Medium | Done | | 2026-09-06 |
 | 27 | Add performance tests to CI | CI/CD | Medium | Not Started | | 2026-09-20 |
 | 28 | Add runtime smoke tests to CI | CI/CD | Medium | Not Started | | 2026-09-13 |
@@ -81,8 +81,8 @@ section saying what has to be decided first.
 | 45 | Human-in-the-loop UX dashboard | Future | Low | Not Started | | 2026-11-01 |
 
 **Status verified 2026-08-16** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. Nineteen tasks now pass: 1, 2, 3, 4, 5, 7,
-8, 9, 10, 11, 12, 13, 14, 15, 18, 20, 24, 26, and 35. Task 6 is `Blocked`. The remaining 25
+tree, and kept current as tasks have landed since. Twenty tasks now pass: 1, 2, 3, 4, 5, 7, 8,
+9, 10, 11, 12, 13, 14, 15, 18, 20, 24, 25, 26, and 35. Task 6 is `Blocked`. The remaining 24
 verified as genuinely absent.
 
 Tasks 4 and 8 were verified rather than written — their artifacts already existed. Task 4 passes
@@ -2375,83 +2375,58 @@ grep -q "Status: Accepted" docs/DECISION-LOGS/*.md
 
 **Goal.** Help users adapt these patterns to existing projects.
 
-**Action.**
-Create `docs/MIGRATION-GUIDE.md` with:
+**Status: Done.** `docs/MIGRATION-GUIDE.md`.
 
-```markdown
-# Migration Guide: Adapting Agentic-AI-Systems Patterns
+**What the specified draft got right.** Unusually for this plan, most of its factual claims
+survived checking: there are six building blocks, GCP does use Firestore for state and Vertex
+for models, `modules/security/` exists in the AWS tree, and Azure's boundary is genuinely
+thinner — `MODULES.md` and `CHOOSING-A-TREE.md` both say so, and `modules/entra-audit` exists
+because of it.
 
-This guide helps you integrate the patterns from this repository into your existing
-agentic AI projects.
+**Three things it got wrong.**
 
-## Step 1: Assess Your Current Architecture
+- It linked to `docs/FAQ.md`, which is Task 39 and not written. The link check would have
+  failed on merge.
+- It offered three clouds. There are four trees.
+- It told readers to open an issue with a `migration` label. The templates are
+  `.github/ISSUE_TEMPLATE/{bug_report,feature_request,security}.md` and there is no such label.
 
-Evaluate which of the [six building blocks](agentic-system-architecture/BUILDING-BLOCKS.md)
-you already have:
+**The larger problem was that it was generic.** "Over-engineering", "you can't improve what you
+don't measure", "ignoring the write boundary" — advice that would read identically in any
+repository, which is the kind of documentation people skim once and never return to. This
+repository has something better available: a documented record of mistakes that were actually
+made here, several of them still visible in the code with the evidence left in place.
 
-- [ ] Model routing
-- [ ] Tools (read/write split)
-- [ ] Memory and state
-- [ ] Orchestration
-- [ ] Trace-level evaluation
-- [ ] Approval gates
+So the pitfalls section names them, ranked by how often they bite:
 
-## Step 2: Choose Your Starting Point
+1. **Gating the model rather than the tool** — the model was never the dangerous part.
+2. **An approval that does not survive a restart** — Task 24's `InMemorySaver` finding. It
+   looks like it works right until the day it matters.
+3. **Inferring read-versus-write from request text** — `graph-agent`'s keyword list contained
+   `"refund"`, so *"what is the refund policy"* drafted a refund for an order nobody mentioned.
+   The failure runs toward the privileged path.
+4. **Depending on something undeclared** — Task 26's `typing_extensions` finding, which passed
+   CI for weeks because the CI environment happened to install it transitively.
+5. **Reaching for multi-agent too early** — and when you do, `multi-agent-debate` shows that no
+   debater holds the write capability; the executor role is never granted approve in any of the
+   four trees.
+6. **Over-trusting one cloud's defaults.**
 
-### Option A: Greenfield Project
-Start with the `starter-agent` and add building blocks incrementally.
+Each is a thing that happened, with the artefact still in the tree to look at.
 
-### Option B: Existing Project
-1. **Add the write boundary** (most critical):
-   - Separate tools into read/write categories
-   - Add approval gates for all write actions
-   - Use `hermes-agent` as a reference
-
-2. **Add trace-level evaluation**:
-   - Instrument all actions with tracing
-   - Use `trace-eval` as a reference
-
-## Step 3: Cloud-Specific Guidance
-
-### AWS
-1. Deploy `infra/terraform-aws/envs/dev`
-2. Gradually migrate existing resources into the modules
-3. Use the IAM patterns from `modules/security/`
-
-### Azure
-1. Deploy `infra/terraform-azure/envs/dev`
-2. Note: Azure has thinner write boundary enforcement (see THREAT-MODEL.md)
-3. Add Entra audit alerts for additional protection
-
-### GCP
-1. Deploy `infra/terraform-gcp/envs/dev`
-2. Use Firestore for state (best IAM deny policy support)
-3. Use Vertex AI for model hosting
-
-## Step 4: Testing Your Migration
-
-1. **Write boundary tests**: Verify no write action can bypass approval
-2. **Trace validation**: Ensure all actions are properly traced
-3. **Failure testing**: Simulate crashes and verify recovery
-
-## Common Pitfalls
-
-1. **Over-engineering**: Start with a single-agent pipeline, not multi-agent
-2. **Ignoring the write boundary**: This is the most critical security control
-3. **Skipping trace-level evaluation**: You can't improve what you don't measure
-
-## Support
-
-If you encounter issues, please:
-1. Check the [FAQ](FAQ.md)
-2. Review the [THREAT-MODEL.md](THREAT-MODEL.md) for security considerations
-3. Open a GitHub issue with the `migration` label
-```
+**Also covered, because both surprise people mid-migration:** `src/build.sh` must run before
+`terraform plan`, since every module calls `filebase64sha256` on its package at plan time and a
+tree with unbuilt packages cannot be planned; and secrets reach the trees differently, with one
+putting a secret value in Terraform state — `SECRETS-ROTATION.md` says which.
 
 **Verify.**
-
 ```bash
-test -f docs/MIGRATION-GUIDE.md && grep -c "building blocks\|write boundary\|trace" docs/MIGRATION-GUIDE.md
+test -f docs/MIGRATION-GUIDE.md
+python3 .github/scripts/linkcheck.py .        # every link, including the four tree references
+
+# The claims that are cheap to check and would rot silently:
+grep -c 'FAQ' docs/MIGRATION-GUIDE.md         # 0 — Task 39 is not written
+python3 -m unittest discover -s infra/terraform-aws/tests   # the suite step 4 tells you to copy
 ```
 
 ---

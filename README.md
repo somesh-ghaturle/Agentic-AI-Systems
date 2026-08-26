@@ -80,6 +80,7 @@ Agentic-AI-Systems/
 │   ├── HARDENING-PLAN.md              CI hardening, 11 tasks over 6 phases
 │   ├── CONCEPTS-PLAN.md               adding harness, context, and graph engineering
 │   ├── THREAT-MODEL.md                the write boundary from the adversary's side
+│   ├── MIGRATION-GUIDE.md             retrofitting these patterns into a project you have
 │   ├── DECISION-LOGS/                 ADRs — the decisions the code cannot explain itself
 │   └── *.md                           governance, security, privacy, runbook, templates
 ├── tests/                        example suites run by CI
@@ -173,6 +174,8 @@ Review gates, to run before a system ships rather than after it misbehaves:
 - Privacy checklist: [docs/privacy-checklist.md](docs/privacy-checklist.md)
 
 What in the four trees is credential material and how each piece rotates — which is a shorter list than it sounds, because the Terraform provisions no long-lived credentials at all: [docs/SECRETS-ROTATION.md](docs/SECRETS-ROTATION.md). It names the three places a value still passes through something that retains it, and why the Snowflake tree federates rather than holding a key.
+
+Retrofitting these patterns into an agent that already works, in the order that pays off soonest: [docs/MIGRATION-GUIDE.md](docs/MIGRATION-GUIDE.md). The write boundary first, because an ungated write path is a present risk while a missing eval harness is a future one. Its pitfalls section is specific to this repository — every entry is a mistake that was made here, with the artefact still in the tree to look at.
 
 The adversary's view of the write boundary — what a compromised orchestrator reaches, what a prompt-injected model reaches, what a leaked approval claim buys, and which of the three clouds survives each: [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md). It is explicit about what is *not* defended, which is the more useful half.
 
