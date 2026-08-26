@@ -47,8 +47,10 @@ Agentic-AI-Systems/
 ├── infra/                        three Terraform trees, same architecture per cloud
 │   ├── CHOOSING-A-TREE.md        which tree to start from, and what you give up
 │   ├── MODULES.md                every module, its dependencies and status
+│   ├── policies/                 OPA policies — do the resources agree with each other?
 │   ├── terraform-aws/            8 modules · envs/{dev,staging,prod}
 │   ├── terraform-azure/          12 modules · envs/{dev,staging,prod,tenant}
+│   ├── terraform-snowflake/      10 modules · envs/{dev,staging,prod} · no src/
 │   └── terraform-gcp/            10 modules · envs/{dev,staging,prod}
 │       ├── README.md             entry point for that cloud
 │       ├── ARCHITECTURE.md       mermaid diagrams in that cloud's own terms
@@ -57,10 +59,11 @@ Agentic-AI-Systems/
 │       ├── envs/                 one root per environment
 │       ├── src/                  handler source + build.sh (run before plan)
 │       └── tests/                write-boundary tests, stdlib unittest
-├── examples/                     twelve runnable examples, worked → minimal
+├── examples/                     thirteen runnable examples, worked → minimal
 │   ├── hermes-agent/             the write boundary in application code
 │   ├── trace-eval/               scoring the path rather than the answer
 │   ├── harness-agent/            continuity across context windows
+│   ├── multi-agent-debate/       several agents argue; none of them approves
 │   ├── checkpoint-agent/         resuming work after a crash, idempotently
 │   ├── e2e-agent/                tracing, audit, provenance over HTTP
 │   ├── starter-agent/            the smallest possible agent loop
@@ -91,7 +94,7 @@ Agentic-AI-Systems/
     └── dependabot.yml               monthly pip, actions, and provider updates
 ```
 
-The per-tree files are shown once under `terraform-gcp/` but exist in all three. AWS has no `model-integration` module — its Bedrock guardrail lives in `modules/security`, because a guardrail is a security control on AWS and a separate service on the other two.
+The per-tree files are shown once under `terraform-gcp/` but exist in all four, except `src/` — the Snowflake tree has none, because its handler logic is SQL. AWS has no `model-integration` module either: its Bedrock guardrail lives in `modules/security`, because a guardrail is a security control on AWS and a separate service on the other three.
 
 ## System architecture reference
 
@@ -106,8 +109,11 @@ Three parallel Terraform trees under [infra/](infra/), implementing the same age
 | [terraform-aws/](infra/terraform-aws/) | Step Functions | Lambda | DynamoDB | OpenSearch Serverless |
 | [terraform-azure/](infra/terraform-azure/) | Logic Apps | Functions | Storage Tables / Cosmos DB | AI Search |
 | [terraform-gcp/](infra/terraform-gcp/) | Cloud Workflows | Cloud Functions gen2 | Firestore | Vertex AI Vector Search |
+| [terraform-snowflake/](infra/terraform-snowflake/) | Tasks — *scheduler, not workflow engine* | Stored procedures | Hybrid tables | Cortex Search |
 
-Choosing between them: [infra/CHOOSING-A-TREE.md](infra/CHOOSING-A-TREE.md) — the prerequisites that stop an apply before it starts, which of the three boundaries survives a later broad grant, and what each tree does not have.
+Choosing between them: [infra/CHOOSING-A-TREE.md](infra/CHOOSING-A-TREE.md) — the prerequisites that stop an apply before it starts, which boundary survives a later broad grant, and what each tree does not have.
+
+**Snowflake is not a fourth cloud.** It is a data platform running on one of the other three, with no VPC, no cloud IAM, and no general-purpose compute — so its tools are stored procedures and its write boundary is the role graph rather than a policy object. It also has no suspend-and-resume primitive, which makes its approval flow a poll rather than a callback. Pick it when the agent's tools are already queries over data in Snowflake; that trade and its cost are §0 of [CHOOSING-A-TREE.md](infra/CHOOSING-A-TREE.md).
 
 Each tree has its own `ARCHITECTURE.md` with mermaid diagrams drawn in that cloud's terms, a `HOW-TO-DEPLOY.md`, and `envs/dev`, `envs/staging` and `envs/prod` roots. Azure has a fourth root, `envs/tenant`, because the Entra audit alert it applies is tenant-scoped — two roots managing it would revert each other.
 
@@ -121,9 +127,9 @@ Each tree has its own `ARCHITECTURE.md` with mermaid diagrams drawn in that clou
 - **Azure** — one load-bearing line (`app_role_assignment_required = true`) plus two mitigations. Azure has no resource-policy equivalent for Functions, so this is genuinely thinner, and a CI check and an Entra audit alert guard the line rather than replacing it.
 - **GCP** — the closest to the AWS original, because a gen2 function is a Cloud Run service underneath and carries its own IAM policy. It also adds an IAM Deny policy, the only override-proof lock of the three: deny rules evaluate before allow policies, so a later broad grant cannot reopen the path.
 
-**Status.** All ten environment roots pass `terraform validate`, and all three trees have a handler source tree (`src/`) with a build script, so each can `plan` once its packages are built — every function package path is read at plan time to compute a deployment hash, which is why `src/build.sh` runs before `terraform plan` rather than after.
+**Status.** All thirteen environment roots pass `terraform validate`. The three infrastructure trees have a handler source tree (`src/`) with a build script, so each can `plan` once its packages are built — every function package path is read at plan time to compute a deployment hash, which is why `src/build.sh` runs before `terraform plan` rather than after.
 
-The three trees are at parity in structure, not in implementation, and the differences are deliberate. Each handler tree is written against its own provider's SDK and its own failure modes: the packaging differs (AWS vendors wheels into the zip because a Lambda zip is the final artifact; Azure and GCP ship source and let Oryx and Cloud Build resolve dependencies), the approval claim differs (a DynamoDB condition expression, a Firestore transaction, a Cosmos ETag), and the trace field names differ because each provider's queries match different ones. `src/tests/` in each tree asserts its own conventions, so a handler copied between trees fails in CI rather than in production.
+The Snowflake tree has no `src/`: its handler logic is SQL stored procedures defined in `modules/approval`, so there is no package to build and it appears in neither the `handlers` nor the `packages` CI job. The trees are at parity in structure, not in implementation, and the differences are deliberate. Each handler tree is written against its own provider's SDK and its own failure modes: the packaging differs (AWS vendors wheels into the zip because a Lambda zip is the final artifact; Azure and GCP ship source and let Oryx and Cloud Build resolve dependencies), the approval claim differs (a DynamoDB condition expression, a Firestore transaction, a Cosmos ETag), and the trace field names differ because each provider's queries match different ones. `src/tests/` in each tree asserts its own conventions, so a handler copied between trees fails in CI rather than in production.
 
 The model layer is the one place the trees diverge on vendor: AWS calls Claude on Bedrock and GCP calls Claude on Vertex, while Azure calls Azure OpenAI. That is a trade — it buys `azurerm_cognitive_account_rai_policy`, the only Azure content filter that is a first-class Terraform resource and the closest analogue to a Bedrock guardrail, at the cost of model consistency. Serving Claude through the Azure AI model catalog instead would reverse both halves of that trade.
 
@@ -134,6 +140,7 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 - [hermes-agent](examples/hermes-agent/README.md) — routing and the write boundary in application code
 - [trace-eval](examples/trace-eval/README.md) — trace-level evaluation, scoring the path rather than the answer
 - [harness-agent](examples/harness-agent/README.md) — continuity across context windows, and the four things a harness refuses to let an agent do
+- [multi-agent-debate](examples/multi-agent-debate/README.md) — several agents argue a proposal into better shape, and why none of them is allowed to approve it
 
 **Applied example** — tracing, audit, provenance, and governance docs over HTTP:
 
@@ -165,6 +172,8 @@ Review gates, to run before a system ships rather than after it misbehaves:
 - Security checklist: [docs/security-checklist.md](docs/security-checklist.md)
 - Privacy checklist: [docs/privacy-checklist.md](docs/privacy-checklist.md)
 
+What in the four trees is credential material and how each piece rotates — which is a shorter list than it sounds, because the Terraform provisions no long-lived credentials at all: [docs/SECRETS-ROTATION.md](docs/SECRETS-ROTATION.md). It names the three places a value still passes through something that retains it, and why the Snowflake tree federates rather than holding a key.
+
 The adversary's view of the write boundary — what a compromised orchestrator reaches, what a prompt-injected model reaches, what a leaked approval claim buys, and which of the three clouds survives each: [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md). It is explicit about what is *not* defended, which is the more useful half.
 
 Documents to fill in per system, and one to reach for when it breaks:
@@ -179,16 +188,17 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 
 ## CI
 
-[`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, `tests/`, `docs/`, the root markdown files, `pyproject.toml`, or the workflow's own scripts — eleven jobs, checking:
+[`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, `tests/`, `docs/`, the root markdown files, `pyproject.toml`, or the workflow's own scripts — twelve jobs, checking:
 
-- `terraform fmt -check` across all three trees, plus a provider-pin check that `terraform validate` cannot see
+- `terraform fmt -check` across all four trees, plus a provider-pin check that `terraform validate` cannot see
 - `ruff check` over all 86 Python files, against the rules in `pyproject.toml` — the same command and the same verdict a contributor gets locally
 - `terraform validate` on each of the ten environment roots, as a matrix so one broken root does not hide the others
 - `tflint` over all thirty modules and ten roots — `validate` only ever sees a module through a root that calls it, which is why nothing reported that twelve Azure modules pinned no provider version
-- `checkov` over the three trees, failing on any finding not skipped by name and with a reason in [`.checkov.yaml`](.checkov.yaml)
-- Write-boundary tests for all three trees — stdlib `unittest` reading `.tf` files as text
-- Handler logic tests for all three trees
-- Deployment package builds for all three trees
+- `checkov` over the trees, failing on any finding not skipped by name and with a reason in [`.checkov.yaml`](.checkov.yaml)
+- `conftest` over all four trees against the OPA policies in [`infra/policies/`](infra/policies/README.md), which check whether resources agree with each other — a content filter that nothing references is the case they exist for — plus the policies' own unit tests
+- Write-boundary tests for all four trees — stdlib `unittest` reading `.tf` files as text
+- Handler logic tests for the three trees that have handlers
+- Deployment package builds for the three trees that have packages
 - The example suites under `tests/` — nine of the twelve examples, via `unittest discover`; `langchain-agent`, `rag-langchain`, and `ray-orchestrator` have none
 - A syntax check over all twelve examples, including those three
 - A relative-link check over every markdown file, external URLs deliberately excluded

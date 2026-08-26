@@ -405,6 +405,30 @@ Azure `modules/observability` still lacks the `storage_shared_access_key_enabled
 parity gap, but one that adds module inputs and env wiring rather than an attribute, so it is
 noted here rather than folded into a lint task.
 
+**Residual — tflint runs the bundled ruleset only.** `.tflint.hcl` enables `plugin "terraform"`
+and nothing else, so none of the three provider rulesets are in play. Measured 2026-08-24 with
+`tflint-ruleset-aws` 0.44.0, `-azurerm` 0.32.0 and `-google` 0.39.0 against the same 40
+directories: AWS and GCP are clean, and Azure reports thirteen things, none of them adopted here.
+
+Twelve are one rule, `azurerm_resources_missing_prevent_destroy` — the Cosmos DB account,
+database and container, the Service Bus namespace and topic, four storage accounts, a storage
+container, a storage table, and the Key Vault. `prevent_destroy` accepts a literal only, so it
+cannot be varied per environment from a module that every environment shares: setting it in
+`modules/` makes `envs/dev` undestroyable. That is the objection [`.checkov.yaml`](../.checkov.yaml)
+already records against CKV_AZURE_110 and CKV_GCP_82, and the rule has no counterpart in the AWS
+or Google rulesets — so honouring it would also make the Azure tree carry a constraint the other
+two trees do not.
+
+The thirteenth is a plugin defect rather than a finding. `azurerm_app_service_app_insights_hidden_link`
+aborts on `modules/observability` with "Attempt to get attribute from null value", because
+`azurerm_storage_account.observability` is `count = var.trace_emitter == null ? 0 : 1` and linting
+the module on its own terms leaves that count at zero, so the rule dereferences an index that does
+not exist. The configuration is valid; the rule cannot read it.
+
+Adopting any of this costs a `tflint --init`, a second network hop in the job, and a per-tree
+config file where there is now a single one at the root. Worth revisiting if the azurerm ruleset
+grows a rule that fires on something real.
+
 **Verify.**
 
 ```bash

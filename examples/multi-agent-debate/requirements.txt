@@ -1,0 +1,8 @@
+# No external dependencies. Standard library only, Python 3.10+.
+#
+# 3.10 rather than 3.9, for `dict | None` in annotations. Everything else here is 3.7-era.
+#
+# A debate protocol is coordination logic: whose turn it is, what counts as agreement, what
+# survives disagreement. A framework would supply exactly that layer, so an example of one
+# that imports a framework has delegated its own subject — the same reason harness-agent
+# ships no dependencies. The whole protocol is four short modules.

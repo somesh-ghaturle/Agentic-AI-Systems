@@ -200,7 +200,7 @@ class TestRealTree(unittest.TestCase):
             for _, source, constraint in tfconstraints.constraints(path):
                 found.setdefault(source, set()).add(constraint)
 
-        # The five providers the three trees declare. If this list needs editing because a
+        # The six providers the four trees declare. If this list needs editing because a
         # provider was added or dropped, that is a real change and should be a real edit.
         self.assertEqual(
             {
@@ -209,6 +209,7 @@ class TestRealTree(unittest.TestCase):
                 "hashicorp/azurerm",
                 "hashicorp/google",
                 "hashicorp/random",
+                "snowflakedb/snowflake",
             },
             set(found),
         )

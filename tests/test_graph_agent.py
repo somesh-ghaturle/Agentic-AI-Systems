@@ -29,6 +29,13 @@ import graph_agent as ga
 
 HAS_LANGGRAPH = importlib.util.find_spec("langgraph") is not None
 
+# Imported here rather than inside the tests that use them, so ruff's top-level-import rule
+# holds. They cannot be unconditional: the routing tests must still run with langgraph absent,
+# which is the whole reason this file can exist at all — see the docstring.
+if HAS_LANGGRAPH:
+    from langgraph.checkpoint.memory import InMemorySaver
+    from langgraph.types import Command
+
 
 def kind(request):
     return ga.classify({"request": request})["kind"]
@@ -122,6 +129,87 @@ class TestWritePathNeverActsUnapproved(unittest.TestCase):
     def test_route_sends_writes_through_draft(self):
         self.assertEqual(ga.route({"kind": "write"}), "draft")
         self.assertEqual(ga.route({"kind": "read"}), "retrieve")
+
+
+@unittest.skipUnless(HAS_LANGGRAPH, "langgraph not installed; runs in the example-deps job")
+class TestDurableInterrupt(unittest.TestCase):
+    """The property a production approval gate actually depends on.
+
+    The example's claim is that an approval taking a day is the same code as one taking a
+    second. That is only true if the suspended state lives in the checkpointer rather than in
+    the graph object — otherwise "resume tomorrow" means "keep this Python process alive
+    overnight", which is not the same claim at all.
+
+    These tests use two separately-built graphs sharing one checkpointer. That is the closest
+    honest proxy for a process restart that needs no database: if the second graph can resume
+    what the first one suspended, the state is genuinely in the checkpointer.
+    """
+
+    def setUp(self):
+        self.saver = InMemorySaver()
+
+    def _config(self, thread_id):
+        return {"configurable": {"thread_id": thread_id}}
+
+    def test_a_caller_supplied_checkpointer_is_the_one_used(self):
+        """Otherwise the argument is accepted and quietly ignored — the worst outcome."""
+        graph = ga.build(checkpointer=self.saver)
+        config = self._config("t-used")
+        graph.invoke({"request": "issue a refund for order 4471"}, config)
+
+        self.assertIsNotNone(
+            self.saver.get(config),
+            "nothing was written to the supplied checkpointer; build() ignored it",
+        )
+
+    def test_a_second_graph_resumes_what_the_first_suspended(self):
+        """The state is in the checkpointer, not in the graph object."""
+        config = self._config("t-handoff")
+
+        suspended = ga.build(checkpointer=self.saver).invoke(
+            {"request": "issue a refund for order 4471"}, config
+        )
+        self.assertIn("__interrupt__", suspended, "expected the write branch to suspend")
+
+        # A different compiled graph, as a different process would build.
+        resumed = ga.build(checkpointer=self.saver).invoke(Command(resume=True), config)
+
+        self.assertNotIn("__interrupt__", resumed)
+        self.assertIn("Executed", resumed["answer"])
+
+    def test_a_refusal_survives_the_handoff_too(self):
+        """The dangerous direction: a refusal must not become an approval across a restart."""
+        config = self._config("t-refuse")
+        ga.build(checkpointer=self.saver).invoke(
+            {"request": "issue a refund for order 4471"}, config
+        )
+        resumed = ga.build(checkpointer=self.saver).invoke(Command(resume=False), config)
+
+        self.assertIn("Refused", resumed["answer"])
+        self.assertNotIn("Executed", resumed["answer"])
+
+    def test_separate_checkpointers_do_not_share_threads(self):
+        """A thread id is only meaningful within its checkpointer.
+
+        Guards the reading of the seam that would be wrong in production: thread ids are not
+        globally unique handles, so two deployments pointed at different stores cannot resume
+        each other's approvals even with the same id.
+        """
+        config = self._config("t-isolated")
+        ga.build(checkpointer=self.saver).invoke(
+            {"request": "issue a refund for order 4471"}, config
+        )
+
+        other = InMemorySaver()
+        self.assertIsNone(other.get(config))
+
+    def test_default_checkpointer_still_works(self):
+        """Passing nothing keeps the demo and the rest of the suite working."""
+        graph = ga.build()
+        result = graph.invoke(
+            {"request": "what is the refund policy"}, self._config("t-default")
+        )
+        self.assertNotIn("__interrupt__", result)
 
 
 @unittest.skipUnless(HAS_LANGGRAPH, "langgraph not installed; runs in the example-deps job")

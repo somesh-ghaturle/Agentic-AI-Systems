@@ -361,6 +361,7 @@ Each cloud implements this differently:
 | GCP | Firestore | Same JSON structure | Transaction with document existence check |
 
 **Fingerprint Algorithm:**
+
 ```python
 import hashlib, json
 
@@ -370,8 +371,12 @@ def generate_fingerprint(action: str, args: dict) -> str:
 ```
 
 **Security Properties:**
+
 - Single-use: A claim is consumed after use
-- Expiring: Default TTL is 15 minutes (configurable)
+- Expiring: a *pending* approval never expires. An `executing` claim may be taken over after
+  `STALE_CLAIM_SECONDS`, default 900 (fifteen minutes) — a liveness window for a dead executor,
+  not an authorization expiry. GCP exposes it as `var.stale_claim_seconds`; AWS and Azure set it
+  as a handler environment variable
 - Bound to arguments: Changing any argument invalidates the claim
 
 ---

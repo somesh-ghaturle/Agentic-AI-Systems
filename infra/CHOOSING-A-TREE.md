@@ -1,7 +1,12 @@
 # Choosing a tree
 
-Three trees deploy the same architecture and enforce the same property. This page is for the
+Four trees deploy the same architecture and enforce the same property. This page is for the
 one decision every other document in `infra/` assumes you have already made.
+
+**Snowflake is not a fourth option in the same sense as the other three.** It is a data
+platform that runs *on* AWS, Azure or GCP — so the real question it answers is not "which
+cloud" but "is my agent's data already in Snowflake". §0 below is about that; everything
+after it compares the three infrastructure trees.
 
 It does not restate those documents. Where a difference is already explained somewhere, this
 page says what it means *for the choice* and links to the explanation. Five documents already
@@ -20,9 +25,39 @@ divergence from AWS. None of them answers "which one do I start from."
 | You want two independent locks and the fewest prerequisites outside the account | **AWS** | An identity policy *and* a resource policy, each refusing on its own. Nothing needed outside the AWS account |
 | You are already on Azure, or you need a first-class Terraform content filter | **Azure** | `azurerm_cognitive_account_rai_policy` has no counterpart on the other two. Know what you are trading — see §2 |
 | You are reading to learn the architecture rather than to deploy it | **AWS** | It is the baseline the other two document their divergence *from*, so it reads without cross-references |
+| Your agent's data already lives in Snowflake, and the tools are queries over it | **Snowflake** | The tools *are* the data platform. No egress, no second copy, no sync to fall behind — at the cost of §0's trade |
 
 If none of those decide it, take AWS. It has the fewest things that can stop an apply before
 it starts, which §1 is about.
+
+---
+
+## 0 · Whether Snowflake is even the question
+
+Pick this tree when the agent's read tools are queries over data that is already in
+Snowflake. That is a real and common shape — the retrieval corpus, the business tables the
+write tools modify, and the audit trail all live in one place, so there is no export, no
+second copy, and no ingestion path to fall behind. `modules/knowledge` is the clearest case:
+Cortex Search indexes a *query*, not a snapshot, so the staleness failure the other three
+trees can have simply does not exist here.
+
+What you give up is the part that has nothing to do with data:
+
+| | The three infrastructure trees | Snowflake |
+|---|---|---|
+| Approval flow | Execution suspends, resumes on a callback | **Polls.** A Task is a scheduler; approvals wait for the next sweep |
+| Arbitrary compute | Any runtime, any dependency | Stored procedures, or Snowpark Container Services at a compute-pool cost |
+| Network isolation | VPC / VNet / VPC-SC | Account allow-list only; PrivateLink is a separate purchase |
+| Blast radius of the deploy role | Scoped cloud IAM | `CREATE ROLE` at account level — it builds the role graph, so it can rebuild it |
+
+The approval row is the one that decides most cases. If a human approval must be acted on in
+seconds rather than on a sweep interval, this is the wrong tree, and the answer is one of the
+other three with Snowflake as the data layer behind it.
+
+The write boundary itself is not a trade. It is as strong here as anywhere — arguably
+simpler, since there is no policy evaluation order to get wrong — but it is made of role
+inheritance, which is easier to break by accident. See
+[`terraform-snowflake/README.md`](terraform-snowflake/README.md) § "The write boundary".
 
 ---
 

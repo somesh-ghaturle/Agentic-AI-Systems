@@ -22,18 +22,31 @@ The approval gate enforces a strict boundary between read and write operations. 
 
 ## Token Lifetime and Rotation
 
-Approval tokens expire after **24 hours** (configurable via `var.approval_token_ttl_seconds`).
+An approval claim is bound to a fingerprint of the exact action, is single-use, and is enforced
+by the validator and executor handlers in [`src/`](../../src/README.md) — which this tree ships,
+along with their tests.
 
-**Rotation:**
-1. Generate a new token: `aws stepfunctions get-task-token --task-token <token>` (or your orchestrator's equivalent)
-2. Update the orchestrator's environment variable: `APPROVAL_TOKEN=...`
-3. Restart the orchestrator
+**A pending approval never expires.** Nothing in this tree ages one out: the executor's
+conditional write accepts a record that is `pending` regardless of age. If an approval request
+should lapse after some interval, that is a control you add; it does not exist here today.
 
-**Mid-execution behavior:** If a token expires during an approval flow, the action is **rejected**
-and must be resubmitted with a fresh token. The system logs the expiration and returns a
-403 Forbidden to the caller.
+**What does have a lifetime is an `executing` claim.** `STALE_CLAIM_SECONDS` (default **900**,
+fifteen minutes) is how long a claim may sit in `executing` before another executor may take it
+over — recovery for an executor that died between claiming the record and resolving its token.
+It is a liveness window, not an authorization expiry, and it is safe only because write tools
+are idempotent on the approval ID. It must exceed the write tool's own timeout plus retries.
 
-**Security note:** Tokens are single-use and bound to a specific action fingerprint.
+**How it is set here:** an environment variable on the executor Lambda. There is no Terraform
+variable for it in this module — set it through the function's environment block. See
+[`src/README.md`](../../src/README.md) for the full environment-variable table.
+
+**What this module does fix:** `aws_dynamodb_table.approvals` carries no TTL, deliberately — the
+approval record is evidence, and expiring an audit trail is a records-policy decision rather
+than a storage setting.
+
+See [BUILDING-BLOCKS.md](../../../../docs/agentic-system-architecture/BUILDING-BLOCKS.md)
+§ "Approval Claim Formats by Cloud" for the claim structure and fingerprint algorithm, and
+[SECRETS-ROTATION.md](../../../../docs/SECRETS-ROTATION.md) for what in this stack does rotate.
 
 ## Usage
 

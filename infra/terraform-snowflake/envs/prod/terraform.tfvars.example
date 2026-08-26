@@ -1,0 +1,34 @@
+# Copy to terraform.tfvars and edit. terraform.tfvars is gitignored.
+#
+# Note what is absent: no password, no private key, no token. If you find yourself adding
+# one, see HOW-TO-DEPLOY.md § "If you cannot use WIF" first.
+
+organization_name = "MYORG"
+account_name      = "MYACCOUNT"
+
+# Which cloud this Snowflake account runs on. Determines how Terraform authenticates.
+workload_identity_provider = "AWS"
+
+# Deliberately not ACCOUNTADMIN. See HOW-TO-DEPLOY.md.
+terraform_role = "AGENTIC_DEPLOYER"
+
+# Identities on the host cloud permitted to become each service user. References, not
+# secrets — nothing here is sensitive and nothing here rotates.
+orchestrator_workload_arn = "arn:aws:iam::123456789012:role/agentic-prod-orchestrator"
+executor_workload_arn     = "arn:aws:iam::123456789012:role/agentic-prod-executor"
+
+model_name = "claude-sonnet-4-5"
+
+# Required in prod, and validated. An empty list creates no network policy at all, which
+# fails open. Cover the host cloud's egress ranges, not just the office.
+allowed_ip_list = ["203.0.113.0/24", "198.51.100.0/24"]
+
+warehouse_size = "SMALL"
+
+# Required in prod, and validated. A production approval gate with no approver is a gate
+# that can never open. Never name a machine role here — a role that can approve its own
+# proposal collapses the gate into a formality.
+approver_roles = {
+  oncall   = "AGENTIC_PROD_APPROVER"
+  finance  = "AGENTIC_PROD_FINANCE_APPROVER"
+}

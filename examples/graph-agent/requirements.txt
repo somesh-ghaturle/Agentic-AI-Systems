@@ -1,7 +1,8 @@
 # Pinned, like every other example here. Resolved and verified 2026-08-15.
 #
-# Requires Python 3.10+ — langgraph dropped 3.9. That makes this the only example in the
-# repository with a floor above 3.9, which is worth knowing before copying it into an older
+# Requires Python 3.10+ — langgraph dropped 3.9. `multi-agent-debate` shares that floor, for
+# an unrelated reason (`dict | None` in annotations), so between them they are the two
+# examples here that will not run on 3.9. Worth knowing before copying either into an older
 # environment.
 #
 # This is also the only example of the three added alongside the harness and context docs that

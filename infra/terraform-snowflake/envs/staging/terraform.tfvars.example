@@ -1,0 +1,31 @@
+# Copy to terraform.tfvars and edit. terraform.tfvars is gitignored.
+#
+# Note what is absent: no password, no private key, no token. If you find yourself adding
+# one, see HOW-TO-DEPLOY.md § "If you cannot use WIF" first.
+
+organization_name = "MYORG"
+account_name      = "MYACCOUNT"
+
+# Which cloud this Snowflake account runs on. Determines how Terraform authenticates.
+workload_identity_provider = "AWS"
+
+# Deliberately not ACCOUNTADMIN. See HOW-TO-DEPLOY.md.
+terraform_role = "AGENTIC_DEPLOYER"
+
+# Identities on the host cloud permitted to become each service user. References, not
+# secrets — nothing here is sensitive and nothing here rotates.
+orchestrator_workload_arn = "arn:aws:iam::123456789012:role/agentic-staging-orchestrator"
+executor_workload_arn     = "arn:aws:iam::123456789012:role/agentic-staging-executor"
+
+model_name = "claude-sonnet-4-5"
+
+# Enforced in staging so a missing CIDR fails here rather than in prod.
+allowed_ip_list = ["203.0.113.0/24"]
+
+# The sweeper runs on prod's cadence here. An approval path only ever exercised at hourly
+# resolution is an approval path nobody has tested.
+task_started = true
+
+approver_roles = {
+  oncall = "AGENTIC_STAGING_APPROVER"
+}

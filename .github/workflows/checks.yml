@@ -83,7 +83,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      # One pass over all three trees — formatting has no per-root component.
+      # One pass over all four trees — formatting has no per-root component.
       - name: fmt
         run: terraform fmt -recursive -check -diff infra/
 
@@ -161,6 +161,9 @@ jobs:
           - infra/terraform-gcp/envs/dev
           - infra/terraform-gcp/envs/prod
           - infra/terraform-gcp/envs/staging
+          - infra/terraform-snowflake/envs/dev
+          - infra/terraform-snowflake/envs/prod
+          - infra/terraform-snowflake/envs/staging
     steps:
       - uses: actions/checkout@v7
 
@@ -278,6 +281,71 @@ jobs:
           LOG_LEVEL: ERROR
         run: checkov --config-file .checkov.yaml
 
+  conftest:
+    name: conftest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install conftest
+        env:
+          # Pinned with a checksum for the same reasons the tflint and gitleaks pins are:
+          # a binary fetched over the network and then run against the whole tree, whose
+          # verdict must not change between two runs of the same commit. The pin covers OPA
+          # too — conftest 0.62.0 embeds OPA 1.6.0, and OPA 1.0 removed the `deny[msg]`
+          # syntax these policies would otherwise have been written in.
+          CONFTEST_VERSION: "0.62.0"
+          CONFTEST_SHA256: "284231908e4cf66d156e5577c3eee2f67d9f2edf2521fa2309e0df1969f871e5"
+        run: |
+          curl -sSfL -o conftest.tar.gz \
+            "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          echo "${CONFTEST_SHA256}  conftest.tar.gz" | sha256sum -c -
+          tar xzf conftest.tar.gz conftest
+          sudo install conftest /usr/local/bin/conftest
+
+      # Parity with `terraform fmt -check` in the fmt job above: the policies are source in
+      # this repository like the HCL is, and a formatter nobody runs is a diff waiting to
+      # land on top of an unrelated change.
+      - name: Policy formatting
+        run: conftest fmt --check infra/policies
+
+      # The policies' own unit tests, and they run FIRST on purpose. A policy that cannot
+      # fail passes every tree it is pointed at, which looks identical to a policy that
+      # holds. `verify` runs the `test_` rules in infra/policies/, each of which asserts
+      # both directions: silent on wired config, firing on config missing exactly the
+      # wiring reference. Deleting a rule body turns the tree scan below green and turns
+      # this step red.
+      - name: Policy unit tests
+        run: conftest verify --policy infra/policies
+
+      # `--combine` merges every file into one document before evaluating. That is not an
+      # optimisation — it is what makes these policies expressible. The resource that
+      # declares a guardrail and the resource that wires it are routinely in different
+      # files, and a per-file pass can only ever see half of the pair.
+      #
+      # The file list comes from `find`, not from pointing conftest at the directory,
+      # because `--parser hcl2` forces every file it is given through the HCL parser —
+      # including .gitignore, .terraform.lock.hcl, and the zips under src/. Naming the
+      # .tf files is narrower than an ignore regex and does not need editing the next
+      # time a new file type appears under infra/.
+      #
+      # Per tree rather than all at once, so the failure names the tree it came from.
+      - name: Policies over the four trees
+        run: |
+          failed=0
+          for tree in infra/terraform-aws infra/terraform-azure infra/terraform-gcp infra/terraform-snowflake; do
+            echo "--- ${tree} ---"
+            if ! find "$tree" -name '*.tf' -not -path '*/.terraform/*' -print0 \
+              | xargs -0 conftest test --parser hcl2 --combine --policy infra/policies; then
+              failed=$((failed + 1))
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::conftest reported policy failures in ${failed} trees"
+            exit 1
+          fi
+          echo "conftest clean across all four trees"
+
   write-boundary:
     name: write boundary
     runs-on: ubuntu-latest
@@ -288,9 +356,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Three suites, one job — one per tree.
+      # Four suites, one job — one per tree.
       #
-      # All three guard mistakes that `terraform validate` is perfectly happy with, because
+      # All four guard mistakes that `terraform validate` is perfectly happy with, because
       # in each case the wrong value is a valid value in a valid attribute.
       #
       # This job used to skip AWS on the grounds that the boundary there is a Lambda
@@ -325,6 +393,15 @@ jobs:
       - name: GCP — assert the write boundary holds
         run: python3 -m unittest discover -s infra/terraform-gcp/tests -v
 
+      # Snowflake: the boundary is the role graph, which makes it the easiest of the four
+      # to break by accident — every way of breaking it is a valid grant that applies
+      # cleanly and reads as ordinary permission tidying. The suite walks role inheritance
+      # transitively rather than checking pairs, because modules/orchestration adds a
+      # legitimate edge (TASK_OWNER inherits EXECUTOR) and a blocklist would either forbid
+      # that or miss the dangerous ones two hops out.
+      - name: Snowflake — assert the role graph keeps the boundary
+        run: python3 -m unittest discover -s infra/terraform-snowflake/tests -v
+
   examples:
     name: examples
     runs-on: ubuntu-latest
@@ -335,15 +412,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Nine example suites, one runner, no dependencies — the same reasoning as the
+      # Ten example suites, one runner, no dependencies — the same reasoning as the
       # write-boundary job above. hermes-agent asserts that a write cannot happen by the
       # router's path; trace-eval asserts that its own checks still catch a run that
       # bypasses it. None of the nine needs a model, a network, or a cloud account, which is
       # what makes them safe to gate merges on.
-      - name: Example suites — nine of the twelve examples
+      - name: Example suites — ten of the thirteen examples
         run: python3 -m unittest discover -s tests -v
 
-      # Every example, not just the nine with suites. langchain-agent, rag-langchain, and
+      # Every example, not just the ten with suites. langchain-agent, rag-langchain, and
       # ray-orchestrator still have none. Before this step existed, five of the then-eight were
       # verified by nothing at all, which is how two of them sat here importing a LangChain v0.x
       # API that the pinned version had already deleted while this workflow stayed green.
@@ -359,6 +436,25 @@ jobs:
       # commit to infra/.
       - name: All examples — syntax
         run: python3 -m compileall -q examples/
+
+      # Every third-party module an example imports must be pinned in its own
+      # requirements.txt, and no example may import another in a cycle.
+      #
+      # The first half is the one that bites. graph-agent imported typing_extensions while
+      # pinning only langgraph, and passed everything above — compileall parses without
+      # importing, and the example-deps job installs langgraph, which drags typing-extensions
+      # in transitively. Nothing here runs an example against only what it declares, so an
+      # undeclared import is invisible until someone installs it from its requirements file
+      # and it fails for them and not for us.
+      #
+      # The second half is currently one edge: trace-eval evaluates hermes-agent by putting
+      # the sibling directory on sys.path. That is deliberate and fine in one direction; the
+      # check is here so the return edge cannot be added silently.
+      #
+      # Tested in tests/test_example_deps.py, because a guard whose name matching breaks
+      # reports success on everything.
+      - name: Example dependencies are declared, and acyclic
+        run: python3 .github/scripts/example_deps.py examples
 
   docs:
     name: docs
@@ -424,6 +520,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # terraform-snowflake is absent on purpose: its handler logic is SQL stored
+        # procedures defined in modules/approval, so there is no package to build. See
+        # infra/terraform-snowflake/ARCHITECTURE.md § "Remaining work" — it is also why
+        # that tree has no entry in the `handlers` job.
         tree: [terraform-aws, terraform-azure, terraform-gcp]
     steps:
       - uses: actions/checkout@v7

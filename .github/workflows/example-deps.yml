@@ -67,11 +67,11 @@ jobs:
           cache: pip
           cache-dependency-path: examples/${{ matrix.example }}/requirements.txt
 
-      # hermes-agent, harness-agent, context-compaction, starter-agent, trace-eval, and
-      # checkpoint-agent are absent from this matrix on purpose: their requirements.txt files
-      # carry no packages because they are stdlib-only, and `checks.yml` already covers them —
-      # the `examples` job runs the suites for those that have one, and `compileall` parses all
-      # twelve. See docs/DECISION-LOGS/0004-stdlib-only-examples.md for the rule. Adding them
+      # hermes-agent, harness-agent, context-compaction, starter-agent, trace-eval,
+      # checkpoint-agent, and multi-agent-debate are absent from this matrix on purpose: their
+      # requirements.txt files carry no packages because they are stdlib-only, and `checks.yml`
+      # already covers them — the `examples` job runs the suites for those that have one, and
+      # `compileall` parses all thirteen. See docs/DECISION-LOGS/0004-stdlib-only-examples.md for the rule. Adding them
       # here would install nothing and assert nothing that is not already asserted.
       #
       # graph-agent is the exception among the recent additions and needs Python 3.10+, which

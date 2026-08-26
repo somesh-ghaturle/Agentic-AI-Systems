@@ -8,7 +8,7 @@ Get the Agentic-AI-Systems repository running locally and deployed in under 30 m
 
 | Tool | Version | Purpose | Install Command |
 |------|---------|---------|-----------------|
-| Python | 3.9+ | Run examples | `brew install python` (macOS) / `sudo apt install python3.9` (Ubuntu) |
+| Python | 3.9+ (3.10+ for `graph-agent` and `multi-agent-debate`) | Run examples | `brew install python` (macOS) / `sudo apt install python3` (Ubuntu) |
 | pip | Latest | Python package manager | `python3 -m ensurepip --upgrade` |
 | Terraform | 1.6+ | Infrastructure as code | `brew install terraform` (macOS) / See [HashiCorp docs](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) |
 | Git | Latest | Version control | `brew install git` / `sudo apt install git` |
@@ -38,7 +38,7 @@ You should see:
 Agentic-AI-Systems/
 ├── README.md
 ├── examples/          # Runnable agent examples
-├── infra/            # Terraform deployments (AWS/Azure/GCP)
+├── infra/            # Terraform deployments (AWS/Azure/GCP/Snowflake)
 ├── docs/             # Architecture and governance
 └── tests/            # Test suites
 ```
@@ -157,17 +157,18 @@ aws sts get-caller-identity
 ### Deploy Infrastructure
 
 ```bash
-# Navigate to AWS Terraform tree
-cd infra/terraform-aws
+# Build the handler packages FIRST. Every module reads its zip at plan time to compute a
+# deployment hash, so a tree whose packages are unbuilt cannot be planned.
+infra/terraform-aws/src/build.sh
 
-# Initialize Terraform (first time only)
+# The environment root is envs/dev — the tree root holds no .tf files of its own.
+cd infra/terraform-aws/envs/dev
+
+cp terraform.tfvars.example terraform.tfvars   # then edit it
 terraform init
 
-# Review the plan for dev environment
-terraform plan -target=module.dev_root
-
-# Apply the dev environment (takes 10-15 minutes)
-terraform apply -target=module.dev_root -auto-approve
+terraform plan
+terraform apply
 ```
 
 **What gets deployed:**
@@ -224,8 +225,11 @@ curl -X POST \
 ### Clean Up (When Done)
 
 ```bash
-# Destroy dev environment
-terraform destroy -target=module.dev_root -auto-approve
+# Destroy the dev environment. Run from infra/terraform-aws/envs/dev.
+#
+# No -auto-approve. This is the one command in this guide that deletes data, and the
+# archive bucket and approvals table are the audit trail — read the plan before confirming.
+terraform destroy
 
 # Verify cleanup
 aws stepfunctions list-state-machines  # Should be empty
@@ -236,8 +240,11 @@ aws stepfunctions list-state-machines  # Should be empty
 ## Step 5: Deploy to Azure (Alternative)
 
 ```bash
-# Navigate to Azure Terraform tree
-cd infra/terraform-azure
+# Build the handler packages first, as with AWS.
+infra/terraform-azure/src/build.sh
+
+# The environment root is envs/dev.
+cd infra/terraform-azure/envs/dev
 
 # Initialize
 terraform init
@@ -249,8 +256,8 @@ export ARM_SUBSCRIPTION_ID="your-subscription-id"
 export ARM_TENANT_ID="your-tenant-id"
 
 # Plan and apply dev environment
-terraform plan -target=module.dev_root
-terraform apply -target=module.dev_root -auto-approve
+terraform plan
+terraform apply
 ```
 
 **Note:** Azure's write boundary uses Entra ID audit alerts as a second line of defense. See [THREAT-MODEL.md](docs/THREAT-MODEL.md) for details.
@@ -260,8 +267,11 @@ terraform apply -target=module.dev_root -auto-approve
 ## Step 6: Deploy to GCP (Alternative)
 
 ```bash
-# Navigate to GCP Terraform tree
-cd infra/terraform-gcp
+# Build the handler packages first, as with AWS.
+infra/terraform-gcp/src/build.sh
+
+# The environment root is envs/dev.
+cd infra/terraform-gcp/envs/dev
 
 # Initialize
 terraform init
@@ -270,11 +280,52 @@ terraform init
 export GOOGLE_CLOUD_KEYFILE_JSON="path/to/service-account.json"
 
 # Plan and apply dev environment
-terraform plan -target=module.dev_root
-terraform apply -target=module.dev_root -auto-approve
+terraform plan
+terraform apply
 ```
 
-**Note:** GCP uses IAM Deny policies — the strongest write boundary of the three clouds.
+**Note:** GCP uses IAM Deny policies — the strongest write boundary of the three infrastructure clouds, because a deny rule evaluates before allow policies and a later broad grant cannot reopen the path.
+
+---
+
+## Step 6b: Deploy to Snowflake (Alternative)
+
+Snowflake is **not a fourth cloud** — it is a data platform running on one of the other three.
+Pick it when the agent's tools are already queries over data you keep in Snowflake. See
+[infra/CHOOSING-A-TREE.md](infra/CHOOSING-A-TREE.md) §0 for the trade, the largest part of
+which is that approvals are *polled* rather than called back.
+
+```bash
+# No packages to build — this tree's handler logic is SQL stored procedures.
+cd infra/terraform-snowflake/envs/dev
+
+cp terraform.tfvars.example terraform.tfvars   # then edit it
+terraform init
+
+terraform plan
+terraform apply
+```
+
+**Authentication is different here.** The other three trees inherit an ambient identity from
+the platform. Snowflake has none, so this tree uses workload identity federation — run the
+apply from a context that already holds a federated identity. There is deliberately no
+private key anywhere in the configuration; see
+[infra/terraform-snowflake/HOW-TO-DEPLOY.md](infra/terraform-snowflake/HOW-TO-DEPLOY.md).
+
+**What gets deployed:**
+| Component | Snowflake Object | Purpose |
+|-----------|------------------|---------|
+| Orchestrator | Task | Sweeps for approved proposals — a scheduler, not a workflow engine |
+| Tools | Stored procedures | `EXECUTE AS OWNER`, so no caller role holds a table privilege |
+| State | Hybrid tables | Row-locked execution state and approvals |
+| Approval Gate | Procedures + role grants | The write boundary is the role graph |
+| Knowledge | Cortex Search | Indexes a query, not a copy — nothing to fall behind |
+| Archive | Table + internal stage | Cold traces and exports |
+| Observability | Event table + traces | A stored procedure has no stdout anyone will read |
+
+**Note:** the write boundary here is role inheritance, which makes it the easiest of the four
+to break with a valid grant. Rehearse it after applying — authenticate as the orchestrator and
+confirm a write procedure refuses you.
 
 ---
 
@@ -288,6 +339,8 @@ All examples run without cloud dependencies (except where noted):
 | trace-eval | `python3 eval.py` | None | Trace-level evaluation |
 | starter-agent | `python3 agent.py "query"` | None | Minimal agent loop |
 | harness-agent | `python3 agent.py "query"` | None | Continuity across context windows |
+| checkpoint-agent | `python3 agent.py` | None | Resuming after a crash, idempotently |
+| multi-agent-debate | `python3 agent.py` | None | Several agents argue; none of them approves |
 | context-compaction | `python3 compact.py` | None | Context management |
 | graph-agent | `python3 graph_agent.py "query"` | LangGraph | Read/write split as a graph |
 | e2e-agent | `python3 app.py` | FastAPI | Full HTTP agent with tracing |
