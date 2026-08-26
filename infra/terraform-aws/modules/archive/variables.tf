@@ -33,6 +33,12 @@ variable "noncurrent_version_expiration_days" {
   default     = 90
 }
 
+variable "abort_incomplete_upload_days" {
+  description = "Days before the parts of an incomplete multipart upload are reclaimed. Billed but unlisted until then."
+  type        = number
+  default     = 7
+}
+
 variable "object_lock_retention_days" {
   description = <<-EOT
     Enables S3 Object Lock in COMPLIANCE mode for this many days. Null disables it.

@@ -28,6 +28,17 @@
 # Actions with branches nest their children inside the parent's body — that is the Logic
 # App schema, not a choice. So `CheckLoopBound` carries the whole gated path inside it.
 
+terraform {
+  required_version = ">= 1.6"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 5.0"
+    }
+  }
+}
+
+
 locals {
   # Managed identity auth for every outbound call. No keys, no shared secrets — the
   # workflow presents a token minted for the specific audience it is calling, and the

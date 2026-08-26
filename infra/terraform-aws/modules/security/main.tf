@@ -49,6 +49,10 @@ resource "aws_kms_alias" "main" {
 }
 
 data "aws_iam_policy_document" "key" {
+  # checkov:skip=CKV_AWS_111:Key policy, not identity policy — `resources = ["*"]` here scopes to this key and cannot name another
+  # checkov:skip=CKV_AWS_356:Same. A KMS key policy has exactly one resource, and naming it is not expressible
+  # checkov:skip=CKV_AWS_109:The account-root statement is required by AWS; without it the key can be orphaned, as the comment below says
+
   # Without this the key becomes unmanageable — AWS requires the account root to retain
   # administrative access or the key can be orphaned.
   statement {

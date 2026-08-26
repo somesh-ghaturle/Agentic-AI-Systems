@@ -43,11 +43,11 @@ No task needs cloud credentials. Task 2 needs network access to resolve pins fro
 | 4 | Dependabot for pip, terraform, and github-actions | 2 | high | [x] |
 | 5 | Relative-link check in CI | 3 | medium | [x] |
 | 6 | Add SECURITY.md | 4 | medium | [x] |
-| 7 | Ruff config and lint job — parity with `terraform fmt` | 4 | low | [ ] |
-| 8 | tflint and checkov over the three trees | 5 | low | [ ] |
+| 7 | Ruff config and lint job — parity with `terraform fmt` | 4 | low | [x] |
+| 8 | tflint and checkov over the three trees | 5 | low | [x] |
 | 9 | Reconcile the Terraform version pin | 5 | low | [x] |
 | 10 | Threat model for the write boundary | 6 | medium | [x] |
-| 11 | Single cloud-comparison page | 6 | low | [ ] |
+| 11 | Single cloud-comparison page | 6 | low | [x] |
 
 Phases 1 and 2 are the agreed scope. Phases 3 onward are sequenced but not committed to.
 
@@ -55,7 +55,7 @@ Phases 1 and 2 are the agreed scope. Phases 3 onward are sequenced but not commi
 
 ## Phase 1 — Verify the examples (the gap that already bit)
 
-Three of eight examples were covered by `tests/` when this plan was written (seven of eleven now): `starter-agent`, `hermes-agent`, and
+Three of eight examples were covered by `tests/` when this plan was written (nine of twelve now): `starter-agent`, `hermes-agent`, and
 `trace-eval`. The other five — `e2e-agent`, `langchain-agent`, `rag-faiss`, `rag-langchain`,
 `ray-orchestrator` — are covered by nothing.
 
@@ -293,13 +293,54 @@ and how to report privately.
 
 ### Task 7 — Ruff config and lint job
 
-**Severity: low.** The Terraform side gets `terraform fmt -check` in CI. The Python side has no
-`pyproject.toml`, no ruff, no formatter, and no CI job. That asymmetry is visible to any reader
-who opens both.
+**Done 2026-08-23, and the half that was missing is the half that mattered.** `pyproject.toml`
+landed on 2026-08-16 in commit `82b8ecb`, with the rule set, the `py39` target, and a pass over
+the tree that fixed most of what ruff found. The CI job did not land with it, and the task stayed
+open on that alone.
 
-Minimal `pyproject.toml` with ruff configured for `py39` — the floor the examples claim — plus a
-lint job. Expect a first run that fails on existing code; fix the findings in the same change
-rather than lowering the rules to make it pass.
+What the intervening week demonstrated is the argument for the job, so it is recorded rather than
+tidied away. Running the committed config today found **twelve findings** — ten `E501`, two
+`UP024` — and several sat in files that the cleanup commit had itself edited. A rule set nothing
+runs is not a rule set. It is a document about one, and it drifts at exactly the rate the code
+changes.
+
+**What shipped.**
+
+| Piece | Where | Note |
+|---|---|---|
+| `lint` job | `checks.yml`, directly after `fmt` | The asymmetry this task names is only visible when the two sit together |
+| `ruff==0.16.4` | pinned in the job | Ruff adds rules to existing groups between releases, so an unpinned install is a moving rule set |
+| `ruff-check` hook | `.pre-commit-config.yaml`, same pin | Two pins, one decision — a hook on a different ruff hands a contributor a clean commit and a red pipeline |
+| `pyproject.toml` | added to both path filters | Without it, editing the rules ran nothing that reads them |
+| Twelve fixes | across nine files | Fixed in code, per this task's own instruction, with no rule lowered and no `noqa` added |
+
+**Two things deliberately not done.**
+
+`ruff format` is not adopted, here or in the hook. It would rewrite 54 of the 86 Python files in
+one commit, and in a repository whose Python exists to be read — where `git blame` is the record
+of why each example looks the way it does — that costs more than the uniformity buys. `E501` at
+line-length 100 already holds the one formatting property that matters for reading two files side
+by side. (Note for anyone who tries it: `ruff format` in 0.16 also formats Python inside markdown
+fences, so its file count is not a count of Python files.)
+
+The rule set was not widened. `select` still names `BLE001` and `PLC0415` individually rather
+than pulling in the full `PL` group, for the reason `pyproject.toml` gives at length: the 39
+further findings are led by 17 counts of `PLW0603`, which is an architectural argument about the
+handler modules and not a lint fix.
+
+**Residual.** Dependabot does not watch the ruff pin — it is a `pip install` inside a run step,
+not a manifest, the same trade the pinned `gitleaks` version already makes. Raising either is
+manual, and the workflow comment says so at the pin.
+
+**Verify.**
+
+```bash
+pip install ruff==0.16.4
+ruff check .                                    # All checks passed!
+python3 -m unittest discover -s tests           # 181 tests, unchanged by the fixes
+python3 .github/scripts/tfconstraints.py        # the wrapped print still reads the same
+grep -c "id: ruff-check" .pre-commit-config.yaml
+```
 
 ---
 
@@ -310,6 +351,102 @@ rather than lowering the rules to make it pass.
 **Severity: low.** CI validates but never lints or policy-scans. Both tools run credential-free,
 so they fit the existing constraint. Expect noise on first run; tune the ruleset rather than
 disabling the job.
+
+**Done 2026-08-23.** Both tools now run in `checks.yml`, both fail the build, and neither uses
+`--soft-fail`.
+
+**tflint found something `terraform validate` structurally could not.** The `validate` job checks
+the ten environment roots, and a module is only ever seen there through a root that calls it, with
+that root's variables. tflint reads each directory on its own terms — which is how it reported that
+**all twelve Azure modules declared no `required_version` and no `required_providers`**, against 8
+of 8 on AWS and 10 of 10 on GCP. No root was ever going to report that on a module's behalf. Thirty
+warnings, all one class, all fixed by adding the block with the pins the roots already use
+(`azurerm ~> 5.0`, `azuread ~> 3.0`, `random ~> 3.6`).
+
+The six remaining tflint errors were an artifact of how it evaluates variables: with no
+`--var-file`, `var.tools` is its empty default, `local.tool_members` derives from it and comes out
+empty, and every `local.tool_members["retrieve"]` reads as an invalid index. The job passes
+`terraform.tfvars.example` — the file QUICKSTART tells a reader to copy — so it lints the
+configuration people actually apply rather than the empty default.
+
+**checkov: 110 findings, 9 fixed, 101 skipped by name with a reason.** The split is the point. A
+`--soft-fail` job that reports 101 findings and exits 0 tells nobody anything on run 102; a skip
+list where every entry carries its reason is a readable statement about the reference
+architecture.
+
+The nine fixed were all the same shape — one resource inconsistent with its siblings:
+
+| Fix | Where | What it was |
+|---|---|---|
+| `tracing_config` | AWS `modules/observability` | The trace emitter was the one Lambda of four with X-Ray off — the component whose absence from the trace you notice last |
+| `abort_incomplete_multipart_upload` | AWS `modules/archive` | Abandoned parts bill and do not appear in a listing |
+| TLS 1.2, HTTPS-only, no public blobs | Azure `modules/state` | Four sibling storage accounts declared all three; this one, holding execution state, declared none |
+| Blob soft delete | Azure `state`, `approval`, `tools`, `observability` | `archive` had it; the other four did not. New `soft_delete_retention_days` variable, default 30, so no env root needed rewiring |
+
+The 101 skipped are grouped in [`.checkov.yaml`](../.checkov.yaml) by *why*: network isolation this
+architecture deliberately does not have (public endpoints plus IAM, with the write boundary
+enforced by identity and asserted by `infra/*/tests/`); redundancy and retention priced for a
+reference deployment; checks that want a component nothing would consume; CMK where the tree
+already points the store at its one customer-managed key; and deliberate choices the HCL already
+explains in a comment — `envs/dev` turning PITR off, purge protection off, function-source buckets
+unversioned because source zips are build inputs and not evidence.
+
+**Two kinds of skip, not interchangeable.** A check skipped for one uniform reason goes in
+`.checkov.yaml`. A check skipped because of one specific resource goes inline as
+`# checkov:skip=ID:reason` — AWS `modules/security` does this for the KMS key policy, where
+`resources = ["*"]` is the only thing a key policy can express and reads as over-permission to a
+scanner that assumes it is looking at an identity policy.
+
+**Residual.** Neither pin is watched by Dependabot: `tflint` is a checksummed binary download and
+`checkov` is a `pip install` inside a run step, the same trade the `gitleaks` and `ruff` pins
+already make. Raising either is manual and both workflow comments say so at the pin. Separately,
+Azure `modules/observability` still lacks the `storage_shared_access_key_enabled` and
+`storage_public_network_access_enabled` inputs its `approval` and `tools` siblings have — a real
+parity gap, but one that adds module inputs and env wiring rather than an attribute, so it is
+noted here rather than folded into a lint task.
+
+**Residual — tflint runs the bundled ruleset only.** `.tflint.hcl` enables `plugin "terraform"`
+and nothing else, so none of the three provider rulesets are in play. Measured 2026-08-24 with
+`tflint-ruleset-aws` 0.44.0, `-azurerm` 0.32.0 and `-google` 0.39.0 against the same 40
+directories: AWS and GCP are clean, and Azure reports thirteen things, none of them adopted here.
+
+Twelve are one rule, `azurerm_resources_missing_prevent_destroy` — the Cosmos DB account,
+database and container, the Service Bus namespace and topic, four storage accounts, a storage
+container, a storage table, and the Key Vault. `prevent_destroy` accepts a literal only, so it
+cannot be varied per environment from a module that every environment shares: setting it in
+`modules/` makes `envs/dev` undestroyable. That is the objection [`.checkov.yaml`](../.checkov.yaml)
+already records against CKV_AZURE_110 and CKV_GCP_82, and the rule has no counterpart in the AWS
+or Google rulesets — so honouring it would also make the Azure tree carry a constraint the other
+two trees do not.
+
+The thirteenth is a plugin defect rather than a finding. `azurerm_app_service_app_insights_hidden_link`
+aborts on `modules/observability` with "Attempt to get attribute from null value", because
+`azurerm_storage_account.observability` is `count = var.trace_emitter == null ? 0 : 1` and linting
+the module on its own terms leaves that count at zero, so the rule dereferences an index that does
+not exist. The configuration is valid; the rule cannot read it.
+
+Adopting any of this costs a `tflint --init`, a second network hop in the job, and a per-tree
+config file where there is now a single one at the root. Worth revisiting if the azurerm ruleset
+grows a rule that fires on something real.
+
+**Verify.**
+
+```bash
+# tflint — every module directory and every env root, the way CI sweeps them
+for dir in infra/terraform-*/modules/*/ infra/terraform-*/envs/*/; do
+  args=(--chdir="$dir" --config="$PWD/.tflint.hcl" --format=compact)
+  [ -f "$dir/terraform.tfvars.example" ] && args+=(--var-file=terraform.tfvars.example)
+  tflint "${args[@]}" || echo "FAILED $dir"
+done                                            # silent: 40 directories, 0 issues
+
+pip install checkov==3.3.13
+LOG_LEVEL=ERROR checkov --config-file .checkov.yaml
+                                                # Passed 292, Failed 0, Skipped 9
+
+terraform fmt -check -recursive infra           # unchanged
+python3 .github/scripts/tfconstraints.py infra  # 130 files, 5 providers, all consistent
+for t in aws azure gcp; do python3 -m unittest discover -s infra/terraform-$t/tests; done
+```
 
 ### Task 9 — Reconcile the Terraform CLI version pin
 
@@ -368,6 +505,58 @@ agentic-architecture repository, none of which have one.
 **Severity: low.** The differences are documented per-tree, so a reader choosing between AWS and
 GCP must read three `ARCHITECTURE.md` files and diff them mentally. The root README's table is a
 service mapping, not a decision aid.
+
+**Done 2026-08-23 — and the premise needed correcting first.** Written on 2026-08-14, this task
+assumed no cross-tree comparison existed. By the time it was built, **five** did:
+`infra/MODULES.md` had a comparison matrix, `docs/THREAT-MODEL.md` §6 had "which cloud survives
+what", the root README had grown a write-boundary narrative and a divergence paragraph, and the
+Azure and GCP `ARCHITECTURE.md` files each ended with "Divergences from the AWS tree".
+
+So the gap was not *no comparison*. It was that comparison was scattered across five documents,
+two of which **contradicted each other**, and none of which answered the decision question.
+
+**The contradiction, which is the finding worth keeping.** `MODULES.md` rated write-boundary
+strength AWS ⭐⭐⭐⭐⭐ and GCP ⭐⭐⭐⭐⭐ — equal. `THREAT-MODEL.md` §6 says GCP is the only tree that
+holds once someone adds a broad invoke grant later, because a deny rule evaluates before allow
+policies; GCP's own `ARCHITECTURE.md` §2 "Where GCP is stronger than AWS" agrees with it. Both
+could not be right. The star rating was the thing that could not carry the distinction, so the
+row now states what each tree actually has and the note under the table says why it changed.
+
+**What shipped.**
+
+| Piece | Where | Note |
+|---|---|---|
+| [`infra/CHOOSING-A-TREE.md`](../infra/CHOOSING-A-TREE.md) | new | A decision aid that routes rather than restates — it links THREAT-MODEL §6 rather than copying its table |
+| Prerequisites side by side | §1 of that page | The strongest decision input and the only part genuinely absent before: Azure needs an **Entra directory role**, not just subscription Contributor; GCP needs **`roles/iam.denyAdmin`** or the apply dies on the last resource, one project per environment, eleven APIs enabled by hand, and a **Model Garden terms click with no API behind it**; AWS needs nothing outside the account |
+| Write-boundary row rewritten | `MODULES.md` | Stars replaced with what each tree has, plus a note naming THREAT-MODEL §6 as the authority |
+| "seven environment roots" → ten | `README.md` | A live status claim left stale by task 14's staging roots |
+| Link from the infra section | `README.md` | Placed where a reader is already choosing |
+
+**What the page deliberately does not do.** No pricing, no region availability, and no security
+ranking of its own — §5 reports only which resources have no scale-to-zero, because that is a
+property of the HCL rather than of a price list, and it says outright that AWS makes no
+standing-cost claim rather than inventing one. THREAT-MODEL stays the authority on adversaries.
+
+**Residual.** `docs/ENHANCEMENT-PLAN.md` still describes a future job running `terraform plan`
+on "all seven roots". That is a forward-looking task definition rather than a historical record,
+so it will mislead whoever picks it up; the `seven` in `REPO-AUDIT.md` and in task 9's
+retrospective above is correctly historical and was left alone.
+
+**Verify.**
+
+```bash
+python3 .github/scripts/linkcheck.py .          # 94 files, 0 broken relative links
+
+# Every count and absence claim in the new page
+for c in aws azure gcp; do echo "$c: $(ls infra/terraform-$c/modules | wc -l)"; done
+ls -d infra/terraform-*/envs/*/ | wc -l         # 10
+grep -rn "vpc_config" infra/terraform-aws/modules/                  # none
+grep -rn "vpc_connector\|vpc_access" infra/terraform-gcp/modules/   # none
+grep -rln "private_endpoint_subnet_id" infra/terraform-azure/modules/  # knowledge only
+
+# The contradiction is gone
+grep -n "⭐" infra/MODULES.md                     # no matches
+```
 
 ---
 

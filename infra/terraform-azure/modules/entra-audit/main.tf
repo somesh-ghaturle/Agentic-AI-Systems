@@ -29,6 +29,17 @@
 # Hence envs/tenant: applied once, by a different person, on a different cadence.
 # ---------------------------------------------------------------------------
 
+terraform {
+  required_version = ">= 1.6"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 5.0"
+    }
+  }
+}
+
+
 resource "azurerm_monitor_aad_diagnostic_setting" "audit" {
   name = "${var.name_prefix}-entra-audit"
 

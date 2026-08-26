@@ -165,6 +165,13 @@ resource "aws_lambda_function" "trace_emitter" {
     }
   }
 
+  # Active, matching the tool and approval Lambdas. This one was the exception, and being
+  # the exception matters here more than elsewhere: a trace emitter that is itself absent
+  # from the trace is the one gap you notice last, because everything it writes looks fine.
+  tracing_config {
+    mode = "Active"
+  }
+
   kms_key_arn = var.kms_key_arn
 
   tags = merge(var.tags, {

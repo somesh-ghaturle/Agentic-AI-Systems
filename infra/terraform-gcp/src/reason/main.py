@@ -167,7 +167,10 @@ def _reason(payload, tracer):
         tracer.emit("model_refusal", outcome="refused", category=category)
         return error(
             "model_refused",
-            remediation="The model declined this request. Review the input rather than retrying unchanged.",
+            remediation=(
+                "The model declined this request. "
+                "Review the input rather than retrying unchanged."
+            ),
             category=category,
             **_usage(message),
         )

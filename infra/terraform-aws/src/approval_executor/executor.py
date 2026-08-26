@@ -97,7 +97,11 @@ def _approve(key, task_token, approver, tracer):
     stored = record.get("arguments_fingerprint")
     if stored and stored != fingerprint(arguments):
         _record_outcome(key, "failed", {"error": "arguments_tampered"})
-        _send_task_failure(task_token, "ApprovalTampered", "Arguments no longer match the approved proposal.")
+        _send_task_failure(
+            task_token,
+            "ApprovalTampered",
+            "Arguments no longer match the approved proposal.",
+        )
         return {"status": "failed", "error": "arguments_tampered"}
 
     function_name = _write_tool_function(action)

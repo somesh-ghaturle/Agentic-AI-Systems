@@ -20,7 +20,7 @@ class CheckpointAgent:
         if self.CHECKPOINT_FILE.exists():
             try:
                 return json.loads(self.CHECKPOINT_FILE.read_text())
-            except (json.JSONDecodeError, IOError) as e:
+            except (OSError, json.JSONDecodeError) as e:
                 # Corrupted or unreadable state file - start fresh
                 print(f"Warning: Could not load state: {e}. Starting with empty state.")
                 return {"completed_actions": [], "current_step": 0}
@@ -33,7 +33,7 @@ class CheckpointAgent:
         try:
             temp_file.write_text(json.dumps(self.state, indent=2))
             temp_file.rename(self.CHECKPOINT_FILE)
-        except IOError as e:
+        except OSError as e:
             print(f"Error saving state: {e}")
             # Clean up temp file if rename failed
             if temp_file.exists():

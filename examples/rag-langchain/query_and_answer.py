@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Query FAISS index and optionally call LangChain/OpenAI to generate an answer.
 
-If `OPENAI_API_KEY` is not set, the script prints retrieved documents and a suggested answer template.
+If `OPENAI_API_KEY` is not set, the script prints retrieved documents and a suggested
+answer template.
 """
 import os
 import sys
@@ -69,7 +70,8 @@ def answer_with_llm(query: str, context_texts: list[str]):
 
 
 if __name__ == "__main__":
-    q = "What are governance needs for enterprise AI?" if len(sys.argv) == 1 else " ".join(sys.argv[1:])
+    default_q = "What are governance needs for enterprise AI?"
+    q = default_q if len(sys.argv) == 1 else " ".join(sys.argv[1:])
     res = retrieve(q)
     print("Retrieved documents:")
     for doc, score in res:
@@ -79,4 +81,7 @@ if __name__ == "__main__":
         print('\nLLM answer:\n', llm_out)
     else:
         print('\nLLM not available — suggested answer template:\n')
-        print('Based on the retrieved sources, the governance needs include inventory, monitoring, retraining triggers, clear ownership, and auditability.')
+        print(
+            'Based on the retrieved sources, the governance needs include inventory, '
+            'monitoring, retraining triggers, clear ownership, and auditability.'
+        )

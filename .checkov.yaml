@@ -1,0 +1,160 @@
+# checkov — policy scanning over the three Terraform trees.
+#
+# The job that runs this asserts ZERO unskipped findings, which only means something
+# because every skip below is named individually with the reason it is skipped. A
+# `soft-fail` job that reports 101 findings and exits 0 tells you nothing on run 102.
+#
+# Two kinds of skip live in this repository and they are not interchangeable:
+#
+#   * A check skipped for the same reason everywhere goes here, grouped under that
+#     reason.
+#   * A check skipped because of something specific to one resource goes inline, as
+#     `# checkov:skip=ID:reason` on that resource. modules/security/main.tf on the AWS
+#     side does this for the KMS key policy, where `resources = ["*"]` is the only thing
+#     a key policy can say and reads as over-permission to a scanner that assumes it is
+#     looking at an identity policy.
+#
+# Adding a skip here is a decision about the reference architecture, not a way to get CI
+# green. If a finding is right, fix it — nine were fixed rather than skipped when this
+# file was written, and they are the reason the list below is 101 and not 110.
+
+directory:
+  - infra
+
+framework:
+  - terraform
+
+# Not `compact`: when this job fails, the resource and the guide URL are the whole point.
+quiet: true
+
+skip-check:
+  # -------------------------------------------------------------------------
+  # Network isolation the reference architecture deliberately does not have.
+  #
+  # Every handler here is reached over a public endpoint and authorized by IAM —
+  # a Lambda resource policy, an Entra app role, a GCP deny policy. Private
+  # networking is the correct production answer and it is a different deployment:
+  # VPCs and subnets, private endpoints and private DNS zones, NAT for egress, and
+  # a bill that starts before the first request. docs/agentic-coding-playbook/
+  # ENTERPRISE-ADAPTATION.md is where that transition is described.
+  #
+  # What must NOT be skipped alongside these, and is not: the authorization checks.
+  # The write boundary is enforced by identity, and infra/*/tests/ asserts it holds.
+  # -------------------------------------------------------------------------
+  - CKV_AWS_117    # Lambda not configured inside a VPC
+  - CKV_AZURE_59   # Storage account does not disallow public access
+  - CKV_AZURE_221  # Function App public network access not disabled
+  - CKV_AZURE_124  # Cognitive Search does not disable public network access
+  - CKV_AZURE_101  # Cosmos DB does not disable public network access
+  - CKV_AZURE_99   # Cosmos DB access not restricted
+  - CKV_AZURE_189  # Key Vault does not disable public network access
+  - CKV_AZURE_109  # Key Vault firewall rules not set
+  - CKV_AZURE_204  # Service Bus public network access not False
+  - CKV2_AZURE_33  # Storage account has no private endpoint
+  - CKV2_AZURE_32  # Key Vault has no private endpoint
+  - CKV_GCP_124    # Cloud Function ingress not internal-only
+  - CKV2_GCP_34    # Vertex AI index endpoint not private
+
+  # -------------------------------------------------------------------------
+  # Redundancy and retention priced for a reference deployment.
+  #
+  # Each of these is a correct production default and each multiplies the cost of
+  # a tree whose purpose is to be applied, read, and destroyed. Zone-redundant
+  # plans and warm instance floors bill by the hour whether or not anyone invokes
+  # a tool; geo-replication and cross-region replication double storage; a one-year
+  # log retention floor bills for eleven months of logs nobody will read.
+  #
+  # Retention that IS load-bearing is not skipped and is not a default: the trace
+  # archive's lifecycle, expiration and Object Lock are explicit inputs, because
+  # retention is a records decision rather than a platform one.
+  # -------------------------------------------------------------------------
+  - CKV_AWS_144    # S3 bucket has no cross-region replication
+  - CKV_AWS_338    # CloudWatch log group retains less than 1 year
+  - CKV_AZURE_206  # Storage account replication tier
+  - CKV_AZURE_225  # App Service Plan not zone redundant
+  - CKV_AZURE_212  # App Service has no minimum instance count for failover
+
+  # -------------------------------------------------------------------------
+  # Checks that want a resource this architecture does not create.
+  #
+  # Skipped because the answer is "add a component", not "set an attribute" — and
+  # adding one to satisfy a scanner, with nothing reading from it, is how a tree
+  # accumulates resources nobody can explain. Each of these is a real thing to
+  # build when there is a consumer for it.
+  # -------------------------------------------------------------------------
+  - CKV_AWS_116    # Lambda has no dead letter queue — needs an SQS queue and a consumer
+  - CKV_AWS_272    # Lambda code signing — needs a Signer profile and a signing pipeline
+  - CKV_AWS_18     # S3 access logging — needs a second bucket to log into
+  - CKV2_AWS_62    # S3 event notifications — needs a subscriber
+  - CKV_GCP_62     # GCS access logging — needs a second bucket to log into
+  - CKV_AZURE_33   # Storage queue logging — needs a diagnostic setting per service
+  - CKV2_AZURE_20  # Storage table read logging — same
+  - CKV2_AZURE_21  # Storage blob read logging — same
+  - CKV_AZURE_202  # Service Bus managed identity — the namespace has no data-plane client here
+
+  # -------------------------------------------------------------------------
+  # Customer-managed keys where the resource is already covered, or where the
+  # provider offers no CMK path the module can take.
+  #
+  # All three trees create one customer-managed key and point the stores that hold
+  # trace, state and approval data at it. These checks fire on resources whose
+  # encryption is configured elsewhere in the same module, or on services where CMK
+  # requires a separate provisioning flow (a managed HSM, a key permission grant on
+  # a resource that does not exist until after apply).
+  # -------------------------------------------------------------------------
+  - CKV2_AZURE_1   # Storage account not encrypted with CMK
+  - CKV_AZURE_100  # Cosmos DB not encrypted with CMK
+  - CKV_AZURE_201  # Service Bus not encrypted with CMK
+  - CKV_AZURE_199  # Service Bus double encryption
+  - CKV2_AZURE_22  # Cognitive Services not encrypted with CMK
+
+  # -------------------------------------------------------------------------
+  # Deliberate choices, stated in the HCL with the reason attached.
+  #
+  # These are the skips most worth re-reading before they are extended: in each
+  # case the code already carries a comment explaining the value, and the scanner
+  # is reporting the comment as a finding. If one of those comments stops being
+  # true, the skip must go before the code does.
+  # -------------------------------------------------------------------------
+  - CKV_AWS_28     # DynamoDB PITR — module default is true; envs/dev sets false on purpose
+  - CKV_AZURE_110  # Key Vault purge protection — off in dev on purpose; a vault nobody can
+                   # delete for 90 days is a dev environment nobody can tear down
+  - CKV_AZURE_42   # "Key vault is recoverable" — the same purge-protection input, restated
+  - CKV_GCP_82     # KMS prevent_destroy — same reasoning: a key that blocks `terraform
+                   # destroy` makes the reference tree unusable as a reference
+  - CKV_GCP_78     # GCS versioning — off on function-source buckets by design: source zips
+                   # are build inputs, not evidence. The archive bucket, which IS evidence,
+                   # has versioning on and passes.
+
+  # -------------------------------------------------------------------------
+  # Shared-key and local authentication.
+  #
+  # Disabling these is right and is blocked by something concrete: the Function
+  # Apps mount their content share from the storage account with a shared key, and
+  # Cosmos and Service Bus are reached through connection strings held in Key Vault
+  # rather than through managed identity. Both are tracked as work, not as posture
+  # — moving them to identity is a code change in infra/terraform-azure/src/ as
+  # well as in the HCL.
+  # -------------------------------------------------------------------------
+  - CKV2_AZURE_40  # Storage account allows Shared Key authorization
+  - CKV2_AZURE_41  # Storage account has no SAS expiration policy
+  - CKV_AZURE_140  # Cosmos DB local authentication not disabled
+  - CKV_AZURE_132  # Cosmos DB management-plane changes not restricted
+  - CKV_AZURE_203  # Service Bus local authentication not disabled
+
+  # -------------------------------------------------------------------------
+  # Not a security property.
+  # -------------------------------------------------------------------------
+  - CKV_AZURE_208  # Cognitive Search SLA for index updates — a replica-count SLA tier
+  - CKV_AZURE_209  # Cognitive Search SLA for index queries — same
+
+  # -------------------------------------------------------------------------
+  # Concurrency limits.
+  #
+  # Reserved concurrency is set where it bounds blast radius — the tool Lambdas and
+  # the approval executor, which are the functions that can act. The validator and
+  # the trace emitter are deliberately unbounded: throttling the validator turns a
+  # rejected proposal into a timed-out one, and throttling the trace emitter drops
+  # the evidence for the incident you are trying to reconstruct.
+  # -------------------------------------------------------------------------
+  - CKV_AWS_115    # Lambda has no function-level concurrent execution limit

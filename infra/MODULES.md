@@ -1,8 +1,8 @@
 # Terraform Modules Catalog
 
-> **Purpose:** Central reference for all Terraform modules across the three cloud implementations.
-> **Scope:** AWS, Azure, and GCP trees.
-> **Last Updated:** 2026-08-22
+> **Purpose:** Central reference for all Terraform modules across the four implementations.
+> **Scope:** AWS, Azure, GCP, and Snowflake trees.
+> **Last Updated:** 2026-08-25
 
 This document lists every module in the repository, its purpose, dependencies, and status.
 
@@ -20,6 +20,14 @@ This document lists every module in the repository, its purpose, dependencies, a
 | AWS | 8 | Dual-lock (IAM + Lambda resource policy) | `aws_iam_policy` + `aws_lambda_permission` |
 | Azure | 12 | Entra audit alerts | `app_role_assignment_required = true` + audit |
 | GCP | 10 | IAM Deny policies | `google_iam_policy` with deny rules |
+| Snowflake | 10 | Not an IaaS peer — a data platform running on one of the other three | Role graph: USAGE on write procedures granted to the executor role alone |
+
+**Snowflake is a different kind of entry in this table** and the row above understates it.
+It has no VPC, no cloud IAM, and no general-purpose compute; tools are stored procedures and
+the boundary is role inheritance rather than a policy object. It also has no
+suspend-and-resume orchestration primitive, so its approval flow is a poll rather than a
+callback. See [`terraform-snowflake/README.md`](terraform-snowflake/README.md) for the full
+comparison and [`CHOOSING-A-TREE.md`](CHOOSING-A-TREE.md) for when that trade is the right one.
 
 **Common Modules (All Clouds):**
 - `approval` — Enforces human approval for write actions
@@ -126,9 +134,12 @@ All modules are in `infra/terraform-gcp/modules/`.
 
 ## Module Comparison Matrix
 
+Choosing between the three is a decision this table does not make; see
+[CHOOSING-A-TREE.md](CHOOSING-A-TREE.md).
+
 | Feature | AWS | Azure | GCP |
 |---------|-----|-------|-----|
-| **Write Boundary Strength** | ⭐⭐⭐⭐⭐ (Dual-lock) | ⭐⭐⭐ (Single lock + mitigations) | ⭐⭐⭐⭐⭐ (Deny policy) |
+| **Write boundary** | Two allow-shaped locks — identity policy **and** Lambda resource policy | One load-bearing lock (`app_role_assignment_required`) plus two mitigations | One allow **and** one deny — the only tree a later broad grant cannot reopen |
 | **Model Provider** | Bedrock (Claude) | Azure OpenAI | Vertex AI (Claude) |
 | **State Storage** | DynamoDB | Cosmos DB + Storage Tables | Firestore |
 | **Orchestrator** | Step Functions | Logic Apps | Cloud Workflows |
@@ -137,6 +148,17 @@ All modules are in `infra/terraform-gcp/modules/`.
 | **Audit Storage** | S3 | Storage Tables | Cloud Storage |
 | **Identity Model** | Per-module IAM roles | Centralized identities | Centralized service accounts |
 | **Security Controls** | IAM + Lambda policies + Guardrails | RBAC + Entra alerts | IAM Deny policies |
+
+**On the write boundary row.** It used to rate AWS and GCP equally, at five stars each. They
+are not equal, and [docs/THREAT-MODEL.md](../docs/THREAT-MODEL.md) §6 is the reason: both hold
+against a compromised orchestrator, but only GCP holds once someone adds a broad invoke grant
+later, because a deny rule evaluates before allow policies. A star rating could not carry that,
+which is why the row now says what each tree actually has.
+
+Azure's single lock is genuinely thinner, and `modules/entra-audit` exists because of it. That
+module also buys Azure the one row in THREAT-MODEL §6 where it is the *only* tree with a
+control at all: a cloud admin acting out of band is detected there and undefended on the other
+two.
 
 ---
 
@@ -330,3 +352,37 @@ gcp: 10 modules
 - [GCP Terraform Tree](terraform-gcp/README.md)
 - [Agentic System Architecture](../docs/agentic-system-architecture/README.md)
 - [Building Blocks](../docs/agentic-system-architecture/BUILDING-BLOCKS.md)
+
+---
+
+## Snowflake (`infra/terraform-snowflake/`)
+
+All modules are in `infra/terraform-snowflake/modules/`.
+
+| Module | Purpose | Dependencies | Terraform Resources | Status | Notes |
+|--------|---------|--------------|---------------------|--------|-------|
+| **approval** | The gate. Approvals table plus the four procedures that move a record through it. The claim is `UPDATE ... WHERE status = 'APPROVED'` followed by `SQLROWCOUNT = 1`. | state, security | `snowflake_hybrid_table`, `snowflake_procedure_sql`, `snowflake_grant_ownership` | **Stable** | Hybrid table is a correctness requirement, not a performance choice — a standard table has no row locking and the claim can be won twice |
+| **archive** | Cold trace storage and an internal stage for exports leaving the account. | state | `snowflake_table`, `snowflake_stage_internal` | **Stable** | No `is_transient` at provider v2.20, so fail-safe cost is managed via the Time Travel window instead |
+| **identity** | Service users carrying federated identities rather than credentials. | state, security | `snowflake_service_user`, `snowflake_grant_account_role`, `snowflake_network_policy_attachment` | **Stable** | The module that keeps this tree free of long-lived secrets. See [`docs/SECRETS-ROTATION.md`](../docs/SECRETS-ROTATION.md) |
+| **knowledge** | Cortex Search service defined over a query rather than a copy. | state | `snowflake_table`, `snowflake_cortex_search_service` | **Stable** | No ingestion pipeline to fall behind; `target_lag` is a declared freshness contract and a standing warehouse cost |
+| **model** | The guarded Cortex entry point, and the grant discipline that makes it unavoidable. | state, security | `snowflake_procedure_sql`, `snowflake_grant_database_role` | **Stable** | Cortex has no floor setting, so the guard is structural — see the guardrail rules in [`policies/guardrail_wiring.rego`](policies/guardrail_wiring.rego) |
+| **observability** | Event table plus the structured trace table. | state | `snowflake_execute`, `snowflake_table` | **Stable** | The provider has no event-table resource; `snowflake_execute` has no drift detection, which is documented at the resource |
+| **orchestration** | Scheduled task that sweeps for approved-but-unclaimed proposals. | approval, security | `snowflake_task`, `snowflake_grant_account_role` | **Stable** | A Task is a scheduler, not a workflow engine — there is no suspend-and-resume, so approvals are polled |
+| **security** | The role graph, the network policy, and the column masking policies. | state | `snowflake_account_role`, `snowflake_grant_privileges_to_account_role`, `snowflake_network_policy`, `snowflake_masking_policy` | **Stable** | Deliberately does **not** follow Snowflake's SYSADMIN convention, which would put both boundary roles under a common ancestor |
+| **state** | Database, three schemas, warehouse, and the execution-state table. | - | `snowflake_database`, `snowflake_schema`, `snowflake_warehouse`, `snowflake_hybrid_table` | **Stable** | Owns more than its peers because Snowflake has one namespace tree that every other module writes into |
+| **tools** | Read/write split expressed as procedure grants. | state, security | `snowflake_procedure_sql`, `snowflake_grant_ownership`, `snowflake_grant_privileges_to_account_role` | **Stable** | `EXECUTE AS OWNER` on every procedure is what keeps table privileges off every caller role |
+
+### What is deliberately absent
+
+- **No `src/` handler tree.** The other three trees ship Python handlers with unit suites.
+  Here the equivalent logic is SQL inside `modules/approval`, so there is no package to build
+  — which is why this tree appears in neither the `handlers` nor the `packages` CI job.
+- **No `identity`-equivalent secret.** Every other tree inherits an ambient platform identity.
+  This one federates instead, and creates no key.
+- **No checkov coverage.** checkov ships no Snowflake policies, so this tree contributes zero
+  checks to that job. tflint's bundled ruleset and the OPA policies do cover it.
+
+### Field naming
+
+The trace field is `EVENT_TYPE`, matching AWS and Azure. GCP calls it `event` because Cloud
+Logging reserves the longer name. That divergence is recorded rather than fixed.

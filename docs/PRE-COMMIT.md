@@ -31,6 +31,23 @@
 | `check-yaml` | Validates YAML syntax | `.yaml`, `.yml` |
 | `check-added-large-files` | Blocks large files (>500kb) | All files |
 
+### Lint (astral-sh/ruff-pre-commit)
+
+| Hook ID | Purpose | Files Affected |
+|---------|---------|----------------|
+| `ruff-check` | Lints against the rule set in `pyproject.toml` | `.py` |
+
+Pinned to `v0.16.4`, which is the version the `lint` job in `.github/workflows/checks.yml`
+installs. **These two pins are one decision.** A hook running a different ruff than CI gives a
+contributor a clean commit and a red pipeline, which is worse than having no hook at all — it
+teaches them the hook cannot be trusted. Raise both together, run `ruff check .` on the new
+version first, and fix what it finds in the same change.
+
+`ruff format` is not enabled, here or in CI. It would rewrite 54 of the repository's 86 Python
+files in one commit, and this is a repository whose Python exists to be read. `E501` at
+line-length 100 already holds the one formatting property that matters for reading two files
+side by side.
+
 ### Project-Specific Hooks
 
 #### Terraform Validate
@@ -73,6 +90,10 @@ To update to the latest versions of the hooks:
 pre-commit autoupdate
 ```
 
+**Not for `ruff-check`.** `autoupdate` moves every `rev` to the newest tag, which silently breaks
+the pin agreement with the `lint` job in CI. If it has already moved the ruff entry, either revert
+it or raise `checks.yml` to match in the same commit.
+
 ### Bypassing Hooks
 To skip pre-commit checks for a single commit:
 ```bash
@@ -102,8 +123,18 @@ Ensure:
 
 ## CI Integration
 
-The same checks that run locally also run in CI (via `.github/workflows/checks.yml`).
-Pre-commit hooks help you catch issues before pushing.
+The same checks that run locally also run in CI (via `.github/workflows/checks.yml`), but the
+local set is a subset: the hooks lint, syntax-check, and validate the directories you touched,
+while CI additionally runs the write-boundary suites, the handler tests, the package builds, the
+link check, `tflint`, `checkov`, and a gitleaks scan over the full history. CI is the authority.
+`git commit --no-verify` skips every hook here, which is the other reason nothing in this file is
+a gate.
+
+`tflint` and `checkov` are deliberately CI-only. Both sweep the whole `infra/` tree rather than
+the files in your commit — tflint because a module's `required_providers` block is a property of
+the directory and not of the line you edited, checkov because its findings are cross-resource. A
+hook that re-scans thirty modules to check a one-line comment change is a hook people disable.
+Run them by hand when you touch `infra/`; CONTRIBUTING.md carries both commands.
 
 ## Configuration File
 

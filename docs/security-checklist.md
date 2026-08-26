@@ -8,7 +8,7 @@ Security considerations for deploying agentic and ML systems in enterprise.
 
 2. Secrets & Credentials
    - Store secrets in a secrets manager (do not commit to repo).
-   - Rotate keys regularly and grant minimal scopes.
+   - Rotate keys regularly and grant minimal scopes. For this repository's own trees, see [SECRETS-ROTATION.md](SECRETS-ROTATION.md).
 
 3. Runtime Isolation
    - Sandbox untrusted code execution and tool integrations.

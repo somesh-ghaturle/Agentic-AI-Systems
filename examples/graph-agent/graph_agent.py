@@ -16,7 +16,15 @@ graph rather than about a prompt.
 """
 
 import sys
-from typing import Any, Optional
+
+# TypedDict comes from typing, not typing_extensions. A try/except further down used to
+# fall back to typing_extensions "for Python 3.9 and below", which was dead in two
+# independent ways: typing.TypedDict has existed since 3.8, so the branch was unreachable,
+# and this example requires 3.10+ regardless because langgraph will not install below it.
+# Its only real effect was an undeclared dependency — the fallback named a package
+# requirements.txt did not pin, which worked solely because langgraph pulls it in
+# transitively. .github/scripts/example_deps.py now fails on exactly that.
+from typing import Any, Optional, TypedDict
 
 # The langgraph import is soft, and that is not politeness — it is what makes this file
 # testable. The first version called sys.exit() here, so importing the module without
@@ -39,11 +47,6 @@ MISSING = (
     "    python3 -m venv .venv && .venv/bin/pip install -r requirements.txt\n"
     "Requires Python 3.10+."
 )
-
-try:
-    from typing import TypedDict
-except ImportError:  # pragma: no cover - Python 3.9 and below
-    from typing_extensions import TypedDict
 
 
 class State(TypedDict, total=False):
@@ -177,12 +180,31 @@ def route(state: State) -> str:
     return "draft" if state["kind"] == "write" else "retrieve"
 
 
-def build():
+def build(checkpointer=None):
     """Assemble and compile the graph.
 
     Written as a function returning a compiled graph so the topology is a value that tests can
     inspect — `graph.get_graph().draw_mermaid()` renders the diagram in architecture.md, which
     is what "the topology is reviewable" means in practice.
+
+    `checkpointer` is the production seam. It used to be hardcoded to `InMemorySaver()`, with
+    the README telling you to edit this line for a real deployment — which meant the one thing
+    standing between the demo and a durable approval gate was a source edit nobody could test.
+    Passing it in makes durability a deployment choice instead:
+
+        # pip install langgraph-checkpoint-sqlite
+        from langgraph.checkpoint.sqlite import SqliteSaver
+        with SqliteSaver.from_conn_string("approvals.db") as saver:
+            graph = build(checkpointer=saver)
+
+    The default stays in-memory because the demo and the test suite should need no database,
+    and because a durable checkpointer that silently defaults on would put approval state on
+    disk without anyone asking for it.
+
+    What the injected checkpointer actually buys is visible in the tests: a *second* graph
+    built over the same checkpointer resumes a thread the first one suspended. The state lives
+    in the checkpointer, not in the graph object — which is the property a process restart
+    depends on, and the one an in-memory default cannot survive.
     """
     if not LANGGRAPH_AVAILABLE:
         raise ImportError(MISSING)
@@ -205,10 +227,10 @@ def build():
     builder.add_edge("execute", "respond")
     builder.add_edge("respond", END)
 
-    # The checkpointer is what makes interrupt() durable rather than a pause. InMemorySaver is
-    # for the demo; a real deployment uses the Postgres or SQLite saver, and that swap is the
-    # only change needed to survive a process restart.
-    return builder.compile(checkpointer=InMemorySaver())
+    # The checkpointer is what makes interrupt() durable rather than a pause. The default is
+    # in-memory and dies with the process; see the docstring for the swap and why it is an
+    # argument rather than an edit.
+    return builder.compile(checkpointer=checkpointer or InMemorySaver())
 
 
 def run(graph, request, thread_id, approve=None):

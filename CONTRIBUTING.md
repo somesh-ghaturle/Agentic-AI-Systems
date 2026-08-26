@@ -32,7 +32,7 @@ tier sets the bar.
 
 ### Dependencies
 
-Seven of eleven examples have an empty `requirements.txt` carrying only a comment explaining
+Six of twelve examples have an empty `requirements.txt` carrying only a comment explaining
 why. Match that. The question is not "would a framework be convenient here" but "is the
 framework the thing being demonstrated":
 
@@ -109,12 +109,16 @@ attribute.
 
 ## CI
 
-Two workflows, both credential-free:
+Three workflows, all credential-free:
 
-- [`checks.yml`](.github/workflows/checks.yml) — fmt, validate, boundary tests, handler tests,
-  package builds, example suites, syntax, and link checking. Fast, no PyPI.
+- [`checks.yml`](.github/workflows/checks.yml) — fmt, `ruff check`, validate, `tflint`, `checkov`,
+  boundary tests, handler tests, package builds, example suites, syntax, link checking, and a
+  gitleaks scan. Fast, and the only PyPI it touches is the pinned ruff and checkov installs.
 - [`example-deps.yml`](.github/workflows/example-deps.yml) — installs each example's pins and
   imports it. Slower, needs PyPI, fires only on `examples/` and `tests/`.
+- [`codeql.yml`](.github/workflows/codeql.yml) — CodeQL over the Python and the workflow files,
+  on push and on a weekly timer. It is separate because it needs `security-events: write` and
+  because a scheduled scan answers a question a push trigger cannot.
 
 **A check that needs a secret is a check that gets disabled the first time one expires.** If
 your contribution cannot be verified without credentials, that is a signal about the
@@ -126,14 +130,29 @@ Before opening a pull request:
 python3 -m unittest discover -s tests
 python3 -m compileall -q examples/
 python3 .github/scripts/linkcheck.py .
+ruff check .                               # pip install ruff==0.16.4
 terraform fmt -recursive -check infra/     # if you touched infra/
+checkov --config-file .checkov.yaml        # if you touched infra/; pip install checkov==3.3.13
 ```
+
+Pin ruff and checkov to the versions in the `lint` and `checkov` jobs. Rules live in
+`pyproject.toml` and `.checkov.yaml`, so no flags are needed and none should be added here — a
+flag you pass locally is a rule CI does not apply.
+
+`tflint` is not in that list because it wants a per-directory sweep rather than one command; the
+`tflint` job in `checks.yml` carries the loop, and `.tflint.hcl` at the root carries the rules.
+
+If checkov reports something new, the fix is a fix. Adding a check to the skip list in
+`.checkov.yaml` is a statement that the reference architecture deliberately does not do that
+thing, it needs the reason written next to it, and it belongs in the same pull request as
+whatever prompted it.
 
 ### Pre-commit hooks
 
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml) runs a subset of the above automatically on
-`git commit` — whitespace and end-of-file fixes, YAML syntax, a large-file guard, `py_compile` on
-changed Python, and `terraform validate` on the directories whose `.tf` files you touched:
+`git commit` — whitespace and end-of-file fixes, YAML syntax, a large-file guard, `py_compile` and
+`ruff check` on changed Python, and `terraform validate` on the directories whose `.tf` files you
+touched:
 
 ```bash
 pip install pre-commit

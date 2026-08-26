@@ -21,7 +21,24 @@
 # The executor is also the sole holder of the invoke app role on write tools — granted
 # over in modules/tools, which takes this module's executor principal ID as input.
 
-data "azurerm_subscription" "current" {}
+terraform {
+  required_version = ">= 1.6"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 5.0"
+    }
+    azuread = {
+      source  = "hashicorp/azuread"
+      version = "~> 3.0"
+    }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
+  }
+}
+
 
 data "azuread_client_config" "current" {}
 
@@ -240,6 +257,19 @@ resource "azurerm_storage_account" "approval" {
   allow_nested_items_to_be_public = false
   shared_access_key_enabled       = var.storage_shared_access_key_enabled
   public_network_access_enabled   = var.storage_public_network_access_enabled
+
+  blob_properties {
+    # Soft delete, not versioning. Versioning answers "what did this look like before the
+    # overwrite"; this answers "the delete was a mistake, put it back" — and a delete is
+    # the accident that has no other recovery path here.
+    delete_retention_policy {
+      days = var.soft_delete_retention_days
+    }
+
+    container_delete_retention_policy {
+      days = var.soft_delete_retention_days
+    }
+  }
 
   tags = var.tags
 }

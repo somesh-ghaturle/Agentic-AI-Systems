@@ -21,6 +21,17 @@
 # versioning, which is enabled below so that an overwrite creates a version rather than
 # destroying the record.
 
+terraform {
+  required_version = ">= 1.6"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 5.0"
+    }
+  }
+}
+
+
 resource "azurerm_storage_account" "archive_sa" {
   name                = replace("${var.name_prefix}archivesa", "-", "")
   resource_group_name = var.resource_group_name

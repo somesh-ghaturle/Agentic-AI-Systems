@@ -143,3 +143,14 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "soft_delete_retention_days" {
+  description = "Days a deleted blob or container remains recoverable."
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.soft_delete_retention_days >= 1 && var.soft_delete_retention_days <= 365
+    error_message = "soft_delete_retention_days must be between 1 and 365."
+  }
+}

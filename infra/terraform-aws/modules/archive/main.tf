@@ -95,6 +95,14 @@ resource "aws_s3_bucket_lifecycle_configuration" "archive" {
     noncurrent_version_expiration {
       noncurrent_days = var.noncurrent_version_expiration_days
     }
+
+    # A multipart upload that never completes leaves its parts billed and invisible —
+    # they do not appear in a bucket listing, so the cost shows up with nothing to point
+    # at. Traces are large enough to be uploaded in parts, which is what makes this
+    # reachable rather than theoretical.
+    abort_incomplete_multipart_upload {
+      days_after_initiation = var.abort_incomplete_upload_days
+    }
   }
 }
 

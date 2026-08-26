@@ -10,9 +10,9 @@ python3 -m venv .venv
 .venv/bin/python graph_agent.py
 ```
 
-Requires Python 3.10+ — LangGraph dropped 3.9, which makes this the only example here with a
-floor above 3.9. No model and no API key: the node functions are deterministic, so the example
-stays about the graph.
+Requires Python 3.10+ — LangGraph dropped 3.9. `multi-agent-debate` shares that floor for an
+unrelated reason, so those two are the examples here that will not run on 3.9. No model and no
+API key: the node functions are deterministic, so the example stays about the graph.
 
 ## The topology, drawn by the graph itself
 
@@ -52,8 +52,21 @@ and hand back later. That works, and it puts the burden of durability on the cal
 `approval` node calls `interrupt()`, the graph suspends, its state goes to a checkpointer, and
 resuming is `Command(resume=...)` against a thread id — from a different process, hours later.
 
-Swap `InMemorySaver` for the Postgres or SQLite checkpointer and that sentence survives a
-deployment. Nothing else in the file changes.
+Pass a durable checkpointer to `build()` and that sentence survives a process restart:
+
+```python
+from langgraph.checkpoint.sqlite import SqliteSaver   # pip install langgraph-checkpoint-sqlite
+
+with SqliteSaver.from_conn_string("approvals.db") as saver:
+    graph = build(checkpointer=saver)
+```
+
+It is an argument rather than a source edit on purpose. Hardcoded, the one change between the
+demo and a durable approval gate was a line no test could reach; as a seam,
+`TestDurableInterrupt` asserts what actually matters — a second graph built over the same
+checkpointer resumes a thread the first one suspended. The default stays in-memory so the demo
+and the suite need no database.
+
 
 The other three differences are in
 [BUILDING-BLOCKS §4](../../docs/agentic-system-architecture/BUILDING-BLOCKS.md): declared
@@ -99,6 +112,8 @@ five steps in a line — that is five function calls.
 
 ## Related
 
+- [architecture.md](architecture.md) — the topology as the graph reports it, where the write
+  boundary sits, and why the classifier is the known weak point
 - [hermes-agent](../hermes-agent/README.md) — the same boundary in plain application code, with tests
 - [Building blocks §4](../../docs/agentic-system-architecture/BUILDING-BLOCKS.md) — orchestration, and when a graph earns its keep
 - [Building blocks §6](../../docs/agentic-system-architecture/BUILDING-BLOCKS.md) — approval gates

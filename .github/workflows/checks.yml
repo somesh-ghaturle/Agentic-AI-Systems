@@ -35,6 +35,9 @@ on:
       - ".github/scripts/**"
       - ".github/workflows/checks.yml"
       - ".gitleaks.toml"
+      - "pyproject.toml"
+      - ".tflint.hcl"
+      - ".checkov.yaml"
   pull_request:
     paths:
       - "infra/**"
@@ -45,6 +48,9 @@ on:
       - ".github/scripts/**"
       - ".github/workflows/checks.yml"
       - ".gitleaks.toml"
+      - "pyproject.toml"
+      - ".tflint.hcl"
+      - ".checkov.yaml"
 
 permissions:
   contents: read
@@ -77,7 +83,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      # One pass over all three trees — formatting has no per-root component.
+      # One pass over all four trees — formatting has no per-root component.
       - name: fmt
         run: terraform fmt -recursive -check -diff infra/
 
@@ -94,6 +100,47 @@ jobs:
       # own matching silently breaks reports success.
       - name: provider pins
         run: python3 .github/scripts/tfconstraints.py infra
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Pinned for the same reason `terraform_version` above is pinned, and the reason bites
+      # harder here: ruff adds rules to existing groups between releases, so an unpinned
+      # install is a moving rule set and not just a moving bug-fix stream. `select` in
+      # pyproject.toml names groups — E, F, I, B, UP, SIM, C4, RUF — and one new rule inside
+      # any of them turns a commit red that nobody touched, on whoever pushes next.
+      #
+      # Raise this deliberately: run `ruff check .` locally on the new version first and fix
+      # what it finds in the same change. Dependabot does not watch this pin, because it is a
+      # `pip install` inside a run step rather than a manifest — the same trade the pinned
+      # gitleaks version further down already makes.
+      - name: Install ruff
+        run: pip install ruff==0.16.4
+
+      # The Python half of the parity `terraform fmt -check` above has had all along. Every
+      # .tf file in this repository was gated on formatting while 86 Python files across
+      # examples/, infra/*/src/, tests/ and .github/scripts/ were gated on nothing, and that
+      # asymmetry is visible to anyone who opens both halves of the repo.
+      #
+      # No flags on purpose. Every rule lives in pyproject.toml at the root, so the command
+      # here is the command a contributor runs locally and reaches the same verdict. A flag
+      # set only in the workflow is a rule that fails for the first time in CI, on someone
+      # who had no way to see it coming.
+      #
+      # `ruff format` is deliberately NOT run. It would rewrite 54 of the 86 Python files in one
+      # commit, and in a repository whose Python exists to be read — where `git blame` is the
+      # record of why each example looks the way it does — that costs more than the uniformity
+      # buys. E501 at line-length 100 already holds the one formatting property that matters
+      # for reading two files side by side.
+      - name: Lint
+        run: ruff check .
 
   validate:
     name: validate
@@ -114,6 +161,9 @@ jobs:
           - infra/terraform-gcp/envs/dev
           - infra/terraform-gcp/envs/prod
           - infra/terraform-gcp/envs/staging
+          - infra/terraform-snowflake/envs/dev
+          - infra/terraform-snowflake/envs/prod
+          - infra/terraform-snowflake/envs/staging
     steps:
       - uses: actions/checkout@v7
 
@@ -132,6 +182,170 @@ jobs:
       - name: validate
         run: terraform -chdir="${{ matrix.root }}" validate -no-color
 
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install tflint
+        env:
+          # Pinned with a checksum for the same two reasons the gitleaks pin below is:
+          # this step downloads a binary over the network and then runs it against the
+          # whole `infra/` tree, and a linter whose rule set can change between two runs
+          # of the same commit turns a green build into an unreproducible one. tflint
+          # ships the `terraform` ruleset bundled, so there is no `tflint --init` and no
+          # second network hop for a plugin.
+          #
+          # Raise this deliberately: run the sweep below locally on the new version first
+          # and fix what it finds in the same change.
+          TFLINT_VERSION: "0.64.0"
+          TFLINT_SHA256: "cca9d13e2e1d7a2c627af60ff899a3c9b74212899416aeb96ec764d2ef954537"
+        run: |
+          curl -sSfL -o tflint.zip \
+            "https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip"
+          echo "${TFLINT_SHA256}  tflint.zip" | sha256sum -c -
+          unzip -o -q tflint.zip tflint
+          sudo install tflint /usr/local/bin/tflint
+
+      # Every module directory and every env root, not just the roots. `validate` above
+      # already covers the roots, and only the roots — a module is checked there through
+      # whichever root happens to call it, with that root's variables. tflint reads each
+      # directory on its own terms, which is the only way `modules/networking` gets told
+      # it declares no `required_version`: no root was ever going to report that on its
+      # behalf.
+      #
+      # Env roots get --var-file. Without it tflint evaluates `var.tools` as its empty
+      # default, `local.tool_members` derives from it and comes out empty, and every
+      # `local.tool_members["retrieve"]` in the file reports as an invalid index — six
+      # errors across Azure and GCP that describe the empty default rather than the code.
+      # terraform.tfvars.example is the file the QUICKSTART tells a reader to copy, so
+      # linting against it lints the configuration people actually apply.
+      #
+      # Rules live in .tflint.hcl at the repository root, so the command a contributor
+      # runs locally reaches the same verdict as this one.
+      - name: Lint every module and root
+        run: |
+          failed=0
+          for dir in infra/terraform-*/modules/*/ infra/terraform-*/envs/*/; do
+            args=(--chdir="$dir" --config="$PWD/.tflint.hcl" --format=compact)
+            if [ -f "$dir/terraform.tfvars.example" ]; then
+              args+=(--var-file=terraform.tfvars.example)
+            fi
+            if ! tflint "${args[@]}"; then
+              failed=$((failed + 1))
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::tflint reported issues in ${failed} directories"
+            exit 1
+          fi
+          echo "tflint clean across all module directories and env roots"
+
+  checkov:
+    name: checkov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Pinned for the reason the ruff pin above spells out, and one more that is specific
+      # to a policy scanner: checkov ships new checks continuously. An unpinned install
+      # means the rule set changes under a commit nobody touched, and the failure lands on
+      # whoever pushes next rather than whoever caused it.
+      #
+      # Raise this deliberately. New checks in a new version are the point of raising it —
+      # run `checkov --config-file .checkov.yaml` locally first, then either fix what it
+      # found or add it to the skip list with a reason, in the same change.
+      - name: Install checkov
+        run: pip install checkov==3.3.13
+
+      # No `--soft-fail`. This job fails the build on any finding that is not skipped by
+      # name in .checkov.yaml, which is what makes the skip list readable as a statement
+      # about the architecture rather than as a way to get green. There were 110 findings
+      # when this job was written; 9 were fixed and 101 are skipped with a stated reason,
+      # grouped by what the reason is.
+      #
+      # LOG_LEVEL=ERROR because checkov logs a WARNING for every HCL interpolation its
+      # Python evaluator cannot parse — several dozen here, all benign, all in front of
+      # the result. A failure nobody can find in the log is a failure nobody acts on.
+      #
+      # Everything else — which directories, which framework, which checks are skipped —
+      # lives in .checkov.yaml, so the command a contributor runs locally reaches the same
+      # verdict as this one.
+      - name: Scan the Terraform trees
+        env:
+          LOG_LEVEL: ERROR
+        run: checkov --config-file .checkov.yaml
+
+  conftest:
+    name: conftest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install conftest
+        env:
+          # Pinned with a checksum for the same reasons the tflint and gitleaks pins are:
+          # a binary fetched over the network and then run against the whole tree, whose
+          # verdict must not change between two runs of the same commit. The pin covers OPA
+          # too — conftest 0.62.0 embeds OPA 1.6.0, and OPA 1.0 removed the `deny[msg]`
+          # syntax these policies would otherwise have been written in.
+          CONFTEST_VERSION: "0.62.0"
+          CONFTEST_SHA256: "284231908e4cf66d156e5577c3eee2f67d9f2edf2521fa2309e0df1969f871e5"
+        run: |
+          curl -sSfL -o conftest.tar.gz \
+            "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          echo "${CONFTEST_SHA256}  conftest.tar.gz" | sha256sum -c -
+          tar xzf conftest.tar.gz conftest
+          sudo install conftest /usr/local/bin/conftest
+
+      # Parity with `terraform fmt -check` in the fmt job above: the policies are source in
+      # this repository like the HCL is, and a formatter nobody runs is a diff waiting to
+      # land on top of an unrelated change.
+      - name: Policy formatting
+        run: conftest fmt --check infra/policies
+
+      # The policies' own unit tests, and they run FIRST on purpose. A policy that cannot
+      # fail passes every tree it is pointed at, which looks identical to a policy that
+      # holds. `verify` runs the `test_` rules in infra/policies/, each of which asserts
+      # both directions: silent on wired config, firing on config missing exactly the
+      # wiring reference. Deleting a rule body turns the tree scan below green and turns
+      # this step red.
+      - name: Policy unit tests
+        run: conftest verify --policy infra/policies
+
+      # `--combine` merges every file into one document before evaluating. That is not an
+      # optimisation — it is what makes these policies expressible. The resource that
+      # declares a guardrail and the resource that wires it are routinely in different
+      # files, and a per-file pass can only ever see half of the pair.
+      #
+      # The file list comes from `find`, not from pointing conftest at the directory,
+      # because `--parser hcl2` forces every file it is given through the HCL parser —
+      # including .gitignore, .terraform.lock.hcl, and the zips under src/. Naming the
+      # .tf files is narrower than an ignore regex and does not need editing the next
+      # time a new file type appears under infra/.
+      #
+      # Per tree rather than all at once, so the failure names the tree it came from.
+      - name: Policies over the four trees
+        run: |
+          failed=0
+          for tree in infra/terraform-aws infra/terraform-azure infra/terraform-gcp infra/terraform-snowflake; do
+            echo "--- ${tree} ---"
+            if ! find "$tree" -name '*.tf' -not -path '*/.terraform/*' -print0 \
+              | xargs -0 conftest test --parser hcl2 --combine --policy infra/policies; then
+              failed=$((failed + 1))
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::conftest reported policy failures in ${failed} trees"
+            exit 1
+          fi
+          echo "conftest clean across all four trees"
+
   write-boundary:
     name: write boundary
     runs-on: ubuntu-latest
@@ -142,9 +356,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Three suites, one job — one per tree.
+      # Four suites, one job — one per tree.
       #
-      # All three guard mistakes that `terraform validate` is perfectly happy with, because
+      # All four guard mistakes that `terraform validate` is perfectly happy with, because
       # in each case the wrong value is a valid value in a valid attribute.
       #
       # This job used to skip AWS on the grounds that the boundary there is a Lambda
@@ -179,6 +393,15 @@ jobs:
       - name: GCP — assert the write boundary holds
         run: python3 -m unittest discover -s infra/terraform-gcp/tests -v
 
+      # Snowflake: the boundary is the role graph, which makes it the easiest of the four
+      # to break by accident — every way of breaking it is a valid grant that applies
+      # cleanly and reads as ordinary permission tidying. The suite walks role inheritance
+      # transitively rather than checking pairs, because modules/orchestration adds a
+      # legitimate edge (TASK_OWNER inherits EXECUTOR) and a blocklist would either forbid
+      # that or miss the dangerous ones two hops out.
+      - name: Snowflake — assert the role graph keeps the boundary
+        run: python3 -m unittest discover -s infra/terraform-snowflake/tests -v
+
   examples:
     name: examples
     runs-on: ubuntu-latest
@@ -189,17 +412,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Both example suites, one runner, no dependencies — the same reasoning as the
+      # Ten example suites, one runner, no dependencies — the same reasoning as the
       # write-boundary job above. hermes-agent asserts that a write cannot happen by the
       # router's path; trace-eval asserts that its own checks still catch a run that
-      # bypasses it. Neither needs a model, a network, or a cloud account, which is what
-      # makes them safe to gate merges on.
-      - name: Example suites — hermes-agent, trace-eval, starter-agent
+      # bypasses it. None of the nine needs a model, a network, or a cloud account, which is
+      # what makes them safe to gate merges on.
+      - name: Example suites — ten of the thirteen examples
         run: python3 -m unittest discover -s tests -v
 
-      # Every example, not just the three with suites. Five of the eight — e2e-agent,
-      # langchain-agent, rag-faiss, rag-langchain, ray-orchestrator — were verified by nothing
-      # at all until this step, which is how two of them sat here importing a LangChain v0.x
+      # Every example, not just the ten with suites. langchain-agent, rag-langchain, and
+      # ray-orchestrator still have none. Before this step existed, five of the then-eight were
+      # verified by nothing at all, which is how two of them sat here importing a LangChain v0.x
       # API that the pinned version had already deleted while this workflow stayed green.
       #
       # compileall parses without importing, so it needs none of their dependencies and
@@ -213,6 +436,25 @@ jobs:
       # commit to infra/.
       - name: All examples — syntax
         run: python3 -m compileall -q examples/
+
+      # Every third-party module an example imports must be pinned in its own
+      # requirements.txt, and no example may import another in a cycle.
+      #
+      # The first half is the one that bites. graph-agent imported typing_extensions while
+      # pinning only langgraph, and passed everything above — compileall parses without
+      # importing, and the example-deps job installs langgraph, which drags typing-extensions
+      # in transitively. Nothing here runs an example against only what it declares, so an
+      # undeclared import is invisible until someone installs it from its requirements file
+      # and it fails for them and not for us.
+      #
+      # The second half is currently one edge: trace-eval evaluates hermes-agent by putting
+      # the sibling directory on sys.path. That is deliberate and fine in one direction; the
+      # check is here so the return edge cannot be added silently.
+      #
+      # Tested in tests/test_example_deps.py, because a guard whose name matching breaks
+      # reports success on everything.
+      - name: Example dependencies are declared, and acyclic
+        run: python3 .github/scripts/example_deps.py examples
 
   docs:
     name: docs
@@ -278,6 +520,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # terraform-snowflake is absent on purpose: its handler logic is SQL stored
+        # procedures defined in modules/approval, so there is no package to build. See
+        # infra/terraform-snowflake/ARCHITECTURE.md § "Remaining work" — it is also why
+        # that tree has no entry in the `handlers` job.
         tree: [terraform-aws, terraform-azure, terraform-gcp]
     steps:
       - uses: actions/checkout@v7

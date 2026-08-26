@@ -109,7 +109,10 @@ def main():
         return 1
 
     total = sum(len(sites) for by in seen.values() for sites in by.values())
-    print(f"{checked} .tf files checked, {total} provider constraints, {len(seen)} providers, all pinned and consistent")
+    print(
+        f"{checked} .tf files checked, {total} provider constraints, "
+        f"{len(seen)} providers, all pinned and consistent"
+    )
     return 0
 
 
