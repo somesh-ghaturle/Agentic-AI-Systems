@@ -1,0 +1,2 @@
+# Standard library only. Discovery is importlib.util against a local directory; the read/write
+# split needs nothing beyond dataclasses and a dict.

@@ -339,7 +339,7 @@ All examples run without cloud dependencies (except where noted):
 | trace-eval | `python3 eval.py` | None | Trace-level evaluation |
 | starter-agent | `python3 agent.py "query"` | None | Minimal agent loop |
 | harness-agent | `python3 agent.py "query"` | None | Continuity across context windows |
-| checkpoint-agent | `python3 agent.py` | None | Resuming after a crash, idempotently |
+| checkpoint-agent | `python3 agent.py "deploy-model"` | None | Resuming after a crash, idempotently |
 | multi-agent-debate | `python3 agent.py` | None | Several agents argue; none of them approves |
 | context-compaction | `python3 compact.py` | None | Context management |
 | graph-agent | `python3 graph_agent.py "query"` | LangGraph | Read/write split as a graph |
@@ -403,8 +403,10 @@ done
 
 ### Get Help
 
+- **FAQ:** [docs/FAQ.md](docs/FAQ.md) — including the three questions whose common answer is wrong
 - **Architecture:** [docs/agentic-system-architecture/](docs/agentic-system-architecture/README.md)
 - **Threat Model:** [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md)
+- **How to Recover:** [docs/HOW-TO-RECOVER.md](docs/HOW-TO-RECOVER.md) — locked or lost Terraform state, a corrupted execution-state row, a stuck approval claim, per cloud
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **GitHub Issues:** [github.com/somesh-ghaturle/Agentic-AI-Systems/issues](https://github.com/somesh-ghaturle/Agentic-AI-Systems/issues)
 

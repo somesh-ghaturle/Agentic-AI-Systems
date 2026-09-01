@@ -66,3 +66,9 @@ variable "approver_roles" {
     error_message = "approver_roles must name at least one human role in prod. With none, every proposal stays PENDING forever."
   }
 }
+
+variable "cost_monitor_credit_quota" {
+  description = "Monthly credit quota for the warehouse's resource monitor. Null (the default) leaves prod unmonitored until an operator sets this from observed spend plus headroom — the same reasoning modules/state's own variable gives for not guessing a number here. Suspension is left off in this environment's wiring regardless of quota; see modules/state/variables.tf on why."
+  type        = number
+  default     = null
+}

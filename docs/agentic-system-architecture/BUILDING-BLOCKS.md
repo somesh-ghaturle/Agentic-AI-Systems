@@ -375,8 +375,9 @@ def generate_fingerprint(action: str, args: dict) -> str:
 - Single-use: A claim is consumed after use
 - Expiring: a *pending* approval never expires. An `executing` claim may be taken over after
   `STALE_CLAIM_SECONDS`, default 900 (fifteen minutes) — a liveness window for a dead executor,
-  not an authorization expiry. GCP exposes it as `var.stale_claim_seconds`; AWS and Azure set it
-  as a handler environment variable
+  not an authorization expiry. GCP and Snowflake expose it as `var.stale_claim_seconds`; AWS and
+  Azure have no dedicated variable and take it through the executor's generic environment
+  passthrough, defaulting to 900 when unset
 - Bound to arguments: Changing any argument invalidates the claim
 
 ---

@@ -58,3 +58,58 @@ variable "max_cluster_count" {
   type        = number
   default     = 1
 }
+
+variable "cost_monitor_credit_quota" {
+  description = <<-EOT
+    Monthly credit quota for this warehouse's resource monitor. Null disables the monitor
+    entirely — the same disable-by-null convention as daily_cost_threshold_usd on the other
+    three trees' observability modules, and the same caveat: set it from observed credit
+    consumption plus headroom, not from a guess.
+
+    This is not the same signal as those trees' cost alarms. Theirs sum cost_usd from
+    application trace records — a proxy for LLM API spend — and only ever alert. This
+    tracks actual Snowflake credit consumption directly from the platform's own billing
+    unit, and can enforce a cap, not just report one; see cost_monitor_suspend_trigger.
+  EOT
+  type        = number
+  default     = null
+}
+
+variable "cost_monitor_frequency" {
+  description = "How often the credit quota resets. MONTHLY aligns with how Snowflake bills; DAILY reads as a runaway-loop guard rather than a budget, closer to what the other three trees' dev defaults are for."
+  type        = string
+  default     = "MONTHLY"
+}
+
+variable "cost_monitor_notify_triggers" {
+  description = "Percentages of credit_quota at which NOTIFY_USERS is alerted. No enforcement at any of these — the warehouse keeps running."
+  type        = list(number)
+  default     = [75, 90]
+}
+
+variable "cost_monitor_notify_users" {
+  description = "Snowflake usernames to notify when a trigger fires. Must already exist; the provider does not validate this at plan time — a typo here fails silently rather than at apply."
+  type        = list(string)
+  default     = []
+}
+
+variable "cost_monitor_suspend_trigger" {
+  description = <<-EOT
+    Percentage of credit_quota at which the warehouse SUSPENDs: running queries finish,
+    new ones queue until the next reset or a manual resume. Null leaves the monitor
+    alert-only.
+
+    Recommended in dev and staging, where a paused warehouse is a minor inconvenience and
+    catching a runaway loop cheaply matters more. Left null in prod by default — a resource
+    monitor cannot tell a genuine traffic spike from a bug, and suspending production
+    mid-execution over a spend spike is usually the worse outage of the two.
+  EOT
+  type        = number
+  default     = null
+}
+
+variable "cost_monitor_suspend_immediate_trigger" {
+  description = "Percentage of credit_quota at which the warehouse SUSPENDs IMMEDIATELY, killing in-flight queries rather than letting them finish. Null disables. Only meaningful set above cost_monitor_suspend_trigger — it exists for the case where even letting current queries finish is unacceptable spend."
+  type        = number
+  default     = null
+}

@@ -93,8 +93,8 @@ separates claims by evidential weight: primary documentation, established practi
 consensus, and this repository's own framing. If you add a claim, add its row. If you cite a
 URL, fetch it first — a fabricated link in a document about provenance is worse than no link.
 
-Diagrams are mermaid, inline in markdown, so GitHub renders them and no build step is needed.
-Do not commit `.mmd` files or generated SVGs.
+Diagrams are Mermaid source in fenced markdown blocks, so GitHub renders them and no build step is needed.
+The repository enforces this with `.github/scripts/mermaid_guard.py`; a `.mmd` file or an empty Mermaid block is not allowed.
 
 ## Infrastructure
 

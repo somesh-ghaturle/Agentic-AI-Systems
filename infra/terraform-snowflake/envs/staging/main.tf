@@ -63,6 +63,14 @@ module "state" {
   warehouse_size       = "XSMALL"
   auto_suspend_seconds = 60
   max_cluster_count    = 1
+
+  # Higher than dev's guard, same reasoning as data_retention_time_in_days above: enough
+  # headroom for a rehearsal to run without tripping on ordinary usage, still low enough to
+  # catch a loop that dev's smaller quota would have caught too. Suspension stays on —
+  # staging is destroyable, so a paused warehouse here costs nothing lasting.
+  cost_monitor_credit_quota              = 25
+  cost_monitor_suspend_trigger           = 100
+  cost_monitor_suspend_immediate_trigger = 110
 }
 
 module "security" {

@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: >-
+  If you use this repository in research, teaching, or engineering work, please cite it using the metadata below.
+
+title: Agentic AI Systems
+abstract: >-
+  Reference implementations of agentic system design patterns, approval-boundary enforcement,
+  security-minded example architectures, and cloud-ready Terraform examples for AWS, Azure,
+  and GCP.
+
+authors:
+  - family-names: Ghaturle
+    given-names: Somesh
+
+version: 0.1.0
+date-released: 2026-09-01
+repository-code: https://github.com/somesh-ghaturle/Agentic-AI-Systems
+url: https://github.com/somesh-ghaturle/Agentic-AI-Systems
+license: Apache-2.0
+keywords:
+  - agentic-ai
+  - ai-safety
+  - approval-gates
+  - terraform
+  - architecture
+  - examples

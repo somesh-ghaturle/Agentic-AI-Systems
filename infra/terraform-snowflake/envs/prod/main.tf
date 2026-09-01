@@ -72,6 +72,12 @@ module "state" {
   # Multi-cluster, so an approval sweep does not queue behind a long retrieval. This
   # scales concurrency, not speed: it does not make any single query faster.
   max_cluster_count = 3
+
+  # Notify-only by default: no suspend_trigger is set here, so a real traffic spike cannot
+  # auto-suspend production the way it deliberately can in dev and staging. See
+  # cost_monitor_credit_quota's own description for why null is the default rather than a
+  # guessed number.
+  cost_monitor_credit_quota = var.cost_monitor_credit_quota
 }
 
 module "security" {

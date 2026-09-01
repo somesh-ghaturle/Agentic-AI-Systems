@@ -62,6 +62,8 @@ Agentic-AI-Systems/
 ├── examples/                     thirteen runnable examples, worked → minimal
 │   ├── hermes-agent/             the write boundary in application code
 │   ├── trace-eval/               scoring the path rather than the answer
+│   ├── eval-red-teaming/         prompt-injection probes against an approval gate
+│   ├── approval-gate-fuzzing/    prompt variants that try to bypass approval
 │   ├── harness-agent/            continuity across context windows
 │   ├── multi-agent-debate/       several agents argue; none of them approves
 │   ├── checkpoint-agent/         resuming work after a crash, idempotently
@@ -71,6 +73,7 @@ Agentic-AI-Systems/
 │   ├── rag-langchain/            the same, through LangChain
 │   ├── langchain-agent/          a minimal LangChain agent
 │   ├── context-compaction/       what survives when history is compressed
+│   ├── context-overflow/         recency is not the same as relevance
 │   ├── graph-agent/              the read/write split as an explicit graph
 │   └── ray-orchestrator/         parallel task execution with Ray
 ├── docs/
@@ -81,11 +84,14 @@ Agentic-AI-Systems/
 │   ├── CONCEPTS-PLAN.md               adding harness, context, and graph engineering
 │   ├── THREAT-MODEL.md                the write boundary from the adversary's side
 │   ├── MIGRATION-GUIDE.md             retrofitting these patterns into a project you have
+│   ├── FAQ.md                         recurring questions, including the ones commonly answered wrong
+│   ├── HOW-TO-RECOVER.md              per-cloud runbook for Terraform state, execution state, stuck claims
 │   ├── DECISION-LOGS/                 ADRs — the decisions the code cannot explain itself
 │   └── *.md                           governance, security, privacy, runbook, templates
 ├── tests/                        example suites run by CI
 ├── CONTRIBUTING.md               what a good example looks like here
 ├── SECURITY.md                   what counts as a vulnerability here, and how to report it
+├── COMPLIANCE.md                 the repo's documented operating controls and evidence model
 ├── LICENSE                       Apache-2.0
 └── .github/
     ├── workflows/checks.yml         fmt, lint, validate, tflint, checkov, boundary tests, builds
@@ -96,6 +102,14 @@ Agentic-AI-Systems/
 ```
 
 The per-tree files are shown once under `terraform-gcp/` but exist in all four, except `src/` — the Snowflake tree has none, because its handler logic is SQL. AWS has no `model-integration` module either: its Bedrock guardrail lives in `modules/security`, because a guardrail is a security control on AWS and a separate service on the other three.
+
+## Community and discussion prompts
+
+- **Roadmap**: [ROADMAP.md](ROADMAP.md) — a practical view of the repo's direction, current priorities, and future themes.
+- **Discussion starters**: [docs/DISCUSSION-TOPICS.md](docs/DISCUSSION-TOPICS.md) — a ready-to-use set of prompts for GitHub Discussions on architecture, safety, governance, and reuse.
+- **Docs preview**: [docs-preview workflow](.github/workflows/docs-preview.yml) — builds a lightweight static HTML review for Markdown changes in pull requests.
+- **Citation metadata**: [CITATION.cff](CITATION.cff) — cite the repository in research, teaching, or engineering work.
+- **Contribution workflow**: [CONTRIBUTING.md](CONTRIBUTING.md) — what a good example, doc, or patch looks like in this repository.
 
 ## System architecture reference
 
@@ -156,6 +170,7 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 - [ray-orchestrator](examples/ray-orchestrator/README.md) — parallel task execution with Ray
 - [context-compaction](examples/context-compaction/README.md) — what survives when history is compressed, and why truncation drops the wrong things
 - [graph-agent](examples/graph-agent/README.md) — the same read/write split as hermes-agent, as an explicit LangGraph graph
+- [tool-discovery](examples/tool-discovery/README.md) — tools loaded from a directory at runtime, and why the read/write split has to survive being discovered rather than declared
 
 **Hermes** is the runnable counterpart to the infrastructure above. It routes a request to a handler, runs read tools on the spot, and returns anything that would change state as a proposal that stops until a human approves *that specific action* — approval bound to a fingerprint of the exact arguments, single-use, expiring. The router holds no reference to a write tool; the approval executor holds nothing else. Standard library only, no model, no cloud account, and the boundary tests were mutation-tested rather than trusted.
 
@@ -175,9 +190,13 @@ Review gates, to run before a system ships rather than after it misbehaves:
 
 What in the four trees is credential material and how each piece rotates — which is a shorter list than it sounds, because the Terraform provisions no long-lived credentials at all: [docs/SECRETS-ROTATION.md](docs/SECRETS-ROTATION.md). It names the three places a value still passes through something that retains it, and why the Snowflake tree federates rather than holding a key.
 
+Questions that come up more than once, answered against what the code does rather than what it is assumed to do: [docs/FAQ.md](docs/FAQ.md). Three of its answers correct a belief the repository itself used to print — there is no switch that disables the approval gate, nothing expires a claim after 24 hours, and a model cannot call a write tool because it is never handed one.
+
 Retrofitting these patterns into an agent that already works, in the order that pays off soonest: [docs/MIGRATION-GUIDE.md](docs/MIGRATION-GUIDE.md). The write boundary first, because an ungated write path is a present risk while a missing eval harness is a future one. Its pitfalls section is specific to this repository — every entry is a mistake that was made here, with the artefact still in the tree to look at.
 
-The adversary's view of the write boundary — what a compromised orchestrator reaches, what a prompt-injected model reaches, what a leaked approval claim buys, and which of the three clouds survives each: [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md). It is explicit about what is *not* defended, which is the more useful half.
+The adversary's view of the write boundary — what a compromised orchestrator reaches, what a prompt-injected model reaches, what a leaked approval claim buys, and which of the four trees survives each: [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md). It is explicit about what is *not* defended, which is the more useful half — and the row where the trees genuinely differ is a later broad grant, which GCP's deny policy survives, AWS and Azure do not, and Snowflake loses transitively.
+
+What to actually run when Terraform's own state is locked or gone, an execution-state row is corrupted, or an approval claim is stuck: [docs/HOW-TO-RECOVER.md](docs/HOW-TO-RECOVER.md). All four trees apply against a local, unbacked-up state file today, and Azure's execution-state table turns out to have no recovery path configured at all — the soft-delete setting on that storage account protects blobs, not the Table Storage resource state actually lives in.
 
 Documents to fill in per system, and one to reach for when it breaks:
 

@@ -142,6 +142,11 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      # Mermaid diagrams stay as source in markdown fences. A raw `.mmd` file or an empty
+      # ` ```mermaid ` block is a drift away from the source-of-truth path this repo chooses.
+      - name: Mermaid source guard
+        run: python3 .github/scripts/mermaid_guard.py .
+
   validate:
     name: validate
     runs-on: ubuntu-latest
@@ -181,6 +186,19 @@ jobs:
 
       - name: validate
         run: terraform -chdir="${{ matrix.root }}" validate -no-color
+
+  cost-estimate:
+    name: cost estimate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Estimate Terraform spend
+        run: python3 .github/scripts/terraform_cost_estimate.py infra --threshold 500
 
   tflint:
     name: tflint
@@ -417,7 +435,22 @@ jobs:
       # router's path; trace-eval asserts that its own checks still catch a run that
       # bypasses it. None of the nine needs a model, a network, or a cloud account, which is
       # what makes them safe to gate merges on.
-      - name: Example suites — ten of the thirteen examples
+      # Discovery also picks up tests/smoke/, which runs eight of the examples as
+      # subprocesses with the arguments their READMEs document and asserts the exit code each
+      # one promises. That is a different question from the suites above: they import modules,
+      # so a `__main__` block that raises is invisible to them, and it is the first thing a
+      # user hits. graph-agent's smoke case skips here and runs in example-deps.yml, where
+      # langgraph is installed.
+      #
+      # hermes-agent appears three times there, and the middle one expects exit **2** — the
+      # write boundary refusing an unapproved action. It is the only runtime assertion in this
+      # workflow that the boundary actually holds when the example is run rather than imported.
+      #
+      # Discovery also picks up tests/performance/, whose ceilings sit ~20x above measured cost
+      # on purpose. They are not latency targets — a test asserting 40ms would fail whenever
+      # this runner was busy, get called flaky, and get deleted. At 20x they still catch the
+      # regression that actually threatens a stdlib-only example: something started doing I/O.
+      - name: Example suites, and the examples run — ten of the thirteen
         run: python3 -m unittest discover -s tests -v
 
       # Every example, not just the ten with suites. langchain-agent, rag-langchain, and

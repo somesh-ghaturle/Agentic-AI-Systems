@@ -68,11 +68,12 @@ jobs:
           cache-dependency-path: examples/${{ matrix.example }}/requirements.txt
 
       # hermes-agent, harness-agent, context-compaction, starter-agent, trace-eval,
-      # checkpoint-agent, and multi-agent-debate are absent from this matrix on purpose: their
-      # requirements.txt files carry no packages because they are stdlib-only, and `checks.yml`
-      # already covers them — the `examples` job runs the suites for those that have one, and
-      # `compileall` parses all thirteen. See docs/DECISION-LOGS/0004-stdlib-only-examples.md for the rule. Adding them
-      # here would install nothing and assert nothing that is not already asserted.
+      # checkpoint-agent, multi-agent-debate, and tool-discovery are absent from this matrix on
+      # purpose: their requirements.txt files carry no packages because they are stdlib-only,
+      # and `checks.yml` already covers them — the `examples` job runs the suites for those
+      # that have one, and `compileall` parses all fourteen. See
+      # docs/DECISION-LOGS/0004-stdlib-only-examples.md for the rule. Adding them here would
+      # install nothing and assert nothing that is not already asserted.
       #
       # graph-agent is the exception among the recent additions and needs Python 3.10+, which
       # this job's 3.12 satisfies.
@@ -104,3 +105,19 @@ jobs:
       - name: e2e-agent — assert it still fails closed without a key
         if: matrix.example == 'e2e-agent'
         run: python3 -m unittest tests.test_e2e_agent -v
+
+      # Same reasoning, for graph-agent. tests/smoke/ runs each example as a subprocess and
+      # checks its exit code; graph-agent's case skips in checks.yml because langgraph is not
+      # installed there, and this is the one job where it is. Importing graph_agent above
+      # proves the module loads — this proves the demo it advertises actually completes.
+      - name: graph-agent — assert the demo runs end to end
+        if: matrix.example == 'graph-agent'
+        run: python3 -m unittest tests.smoke.test_example_smoke -v
+
+      # Likewise for the timing guard. graph-agent is the slowest example by an order of
+      # magnitude — roughly 350ms against hermes-agent's 37ms — and essentially all of it is
+      # importing langgraph. That makes this the one case where the ceiling is measuring a
+      # dependency rather than the example, and the one job where it can run at all.
+      - name: graph-agent — timing guard
+        if: matrix.example == 'graph-agent'
+        run: python3 -m unittest tests.performance.test_performance -v

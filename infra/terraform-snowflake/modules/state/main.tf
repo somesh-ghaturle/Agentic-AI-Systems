@@ -110,6 +110,10 @@ resource "snowflake_warehouse" "main" {
   auto_resume         = "true"
   initially_suspended = true
 
+  # See cost-monitor.tf. Null when cost_monitor_credit_quota is null, so an unconfigured
+  # monitor is the same as no monitor rather than a monitor with a quota of nothing.
+  resource_monitor = var.cost_monitor_credit_quota == null ? null : snowflake_resource_monitor.warehouse_cost[0].name
+
   # A runaway query in an agent loop is a bill, not an outage. This bounds it.
   statement_timeout_in_seconds        = var.statement_timeout_in_seconds
   statement_queued_timeout_in_seconds = var.statement_queued_timeout_in_seconds
