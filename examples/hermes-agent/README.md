@@ -10,7 +10,6 @@ enforce the same property with cloud IAM — an orchestrator that physically can
 write tool. Here the same boundary is drawn in about 370 lines of standard-library Python —
 the router, the tool split, the approval claim, and the trace — plus a wired-up demo and a
 CLI. Nothing to install, no cloud account, no model.
-
 ```bash
 python3 examples/hermes-agent/agent.py "summarize incident-2291"
 python3 examples/hermes-agent/agent.py "restart the billing service"
@@ -115,6 +114,26 @@ now has `test_keyword_matches_on_word_boundaries_not_substrings` to keep it fixe
 Order encodes policy: the `act` route is first, so a request naming both a lookup and a
 change — *"find the stale records and delete incident-2291"* — lands on the path that asks
 a human rather than the one that answers on its own.
+
+---
+
+## Optional model routing
+
+`ModelRouter` provides a deterministic, offline model-selection seam for applications
+that do call a provider. It scores request length, technical terms, entities, files, and
+explicit multi-step language, then returns a bounded profile for `simple`, `complex`, or
+`code` work. It does not call a model, inspect credentials, or weaken the read/write
+boundary:
+
+```python
+from hermes import ModelRouter
+
+profile = ModelRouter().route("fix the deployment", {"files": ["service.py"]})
+# {"name": "claude-3-5-sonnet", "max_tokens": 4000, "cost_per_token": 0.000003}
+```
+
+The selected profile should be recorded in the trace and enforced by the provider
+adapter. Routing is policy metadata; it is not an authorization decision.
 
 ---
 

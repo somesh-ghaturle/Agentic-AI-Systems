@@ -435,7 +435,7 @@ jobs:
       # router's path; trace-eval asserts that its own checks still catch a run that
       # bypasses it. None of the nine needs a model, a network, or a cloud account, which is
       # what makes them safe to gate merges on.
-      # Discovery also picks up tests/smoke/, which runs eight of the examples as
+      # Discovery also picks up tests/smoke/, which runs twelve of the examples as
       # subprocesses with the arguments their READMEs document and asserts the exit code each
       # one promises. That is a different question from the suites above: they import modules,
       # so a `__main__` block that raises is invisible to them, and it is the first thing a
@@ -450,10 +450,10 @@ jobs:
       # on purpose. They are not latency targets — a test asserting 40ms would fail whenever
       # this runner was busy, get called flaky, and get deleted. At 20x they still catch the
       # regression that actually threatens a stdlib-only example: something started doing I/O.
-      - name: Example suites, and the examples run — ten of the thirteen
+      - name: Example suites, and the examples run — twelve of the runnable examples
         run: python3 -m unittest discover -s tests -v
 
-      # Every example, not just the ten with suites. langchain-agent, rag-langchain, and
+      # Every example, not just the twelve with suites. langchain-agent, rag-langchain, and
       # ray-orchestrator still have none. Before this step existed, five of the then-eight were
       # verified by nothing at all, which is how two of them sat here importing a LangChain v0.x
       # API that the pinned version had already deleted while this workflow stayed green.

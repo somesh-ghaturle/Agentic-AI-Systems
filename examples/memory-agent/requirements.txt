@@ -1,0 +1,4 @@
+# Optional accelerators for production-sized stores; the example falls back to stdlib.
+faiss-cpu==1.15.0
+networkx==3.5
+numpy==2.5.2

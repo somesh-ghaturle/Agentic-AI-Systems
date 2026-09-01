@@ -12,7 +12,7 @@ Each example is run as a subprocess from the repository root, with the arguments
 README documents, and is expected to exit 0 having printed something.
 
 **Why not `--help`.** The task this came from probed every example with `--help` and asserted
-`"usage"` appeared. Two of thirteen examples use argparse. The rest ignore unknown flags and
+`"usage"` appeared. Three examples use argparse. The rest ignore unknown flags and
 run their demo, so the assertion failed on most of them — and `checkpoint-agent` accepts a
 positional action, so `--help` made it dutifully report `Executing: --help`. A smoke test that
 has to be argued into passing is not testing anything. Running the documented command is both
@@ -57,6 +57,8 @@ CASES = [
     ("hermes-agent", "agent.py", ["restart the billing service"], 2),
     ("hermes-agent", "agent.py", ["restart the billing service", "--approve"], 0),
     ("multi-agent-debate", "agent.py", [], 0),
+    ("memory-agent", "agent.py", [], 0),
+    ("edge-agent", "agent.py", [], 0),
     ("starter-agent", "agent.py", ["what is the refund policy"], 0),
     ("tool-discovery", "discover.py", [], 0),
     ("trace-eval", "eval.py", [], 0),
@@ -71,11 +73,15 @@ CONDITIONAL = [
 # Deliberately not smoke-tested, and why. Left here because "which examples does this cover"
 # is the first question anyone reading it will have.
 SKIPPED = {
+    "approval-gate-fuzzing": "a fuzzing harness; covered by its focused test suite",
+    "context-overflow": "a context stress fixture; not a standalone runnable demo",
     "e2e-agent": "an HTTP server; it does not exit on its own",
+    "eval-red-teaming": "a red-team fixture; covered by its focused test suite",
     "langchain-agent": "needs an API key",
     "rag-langchain": "needs an API key",
     "rag-faiss": "builds an index over a Torch model download; too slow for this job",
     "ray-orchestrator": "starts a Ray cluster; too slow for this job",
+    "hermes-dashboard": "a web UI; its backend and frontend are validated separately",
 }
 
 TIMEOUT_SECONDS = 60

@@ -1,7 +1,8 @@
 # Terraform Modules Catalog
 
-> **Purpose:** Central reference for all Terraform modules across the four implementations.
-> **Scope:** AWS, Azure, GCP, and Snowflake trees.
+> **Purpose:** Central reference for all Terraform modules across the four provider
+> implementations and the hybrid proof of concept.
+> **Scope:** AWS, Azure, GCP, Snowflake, and hybrid trees.
 > **Last Updated:** 2026-08-25
 
 This document lists every module in the repository, its purpose, dependencies, and status.
@@ -331,6 +332,7 @@ Each module should:
 for cloud in aws azure gcp; do
   echo "$cloud: $(ls infra/terraform-$cloud/modules/ | wc -l) modules"
 done
+echo "hybrid: $(find infra/terraform-hybrid/modules -mindepth 1 -maxdepth 1 -type d | wc -l) modules"
 
 # Verify all modules are documented
 grep -c "terraform-aws\|terraform-azure\|terraform-gcp" infra/MODULES.md
@@ -341,6 +343,7 @@ grep -c "terraform-aws\|terraform-azure\|terraform-gcp" infra/MODULES.md
 aws: 8 modules
 azure: 12 modules
 gcp: 10 modules
+hybrid: 4 modules (proof of concept)
 ```
 
 ---
@@ -350,6 +353,7 @@ gcp: 10 modules
 - [AWS Terraform Tree](terraform-aws/README.md)
 - [Azure Terraform Tree](terraform-azure/README.md)
 - [GCP Terraform Tree](terraform-gcp/README.md)
+- [Hybrid Terraform POC](terraform-hybrid/README.md)
 - [Agentic System Architecture](../docs/agentic-system-architecture/README.md)
 - [Building Blocks](../docs/agentic-system-architecture/BUILDING-BLOCKS.md)
 

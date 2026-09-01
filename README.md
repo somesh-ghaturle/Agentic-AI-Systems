@@ -6,7 +6,10 @@
 [![Terraform 1.6+](https://img.shields.io/badge/Terraform-1.6%2B-blue.svg)](QUICKSTART.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-Reference implementations of a production agentic architecture: **three parallel Terraform trees** deploying the same system on AWS, Azure, and GCP, **eleven runnable examples**, and the architecture and governance documents behind them. Everything here is meant to be read, copied into your own repository, and adapted.
+Reference implementations of a production agentic architecture: **four provider Terraform
+trees** deploying the same system on AWS, Azure, GCP, and Snowflake, an opt-in hybrid POC,
+and runnable examples for the architecture and governance patterns behind them. Everything
+here is meant to be read, copied into your own repository, and adapted.
 
 The property the whole repository is organised around: **a state-changing action cannot reach production without a human approving that specific action** — enforced by the identity platform, not by the prompt and not by the model choosing to behave.
 
@@ -51,15 +54,16 @@ Agentic-AI-Systems/
 │   ├── terraform-aws/            8 modules · envs/{dev,staging,prod}
 │   ├── terraform-azure/          12 modules · envs/{dev,staging,prod,tenant}
 │   ├── terraform-snowflake/      10 modules · envs/{dev,staging,prod} · no src/
-│   └── terraform-gcp/            10 modules · envs/{dev,staging,prod}
-│       ├── README.md             entry point for that cloud
-│       ├── ARCHITECTURE.md       mermaid diagrams in that cloud's own terms
-│       ├── HOW-TO-DEPLOY.md      ordered deploy steps and prerequisites
-│       ├── modules/              approval, orchestration, tools, state, knowledge…
-│       ├── envs/                 one root per environment
-│       ├── src/                  handler source + build.sh (run before plan)
-│       └── tests/                write-boundary tests, stdlib unittest
-├── examples/                     thirteen runnable examples, worked → minimal
+│   ├── terraform-gcp/            10 modules · envs/{dev,staging,prod}
+│   │   ├── README.md             entry point for that cloud
+│   │   ├── ARCHITECTURE.md       mermaid diagrams in that cloud's own terms
+│   │   ├── HOW-TO-DEPLOY.md      ordered deploy steps and prerequisites
+│   │   ├── modules/              approval, orchestration, tools, state, knowledge…
+│   │   ├── envs/                 one root per environment
+│   │   ├── src/                  handler source + build.sh (run before plan)
+│   │   └── tests/                write-boundary tests, stdlib unittest
+│   └── terraform-hybrid/         cross-cloud POC · opt-in, disabled by default
+├── examples/                     runnable examples and focused proof-of-concepts
 │   ├── hermes-agent/             the write boundary in application code
 │   ├── trace-eval/               scoring the path rather than the answer
 │   ├── eval-red-teaming/         prompt-injection probes against an approval gate
@@ -75,7 +79,10 @@ Agentic-AI-Systems/
 │   ├── context-compaction/       what survives when history is compressed
 │   ├── context-overflow/         recency is not the same as relevance
 │   ├── graph-agent/              the read/write split as an explicit graph
-│   └── ray-orchestrator/         parallel task execution with Ray
+│   ├── ray-orchestrator/         parallel task execution with Ray
+│   ├── memory-agent/             vector, graph, decay, and session memory offline
+│   ├── edge-agent/               local SQLite state and file approvals
+│   └── hermes-dashboard/         FastAPI/WebSocket approval UX with React
 ├── docs/
 │   ├── agentic-system-architecture/   the six building blocks, as prose
 │   ├── agentic-coding-playbook/       working with coding agents day to day
@@ -117,7 +124,10 @@ The per-tree files are shown once under `terraform-gcp/` but exist in all four, 
 
 ## Reference infrastructure
 
-Three parallel Terraform trees under [infra/](infra/), implementing the same agentic architecture on each cloud's own primitives. They are the deployment-ready counterpart to the architecture reference above — the six building blocks expressed as infrastructure rather than as prose.
+Five Terraform trees under [infra/](infra/) cover the three cloud implementations, Snowflake,
+and a cross-cloud topology POC. The provider-specific trees implement the same agentic
+architecture on each cloud's own primitives. The [terraform-hybrid](infra/terraform-hybrid/) tree
+is an opt-in topology POC and is disabled by default.
 
 | Tree | Orchestrator | Tools | State / approvals | Knowledge |
 | --- | --- | --- | --- | --- |
@@ -125,6 +135,7 @@ Three parallel Terraform trees under [infra/](infra/), implementing the same age
 | [terraform-azure/](infra/terraform-azure/) | Logic Apps | Functions | Storage Tables / Cosmos DB | AI Search |
 | [terraform-gcp/](infra/terraform-gcp/) | Cloud Workflows | Cloud Functions gen2 | Firestore | Vertex AI Vector Search |
 | [terraform-snowflake/](infra/terraform-snowflake/) | Tasks — *scheduler, not workflow engine* | Stored procedures | Hybrid tables | Cortex Search |
+| [terraform-hybrid/](infra/terraform-hybrid/) | AWS Step Functions | GCP Cloud Functions | Azure Cosmos DB | GCP Vertex AI |
 
 Choosing between them: [infra/CHOOSING-A-TREE.md](infra/CHOOSING-A-TREE.md) — the prerequisites that stop an apply before it starts, which boundary survives a later broad grant, and what each tree does not have.
 
@@ -171,6 +182,9 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 - [context-compaction](examples/context-compaction/README.md) — what survives when history is compressed, and why truncation drops the wrong things
 - [graph-agent](examples/graph-agent/README.md) — the same read/write split as hermes-agent, as an explicit LangGraph graph
 - [tool-discovery](examples/tool-discovery/README.md) — tools loaded from a directory at runtime, and why the read/write split has to survive being discovered rather than declared
+- [memory-agent](examples/memory-agent/README.md) — offline vector, graph, decay, and session memory patterns
+- [edge-agent](examples/edge-agent/README.md) — local SQLite state and file-based approvals for devices
+- [hermes-dashboard](examples/hermes-dashboard/README.md) — React/FastAPI human approval workflow UX
 
 **Hermes** is the runnable counterpart to the infrastructure above. It routes a request to a handler, runs read tools on the spot, and returns anything that would change state as a proposal that stops until a human approves *that specific action* — approval bound to a fingerprint of the exact arguments, single-use, expiring. The router holds no reference to a write tool; the approval executor holds nothing else. Standard library only, no model, no cloud account, and the boundary tests were mutation-tested rather than trusted.
 

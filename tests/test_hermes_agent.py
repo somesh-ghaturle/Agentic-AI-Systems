@@ -38,6 +38,7 @@ from hermes import (
     ApprovalMismatch,
     ApprovalStore,
     Hermes,
+    ModelRouter,
     Route,
     Router,
     Tool,
@@ -115,6 +116,28 @@ class TestRouting(unittest.TestCase):
         route, keyword = self.agent.router.classify("banana")
         self.assertEqual(route.intent, "unrouted")
         self.assertIsNone(keyword)
+
+
+class TestModelRouting(unittest.TestCase):
+    def setUp(self):
+        self.router = ModelRouter()
+
+    def test_simple_requests_use_the_small_model(self):
+        self.assertEqual(self.router.route("what is the refund policy")["name"], "gpt-4o-mini")
+
+    def test_code_requests_use_the_code_model(self):
+        self.assertEqual(
+            self.router.route("fix this", {"files": ["service.py"]})["name"],
+            "claude-3-5-sonnet",
+        )
+
+    def test_explicit_complex_requests_use_the_complex_model(self):
+        profile = self.router.route(
+            "complex multi-step architecture security migration",
+            {"entities": ["api", "db", "queue", "worker", "audit"]},
+        )
+        self.assertEqual(profile["name"], "gpt-4o")
+        self.assertGreater(profile["max_tokens"], 1000)
 
 
 # ---------------------------------------------------------------------------

@@ -74,16 +74,16 @@ section saying what has to be decided first.
 | 38 | Add automated docs preview | CI/CD | Low | Done | | 2026-10-04 |
 | 39 | Add `FAQ.md` | Documentation | Medium | Done | | 2026-09-06 |
 | 40 | Add evaluation as a service | Future | Medium | Done | | 2026-09-27 |
-| 41 | Add model routing to `hermes-agent` | Future | Medium | Not Started | | 2026-10-04 |
-| 42 | Add `memory-agent` example | Future | Medium | Not Started | | 2026-10-18 |
-| 43 | Hybrid cloud proof-of-concept | Future | Low | Not Started | | 2026-11-01 |
-| 44 | Edge agents proof-of-concept | Future | Low | Not Started | | 2026-11-15 |
-| 45 | Human-in-the-loop UX dashboard | Future | Low | Not Started | | 2026-11-01 |
+| 41 | Add model routing to `hermes-agent` | Future | Medium | Done | Deterministic offline `ModelRouter` profiles and focused tests | 2026-10-04 |
+| 42 | Add `memory-agent` example | Future | Medium | Done | Dependency-free vector, graph, decay, and session stores | 2026-10-18 |
+| 43 | Hybrid cloud proof-of-concept | Future | Low | Done | Opt-in Terraform topology; all resources disabled by default | 2026-11-01 |
+| 44 | Edge agents proof-of-concept | Future | Low | Done | Offline SQLite state, file approval gate, and unprivileged container | 2026-11-15 |
+| 45 | Human-in-the-loop UX dashboard | Future | Low | Done | React/FastAPI dashboard with WebSocket approval updates | 2026-11-01 |
 
-**Status verified 2026-08-16** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. Twenty-seven tasks now pass: 1, 2, 3, 4, 5, 7,
-8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 24, 25, 26, 27, 28, 31, 35, and 39. Task 6 is
-`Blocked`. The remaining 17 verified as genuinely absent.
+**Status verified 2026-09-01** by running each task's own **Verify** block against the working
+tree, and kept current as tasks have landed since. Thirty-two tasks now pass: 1, 2, 3, 4, 5, 7,
+8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 24, 25, 26, 27, 28, 31, 35, 39, 41, 42,
+43, 44, and 45. Task 6 is `Blocked`. The remaining 12 verified as genuinely absent.
 
 Tasks 4 and 8 were verified rather than written — their artifacts already existed. Task 4 passes
 cleanly: all three `modules/approval/README.md` files carry the `Token Lifetime and Rotation`
@@ -126,9 +126,9 @@ pass as written, or describes something that already exists under another name:
   coverage `scripts/dependency_graph.py` adds; scope the task against what already runs.
 - **Task 31** — has no detail section, and `docs/THREAT-MODEL.md` was written in the same batch as
   this plan. What the update should add is undefined.
-- **Task 41** — `examples/hermes-agent/hermes/router.py` already exists, but it holds `Router`,
-  which routes intents to approval and execution. That is not the `ModelRouter` this task's Verify
-  greps for; model routing is a new class, not an edit to the existing one.
+- **Task 41** — `examples/hermes-agent/hermes/router.py` already held `Router`, which routes
+  intents to approval and execution. `ModelRouter` is now a separate deterministic model-choice
+  seam, so model selection cannot call a provider or alter the write boundary.
 
 ---
 
@@ -2075,8 +2075,14 @@ class ModelRouter:
 **Verify.**
 
 ```bash
-grep -q "ModelRouter" examples/hermes-agent/hermes/router.py
+grep -q "class ModelRouter" examples/hermes-agent/hermes/router.py
+python3 -m unittest tests.test_hermes_agent -v
 ```
+
+**Status (2026-09-01).** Done. `ModelRouter` now returns bounded simple, complex, and code
+profiles using explainable local signals (request complexity, technical terms, entities, and
+files). It performs no model or network call; callers remain responsible for enforcing the
+returned token and cost limits.
 
 ---
 
@@ -2087,8 +2093,8 @@ grep -q "ModelRouter" examples/hermes-agent/hermes/router.py
 **Action.**
 Create `examples/memory-agent/` with:
 
-- Vector memory (FAISS)
-- Graph memory (NetworkX)
+- Vector memory (FAISS-compatible, with a dependency-free fallback)
+- Graph memory (NetworkX-compatible, with a dependency-free fallback)
 - Time-based decay
 - Session management
 
@@ -2139,8 +2145,13 @@ class TimeDecayMemory:
 
 ```bash
 test -f examples/memory-agent/memory.py
-python3 -c "from memory_agent.memory import VectorMemory, TimeDecayMemory; print('Import OK')"
+PYTHONPATH=examples/memory-agent python3 -c "from memory import VectorMemory, TimeDecayMemory; print('Import OK')"
+python3 -m unittest tests.test_memory_agent -v
 ```
+
+**Status (2026-09-01).** Done. The example uses dependency-free implementations with interfaces
+that can be replaced by FAISS and NetworkX adapters, plus exponential decay and explicit session
+scoping. It performs no persistence or network access by default.
 
 ---
 
@@ -2177,7 +2188,13 @@ infra/terraform-hybrid/
 test -d infra/terraform-hybrid/modules/aws-orchestrator
 test -d infra/terraform-hybrid/modules/gcp-tools
 test -d infra/terraform-hybrid/modules/azure-state
+test -d infra/terraform-hybrid/modules/gcp-knowledge
+terraform -chdir=infra/terraform-hybrid/envs/dev fmt -check
 ```
+
+**Status (2026-09-01).** Done. The four provider-specific modules are wired by an opt-in dev
+root. `enable_resources` defaults to `false`, and the POC passes resource IDs and endpoints
+between modules without storing credentials or uploading data.
 
 ---
 
@@ -2204,7 +2221,13 @@ test -d infra/terraform-hybrid/modules/azure-state
 ```bash
 test -f examples/edge-agent/agent.py
 grep -q "sqlite\|SQLite" examples/edge-agent/*.py
+test -f examples/edge-agent/Dockerfile
+python3 -m unittest tests.test_edge_agent -v
 ```
+
+**Status (2026-09-01).** Done. The edge agent uses local SQLite, exact single-use file approvals,
+an in-memory default for safe demos, and an unprivileged Python container. Raspberry Pi, Jetson,
+and Greengrass deployment notes are in its README.
 
 ---
 
@@ -2238,7 +2261,13 @@ examples/hermes-dashboard/
 ```bash
 test -f examples/hermes-dashboard/backend/app.py
 test -f examples/hermes-dashboard/frontend/package.json
+python3 -m unittest tests.test_hermes_dashboard -v
 ```
+
+**Status (2026-09-01).** Done. The dashboard displays exact proposal details and fingerprints,
+records approve/reject decisions without executing tools, and broadcasts changes over WebSockets.
+Its in-memory backend and local compose setup are intentionally development-only; authentication,
+durable atomic storage, origin controls, and TLS are required before deployment.
 
 ---
 
