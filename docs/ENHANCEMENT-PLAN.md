@@ -81,9 +81,10 @@ section saying what has to be decided first.
 | 45 | Human-in-the-loop UX dashboard | Future | Low | Done | React/FastAPI dashboard with WebSocket approval updates | 2026-11-01 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. Thirty-two tasks now pass: 1, 2, 3, 4, 5, 7,
-8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 19, 20, 21, 24, 25, 26, 27, 28, 31, 35, 39, 41, 42,
-43, 44, and 45. Task 6 is `Blocked`. The remaining 12 verified as genuinely absent.
+tree, and kept current as tasks have landed since. Thirty-three tasks now pass: 1, 2, 3, 4, 5, 7,
+8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 24, 25, 26, 27, 28, 29, 30, 31, 35,
+39, 40, 41, 42, 43, 44, and 45. Task 6 is `Blocked`. The remaining 11 verified as genuinely
+absent.
 
 Tasks 4 and 8 were verified rather than written — their artifacts already existed. Task 4 passes
 cleanly: all three `modules/approval/README.md` files carry the `Token Lifetime and Rotation`
