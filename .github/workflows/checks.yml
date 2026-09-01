@@ -29,6 +29,7 @@ on:
     paths:
       - "infra/**"
       - "examples/**"
+      - "services/**"
       - "tests/**"
       - "docs/**"
       - "*.md"
@@ -42,6 +43,7 @@ on:
     paths:
       - "infra/**"
       - "examples/**"
+      - "services/**"
       - "tests/**"
       - "docs/**"
       - "*.md"

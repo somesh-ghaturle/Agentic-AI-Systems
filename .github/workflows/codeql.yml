@@ -32,12 +32,14 @@ on:
     branches: [main]
     paths:
       - "examples/**"
+      - "services/**"
       - "tests/**"
       - ".github/scripts/**"
       - ".github/workflows/**"
   pull_request:
     paths:
       - "examples/**"
+      - "services/**"
       - "tests/**"
       - ".github/scripts/**"
       - ".github/workflows/**"
