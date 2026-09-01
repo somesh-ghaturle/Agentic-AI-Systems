@@ -115,6 +115,7 @@ The per-tree files are shown once under `terraform-gcp/` but exist in all four, 
 - **Roadmap**: [ROADMAP.md](ROADMAP.md) — a practical view of the repo's direction, current priorities, and future themes.
 - **Discussion starters**: [docs/DISCUSSION-TOPICS.md](docs/DISCUSSION-TOPICS.md) — a ready-to-use set of prompts for GitHub Discussions on architecture, safety, governance, and reuse.
 - **Docs preview**: [docs-preview workflow](.github/workflows/docs-preview.yml) — builds a lightweight static HTML review for Markdown changes in pull requests.
+- **Repository audit**: [docs/REPOSITORY-DISCREPANCIES.md](docs/REPOSITORY-DISCREPANCIES.md) — current inconsistencies, generated artifacts, and future cleanup candidates.
 - **Citation metadata**: [CITATION.cff](CITATION.cff) — cite the repository in research, teaching, or engineering work.
 - **Contribution workflow**: [CONTRIBUTING.md](CONTRIBUTING.md) — what a good example, doc, or patch looks like in this repository.
 
