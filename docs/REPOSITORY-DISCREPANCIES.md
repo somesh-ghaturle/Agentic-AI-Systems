@@ -11,8 +11,15 @@ intentionally left in place until their replacement or migration is agreed and v
 
 | Severity | Finding | Evidence | Recommended action |
 | --- | --- | --- | --- |
+| Critical | CI is not self-contained for the full test suite. | `tests/test_hermes_dashboard.py` and `tests/test_trace_eval_service.py` import FastAPI, but the main checks workflow does not install those dependencies before running all tests. | Add an explicit test dependency installation or isolate dependency-bearing suites in CI. |
+| High | The security-policy test does not include all current examples. | `tests/test_security_policy.py` reports `edge-agent`, `hermes-dashboard`, and `memory-agent` missing from `SECURITY.md`. | Classify every example in `SECURITY.md` and keep the test as the source-of-truth guard. |
 | High | The repository has five Terraform trees, but several documents still describe only three clouds or three trees. | `README.md:50`, `SECURITY.md:20-34`, `.github/workflows/codeql.yml`, `.github/ISSUE_TEMPLATE/security.md`, and `docs/agentic-system-architecture/README.md` omit Snowflake and/or the hybrid POC. | Normalize wording to distinguish four cloud/data-platform trees plus the opt-in hybrid POC. |
+| High | The infrastructure module catalog contains stale resource names and interfaces. | `infra/MODULES.md` and the Azure/GCP approval READMEs reference Terraform resources or arguments that do not exist in the corresponding source/provider schema. | Reconcile catalog entries against each module's current `.tf` files and provider schemas. |
+| High | Dependency automation omits current dependency manifests. | `.github/workflows/example-deps.yml` omits the dashboard and memory-agent; `.github/dependabot.yml` omits graph-agent, dashboard, memory-agent, and the trace-eval service. | Add all supported manifests to CI and Dependabot, or document why a manifest is intentionally excluded. |
+| High | Service changes can bypass CI and CodeQL. | `.github/workflows/checks.yml` and `.github/workflows/codeql.yml` path filters omit `services/**`. | Add service paths and service tests to the relevant workflow triggers. |
 | Medium | The existing `docs/REPO-AUDIT.md` is historical and its scope is stale. | Its header reports 312 tracked files, 8 examples, 3 Terraform trees, and 234 tests; the current repository has 591 tracked files, 20 example directories, 5 Terraform trees, and 27 test files. | Keep it as historical remediation history, but link this current report and label the old counts as historical. |
+| Medium | Python support is overstated for the e2e example. | The repository advertises Python 3.9+, while `examples/e2e-agent/app.py` uses `str | None` without postponed annotations and its Dockerfile requires Python 3.11. | Raise the documented floor or make the example compatible with the stated floor. |
+| Medium | Deployment guides omit the staging environment. | `infra/terraform-aws/HOW-TO-DEPLOY.md`, `infra/terraform-azure/HOW-TO-DEPLOY.md`, and `infra/terraform-gcp/HOW-TO-DEPLOY.md` do not document their `envs/staging` roots. | Add staging guidance or explicitly mark staging as an internal validation root. |
 | Medium | The docs-preview output is easy to mistake for source. | `docs-preview/` contains generated HTML and is currently untracked; the workflow intentionally uploads it as an artifact. | Keep it out of Git and add an explicit local cleanup command to the preview documentation. |
 | Medium | `audit-claims.txt` is an untracked search artifact, not repository source. | It contains raw grep output from the audit process. | Remove it after this report is committed. |
 | Low | Status language is not uniform in the enhancement plan. | Most completed rows use `Done`; Task 17 uses `Verified`, while the introduction distinguishes both states. | Either verify every completed task or use one completion state consistently. |
@@ -32,6 +39,10 @@ These should not be committed:
 The root `.gitignore` already covers most of these. The current untracked preview and audit files
 were created by local validation and should be deleted before sharing or committing a clean tree.
 
+The docs-preview test currently writes to the repository root (`tests/test_docs_preview.py`) and
+does not clean that directory afterward. This is a confirmed test-hygiene defect, not merely a
+developer habit: a full test run leaves stageable HTML files in the worktree.
+
 ## Future removal or consolidation candidates
 
 | Candidate | Why flag it | Removal condition |
@@ -41,7 +52,8 @@ were created by local validation and should be deleted before sharing or committ
 | `docs/HARDENING-PLAN.md` | Older hardening plan overlaps with `SECURITY.md`, `THREAT-MODEL.md`, and CI configuration. | Consolidate after checking that no unique control rationale or verification command would be lost. |
 | `trace_eval_service/` and `services/trace-eval-service/` | Two service locations may represent overlapping trace-evaluation entry points. | Keep both only while the root wrapper and container service have distinct supported deployment roles; otherwise choose one canonical path. |
 | `examples/rag-faiss/` and `examples/rag-langchain/` | Similar RAG examples with different dependency footprints increase maintenance and dependency-scanning cost. | Retain both only if the framework comparison is an explicit supported goal; otherwise designate one canonical example. |
-| Terraform provider lock files under every module and environment | Many lock files are intentional for isolated validation, but they create update and platform-drift maintenance. | Consolidate only after CI proves a shared lock strategy works for all roots and architectures. |
+| `examples/hermes-dashboard/requirements.txt` | Duplicates `examples/hermes-dashboard/backend/requirements.txt`, while the compose file and README use the backend manifest. | Remove the root duplicate after CI and local setup instructions use one canonical manifest. |
+| Module-level `.terraform.lock.hcl` files | Reusable modules carry lock files in addition to environment-root locks, increasing update and platform-drift maintenance. | Consolidate only after CI proves a shared lock strategy works for all roots and architectures. |
 
 ## Verification performed
 
@@ -50,7 +62,8 @@ were created by local validation and should be deleted before sharing or committ
 - Task 6 (`terraform plan` in CI) remains blocked because enabling it requires a deliberate
   cloud-credential and access-policy decision.
 - Focused regression suites passed for the Snowflake infrastructure and newly added backlog
-  examples.
+  examples; a clean full-suite dependency audit separately identified missing FastAPI test
+  dependencies and the security-policy classification failures listed above.
 - The worktree should be cleaned of generated artifacts before the audit report is committed.
 
 ## Follow-up order
