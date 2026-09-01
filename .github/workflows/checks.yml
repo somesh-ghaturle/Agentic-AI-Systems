@@ -430,8 +430,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install test dependencies
+        run: pip install -q -r tests/requirements.txt
+
       # Ten example suites, one runner, no dependencies — the same reasoning as the
-      # write-boundary job above. hermes-agent asserts that a write cannot happen by the
+      # write-boundary job above. The test-only dependencies above are limited to the two
+      # HTTP-facing suites; the examples themselves remain dependency-free. hermes-agent asserts
+      # that a write cannot happen by the
       # router's path; trace-eval asserts that its own checks still catch a run that
       # bypasses it. None of the nine needs a model, a network, or a cloud account, which is
       # what makes them safe to gate merges on.

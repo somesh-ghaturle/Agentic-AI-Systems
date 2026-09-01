@@ -1,0 +1,7 @@
+# Dependencies required by the dependency-bearing test suites.
+# Resolved 2026-09-01 on Python 3.12.
+fastapi==0.141.1
+httpx==0.28.1
+opentelemetry-api==1.44.0
+opentelemetry-sdk==1.44.0
+pydantic==2.13.4

@@ -11,8 +11,8 @@ intentionally left in place until their replacement or migration is agreed and v
 
 | Severity | Finding | Evidence | Recommended action |
 | --- | --- | --- | --- |
-| Critical | CI is not self-contained for the full test suite. | `tests/test_hermes_dashboard.py` and `tests/test_trace_eval_service.py` import FastAPI, but the main checks workflow does not install those dependencies before running all tests. | Add an explicit test dependency installation or isolate dependency-bearing suites in CI. |
-| High | The security-policy test does not include all current examples. | `tests/test_security_policy.py` reports `edge-agent`, `hermes-dashboard`, and `memory-agent` missing from `SECURITY.md`. | Classify every example in `SECURITY.md` and keep the test as the source-of-truth guard. |
+| Critical | CI is not self-contained for the full test suite. | **Resolved:** `tests/requirements.txt` pins FastAPI, OpenTelemetry, and HTTP test dependencies; the main checks workflow installs it before unittest discovery. | Keep the test manifest pinned and update it when dependency-bearing suites change. |
+| High | The security-policy test does not include all current examples. | **Resolved:** `SECURITY.md` now classifies `edge-agent`, `hermes-dashboard`, and `memory-agent`, and their READMEs carry the required disclaimer. | Keep the policy test as the source-of-truth guard. |
 | High | The repository has five Terraform trees, but several documents still describe only three clouds or three trees. | `README.md:50`, `SECURITY.md:20-34`, `.github/workflows/codeql.yml`, `.github/ISSUE_TEMPLATE/security.md`, and `docs/agentic-system-architecture/README.md` omit Snowflake and/or the hybrid POC. | Normalize wording to distinguish four cloud/data-platform trees plus the opt-in hybrid POC. |
 | High | The infrastructure module catalog contains stale resource names and interfaces. | `infra/MODULES.md` and the Azure/GCP approval READMEs reference Terraform resources or arguments that do not exist in the corresponding source/provider schema. | Reconcile catalog entries against each module's current `.tf` files and provider schemas. |
 | High | Dependency automation omits current dependency manifests. | `.github/workflows/example-deps.yml` omits the dashboard and memory-agent; `.github/dependabot.yml` omits graph-agent, dashboard, memory-agent, and the trace-eval service. | Add all supported manifests to CI and Dependabot, or document why a manifest is intentionally excluded. |
@@ -61,9 +61,9 @@ developer habit: a full test run leaves stageable HTML files in the worktree.
 - Current status rows contain 43 `Done`, 1 `Verified`, and 1 `Blocked` task.
 - Task 6 (`terraform plan` in CI) remains blocked because enabling it requires a deliberate
   cloud-credential and access-policy decision.
-- Focused regression suites passed for the Snowflake infrastructure and newly added backlog
-  examples; a clean full-suite dependency audit separately identified missing FastAPI test
-  dependencies and the security-policy classification failures listed above.
+- The full repository unittest suite passes after installing `tests/requirements.txt` (`310 tests,
+  21 skipped`). The FastAPI/OpenTelemetry dependency gap and missing security classifications
+  identified by the clean-environment audit are now resolved.
 - The worktree should be cleaned of generated artifacts before the audit report is committed.
 
 ## Follow-up order

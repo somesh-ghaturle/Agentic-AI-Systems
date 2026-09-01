@@ -5,6 +5,9 @@ work only: state is held in SQLite and writes require a human to approve an exac
 proposal in a local JSON file. There are no cloud SDKs, credentials, telemetry
 endpoints, or network calls.
 
+This example makes no security claim; production deployments need durable, authenticated,
+tamper-resistant approval storage and device hardening.
+
 ```bash
 python3 examples/edge-agent/agent.py
 python3 -m unittest tests.test_edge_agent -v

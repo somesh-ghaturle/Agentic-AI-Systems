@@ -5,6 +5,9 @@ This small React/FastAPI dashboard demonstrates the human-in-the-loop UX for
 before choosing **Approve** or **Reject**. WebSocket events update all open dashboards.
 The backend records decisions but never executes tools.
 
+This example makes no security claim; its in-memory store and local development transport are
+not suitable for production approvals.
+
 ```bash
 cd examples/hermes-dashboard
 docker compose up

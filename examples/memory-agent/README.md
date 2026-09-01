@@ -21,3 +21,6 @@ python3 -m unittest tests.test_memory_agent -v
 ```
 
 No data is persisted and the example makes no network calls.
+
+This example makes no security claim; production memory systems need explicit retention,
+authorization, and tenant-isolation controls.

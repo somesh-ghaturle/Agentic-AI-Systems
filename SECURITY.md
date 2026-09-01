@@ -31,7 +31,7 @@ incident.
 
 ## In scope
 
-- **The write boundary in all three Terraform trees** — mainly the `orchestration`, `tools`,
+- **The write boundary in all four cloud/data-platform Terraform trees** — mainly the `orchestration`, `tools`,
   `approval`, `identity`, and `security` modules and the wiring in `envs/*`. Any route to a
   write tool without a valid, unexpired, single-use approval claim; any policy that grants
   invocation more widely than the tree's `ARCHITECTURE.md` claims; any control named as
@@ -52,6 +52,10 @@ incident.
 - **`examples/eval-red-teaming/`** — a prompt-injection evaluation harness that exercises override
   attempts against the approval gate itself. The purpose is to test whether a model follows a
   bypass instruction rather than the documented boundary.
+- **`examples/edge-agent/`, `examples/hermes-dashboard/`, and `examples/memory-agent/`** — these
+  are offline proof-of-concept examples. Reports about a claimed security guarantee or an
+  approval/state boundary that the implementation fails to enforce are in scope; ordinary
+  feature requests and production-hardening needs are out of scope.
 - **`examples/e2e-agent/`** — for the opposite reason to the boundary examples. It advertises
   itself as "Secure, Observable, Auditable" with "security gating", exposes an HTTP service
   behind an API-key header, and writes audit and provenance records — but implements no approval
