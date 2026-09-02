@@ -61,9 +61,10 @@ Phases 1 and 2 are the agreed scope. Phases 3 onward are sequenced but not commi
 
 ## Phase 1 — Verify the examples (the gap that already bit)
 
-Three of eight examples were covered by `tests/` when this plan was written (nine of twelve now): `starter-agent`, `hermes-agent`, and
-`trace-eval`. The other five — `e2e-agent`, `langchain-agent`, `rag-faiss`, `rag-langchain`,
-`ray-orchestrator` — are covered by nothing.
+Three of eight examples were covered by `tests/` when this plan was written (seventeen of
+twenty now): `starter-agent`, `hermes-agent`, and `trace-eval`. The other five —
+`e2e-agent`, `langchain-agent`, `rag-faiss`, `rag-langchain`, `ray-orchestrator` — are
+covered by nothing.
 
 The two tasks below are deliberately separate jobs rather than one. Task 1 is free and runs on
 every change; task 2 costs minutes and downloads `ray[default]` and `sentence-transformers`, so

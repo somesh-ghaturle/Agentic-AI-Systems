@@ -8,9 +8,9 @@
 #
 # It exists because of a failure this repository actually had. `rag-langchain` and
 # `langchain-agent` imported `langchain.chains.LLMChain`; the pinned langchain-core had
-# already deleted it; CI was green throughout. It was green because five of the eight
-# examples were covered by nothing, and because `compileall` — the check in checks.yml that
-# now covers all eight — parses rather than imports, so it passes a module that names a
+# already deleted it; CI was green throughout. It was green because most of the examples
+# were covered by nothing, and because `compileall` — the check in checks.yml that now
+# covers all of them — parses rather than imports, so it passes a module that names a
 # package which no longer exists. A stale pin is invisible to every check that does not
 # install the pin. This is the check that installs the pin.
 #
@@ -79,11 +79,12 @@ jobs:
           cache: pip
           cache-dependency-path: ${{ matrix.path }}/requirements.txt
 
-      # hermes-agent, harness-agent, context-compaction, starter-agent, trace-eval,
-      # checkpoint-agent, multi-agent-debate, and tool-discovery are absent from this matrix on
-      # purpose: their requirements.txt files carry no packages because they are stdlib-only,
-      # and `checks.yml` already covers them — the `examples` job runs the suites for those
-      # that have one, and `compileall` parses all twenty. See
+      # hermes-agent, harness-agent, context-compaction, context-overflow, starter-agent,
+      # trace-eval, checkpoint-agent, multi-agent-debate, tool-discovery, approval-gate-fuzzing,
+      # edge-agent, and eval-red-teaming are absent from this matrix on purpose: their
+      # requirements.txt files carry no packages because they are stdlib-only (or have no
+      # requirements.txt at all), and `checks.yml` already covers them — the `examples` job
+      # runs the suites for those that have one, and `compileall` parses all of them. See
       # docs/DECISION-LOGS/0004-stdlib-only-examples.md for the rule. Adding them here would
       # install nothing and assert nothing that is not already asserted.
       #

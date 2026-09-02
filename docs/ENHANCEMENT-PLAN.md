@@ -119,7 +119,7 @@ pass as written, or describes something that already exists under another name:
 
 - **Task 6** — `terraform plan` needs cloud credentials, which the workflow header rules out on
   purpose. Filed as a Phase 1 quick win, it is really a decision about granting CI standing access
-  to all three clouds. See the note in its section.
+  to all four cloud/data-platform trees. See the note in its section.
 - **Task 22** — `examples/context-compaction` already exists. Confirm `context-overflow` is a
   distinct scenario rather than a second name for the same one.
 - **Task 26** — `.github/workflows/example-deps.yml` already installs each example's pinned
@@ -858,8 +858,8 @@ with the commit. `gitleaks` re-reads the same history every run and gains nothin
 which is why it stays in `checks.yml`.
 
 **The gap this does not close, stated because the task title hides it.** CodeQL has no Terraform
-or HCL analyzer. By volume roughly half of this repository is `infra/` across three clouds, and
-none of it is scanned by this workflow. What guards those trees is the write-boundary suite,
+or HCL analyzer. By volume roughly half of this repository is `infra/` across four cloud/data-platform
+trees, and none of it is scanned by this workflow. What guards those trees is the write-boundary suite,
 which asserts exactly three properties by reading `.tf` files as text — it is not a general IaC
 scan and does not become one because this task is marked `Done`. A reader who takes "SAST
 scanning: Done" to mean the Terraform is covered has been misled by this table. Closing that gap

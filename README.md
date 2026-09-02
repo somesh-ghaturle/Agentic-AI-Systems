@@ -82,6 +82,7 @@ Agentic-AI-Systems/
 │   ├── ray-orchestrator/         parallel task execution with Ray
 │   ├── memory-agent/             vector, graph, decay, and session memory offline
 │   ├── edge-agent/               local SQLite state and file approvals
+│   ├── tool-discovery/           discovering and cataloging available tools
 │   └── hermes-dashboard/         FastAPI/WebSocket approval UX with React
 ├── docs/
 │   ├── agentic-system-architecture/   the six building blocks, as prose

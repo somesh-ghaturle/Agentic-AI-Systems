@@ -16,9 +16,9 @@
 # secret expires.
 #
 # The path filters now include docs/ and the root markdown files, which they did not until
-# 2026-08-15. This repository is 70 markdown files against 11 examples — mostly documentation,
-# by volume and by purpose — and until that change a documentation-only commit ran no checks
-# at all. REPO-AUDIT Task 12 was two broken links to a workflow that had been renamed, merged
+# 2026-08-15. This repository is mostly documentation by volume and by purpose, and until that
+# change a documentation-only commit ran no checks at all. REPO-AUDIT Task 12 was two broken
+# links to a workflow that had been renamed, merged
 # green, and found by a human reading the file. See round-two Task 17.
 
 name: checks
@@ -435,14 +435,14 @@ jobs:
       - name: Install test dependencies
         run: pip install -q -r tests/requirements.txt
 
-      # Ten example suites, one runner, no dependencies — the same reasoning as the
+      # Example suites, one runner, no dependencies — the same reasoning as the
       # write-boundary job above. The test-only dependencies above are limited to the two
       # HTTP-facing suites; the examples themselves remain dependency-free. hermes-agent asserts
       # that a write cannot happen by the
       # router's path; trace-eval asserts that its own checks still catch a run that
-      # bypasses it. None of the nine needs a model, a network, or a cloud account, which is
+      # bypasses it. None of the suites needs a model, a network, or a cloud account, which is
       # what makes them safe to gate merges on.
-      # Discovery also picks up tests/smoke/, which runs twelve of the examples as
+      # Discovery also picks up tests/smoke/, which runs a subset of the examples as
       # subprocesses with the arguments their READMEs document and asserts the exit code each
       # one promises. That is a different question from the suites above: they import modules,
       # so a `__main__` block that raises is invisible to them, and it is the first thing a
@@ -457,13 +457,13 @@ jobs:
       # on purpose. They are not latency targets — a test asserting 40ms would fail whenever
       # this runner was busy, get called flaky, and get deleted. At 20x they still catch the
       # regression that actually threatens a stdlib-only example: something started doing I/O.
-      - name: Example suites, and the examples run — twelve of the runnable examples
+      - name: Example suites, and the examples run
         run: python3 -m unittest discover -s tests -v
 
-      # Every example, not just the twelve with suites. langchain-agent, rag-langchain, and
-      # ray-orchestrator still have none. Before this step existed, five of the then-eight were
-      # verified by nothing at all, which is how two of them sat here importing a LangChain v0.x
-      # API that the pinned version had already deleted while this workflow stayed green.
+      # Every example, not just the ones with suites. langchain-agent, rag-langchain, and
+      # ray-orchestrator still have none. Before this step existed, most of the early examples
+      # were verified by nothing at all, which is how two of them sat here importing a LangChain
+      # v0.x API that the pinned version had already deleted while this workflow stayed green.
       #
       # compileall parses without importing, so it needs none of their dependencies and
       # finishes in about a second. That is what makes it affordable here, on the unfiltered
