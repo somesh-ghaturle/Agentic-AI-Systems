@@ -1,13 +1,21 @@
 locals {
   name_prefix = "agentic-hybrid-dev"
+
+  # The root is the only layer that sees every provider, so it resolves the
+  # cross-cloud endpoints and embeds them in the state machine definition. Both
+  # are null while `enable_resources` is false, which is what makes the disabled
+  # tree still express the topology: the wiring is visible in the plan even when
+  # nothing is created.
   definition = jsonencode({
-    Comment = "Hybrid POC; tool and state endpoints are supplied as input."
+    Comment = "Hybrid POC; the tool and state endpoints are resolved at plan time."
     StartAt = "InvokeTool"
     States = {
       InvokeTool = {
         Type = "Pass"
         Result = {
-          status = "not configured"
+          status         = var.enable_resources ? "configured" : "not configured"
+          tool_endpoint  = module.gcp_tools.tool_uri
+          state_endpoint = module.azure_state.state_endpoint
         }
         End = true
       }
@@ -43,7 +51,5 @@ module "aws_orchestrator" {
   source           = "../../modules/aws-orchestrator"
   name_prefix      = local.name_prefix
   definition       = local.definition
-  tool_endpoint    = module.gcp_tools.tool_uri
-  state_endpoint   = module.azure_state.state_endpoint
   enable_resources = var.enable_resources
 }
