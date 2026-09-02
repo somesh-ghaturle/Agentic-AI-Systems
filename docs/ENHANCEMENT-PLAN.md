@@ -1989,8 +1989,8 @@ rmdir examples/phantom
 
 **Action.**
 
-1. Create `services/trace-eval-service/`:
-   - `app.py`: FastAPI application exposing `/score` endpoint
+1. Create `services/trace-eval-service/` (container layer) and `trace_eval_service/` (importable package):
+   - `trace_eval_service/app.py`: FastAPI application exposing `/score` endpoint
    - `Dockerfile`: Container for the service
    - `requirements.txt`: Dependencies
    - `README.md`: Documentation
@@ -1998,7 +1998,7 @@ rmdir examples/phantom
 2. API design:
 
    ```python
-   # services/trace-eval-service/app.py
+   # trace_eval_service/app.py
    from fastapi import FastAPI
    from pydantic import BaseModel
    from traceeval import scoring
@@ -2033,7 +2033,7 @@ rmdir examples/phantom
 **Verify.**
 
 ```bash
-test -f services/trace-eval-service/app.py
+test -f trace_eval_service/app.py
 python3 -c "from trace_eval_service.app import app; print('Import OK')"
 ```
 

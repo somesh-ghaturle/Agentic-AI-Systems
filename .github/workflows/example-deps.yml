@@ -91,10 +91,9 @@ jobs:
       # are optional accelerators — memory.py falls back to a stdlib backend when they are
       # absent — but the module still imports them inside a bare try/except at load time, so a
       # pin that no longer installs or no longer imports fails here even though the example
-      # keeps working without it. hermes-dashboard's `path` points at `backend/`, not the
-      # example's top-level requirements.txt: that top-level file is an unused duplicate (see
-      # docs/REPOSITORY-DISCREPANCIES.md), and `backend/requirements.txt` is what
-      # docker-compose.yml and the README actually install.
+      # keeps working without it. hermes-dashboard's `path` points at `backend/`, where the
+      # FastAPI app and its requirements.txt live; docker-compose.yml and the README both
+      # install from there.
       - name: Install pinned dependencies
         run: pip install -q -r ${{ matrix.path }}/requirements.txt
 

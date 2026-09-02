@@ -26,9 +26,8 @@ updates:
   # examples/trace-eval are stdlib-only by design — their requirements files exist to say so —
   # and pointing Dependabot at an empty file achieves nothing.
   #
-  # hermes-dashboard points at backend/, not the example's top-level requirements.txt: the
-  # top-level file is an unused duplicate (see docs/REPOSITORY-DISCREPANCIES.md), while
-  # backend/requirements.txt is what docker-compose.yml and the README actually install.
+  # hermes-dashboard points at backend/ because that is where the FastAPI app and its
+  # requirements.txt live; the compose file and README both install from there.
   - package-ecosystem: pip
     directories:
       - /examples/e2e-agent
