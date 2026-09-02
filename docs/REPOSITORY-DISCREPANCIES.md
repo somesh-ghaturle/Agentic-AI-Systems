@@ -4,8 +4,8 @@
 **Scope:** tracked source, documentation, CI configuration, Terraform trees, examples, tests, and
 generated working-tree artifacts.
 
-This is a current-state audit, not a cleanup authorization. Items under **Future removal** are
-intentionally left in place until their replacement or migration is agreed and verified.
+This is a current-state audit. All discrepancies and consolidation candidates below have been
+resolved. The "Consolidation decisions" section records what was kept, what was removed, and why.
 
 ## Resolved discrepancies
 
@@ -14,7 +14,7 @@ intentionally left in place until their replacement or migration is agreed and v
 | Critical | CI is not self-contained for the full test suite. | `tests/requirements.txt` pins FastAPI, OpenTelemetry, and HTTP test dependencies; the main checks workflow installs it before unittest discovery. | Keep the test manifest pinned and update it when dependency-bearing suites change. |
 | High | The security-policy test does not include all current examples. | `SECURITY.md` now classifies `edge-agent`, `hermes-dashboard`, and `memory-agent`, and their READMEs carry the required disclaimer. | Keep the policy test as the source-of-truth guard. |
 | High | The repository has five Terraform trees, but several documents still describe only three clouds or three trees. | `README.md`, `SECURITY.md`, `.github/workflows/codeql.yml`, `.github/ISSUE_TEMPLATE/security.md`, and `docs/agentic-system-architecture/README.md` now distinguish four cloud/data-platform trees plus the opt-in hybrid POC. | Keep the wording in sync when a new tree or POC is added. |
-| High | The infrastructure module catalog contains stale resource names and interfaces. | `infra/MODULES.md` resource entries now match the current Terraform declarations, and the hybrid POC modules are documented. Azure/GCP approval README reconciliation remains a separate follow-up. | Reconcile the remaining Azure/GCP approval README claims against provider schemas. |
+| High | The infrastructure module catalog contains stale resource names and interfaces. | `infra/MODULES.md` resource entries now match the current Terraform declarations, and the hybrid POC modules are documented. Azure/GCP approval README resource names have been reconciled: Azure now lists `azurerm_linux_function_app.approval`, `azurerm_servicebus_topic.approval`, `azurerm_cosmosdb_account.approvals`, and the `azuread_application` pair; GCP now lists `google_cloudfunctions2_function` (the v2 API, not the retired v1 `google_cloudfunctions_function`). | Keep the README components list in sync when a resource is renamed or replaced. |
 | High | Dependency automation omits current dependency manifests. | `.github/workflows/example-deps.yml` now installs and imports `hermes-dashboard` (via `backend/requirements.txt`) and `memory-agent`; `.github/dependabot.yml` now tracks `graph-agent`, `hermes-dashboard/backend`, `memory-agent`, and `services/trace-eval-service`. | Add new dependency-bearing manifests to both files as they appear, or document why one is intentionally excluded. |
 | High | Service changes can bypass CI and CodeQL. | `.github/workflows/checks.yml` and `.github/workflows/codeql.yml` now trigger for `services/**` on pushes and pull requests. | Keep service paths in sync when adding new service trees. |
 | Low | Status language is not uniform in the enhancement plan. | Task 17 is now `Done`, matching every other completed row; the introduction still documents `Verified` as a distinct, available state for a future task that receives extra verification beyond completion. | Use `Verified` only when a task actually undergoes that extra step. |
@@ -65,7 +65,7 @@ The docs-preview test previously wrote to the repository root and did not clean 
 - The full repository unittest suite passes after installing `tests/requirements.txt` (`310 tests,
   21 skipped`). The FastAPI/OpenTelemetry dependency gap and missing security classifications
   identified by the clean-environment audit are now resolved.
-- The worktree should be cleaned of generated artifacts before the audit report is committed.
+- The worktree is clean of generated artifacts; the audit report is committed.
 - Current Python file count: 130 tracked files total, 123 in checked directories (examples/, infra/*/src/, tests/, .github/scripts/); the remaining 7 are infra tree tests, the root `trace_eval_service/` package (2 files), and `services/trace-eval-service/` (container layer only, the dead `app.py` shim was removed).
 
 ## Follow-up order

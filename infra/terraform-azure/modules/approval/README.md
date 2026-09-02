@@ -14,10 +14,10 @@ The approval gate enforces a strict boundary between read and write operations. 
 
 ## Components
 
-- `azurerm_function_app.validator` - Validates proposals before human review
-- `azurerm_function_app.executor` - Executes approved actions after token verification
-- `azurerm_eventgrid_topic.approval_requests` - Notifies humans of pending approvals
-- `azurerm_cosmosdb_account` - Stores immutable approval audit trail
+- `azurerm_linux_function_app.approval` - Single function app hosting both the validator and executor handlers
+- `azurerm_servicebus_topic.approval` - Notifies humans of pending approvals (via Service Bus, not Event Grid)
+- `azurerm_cosmosdb_account.approvals` - Stores immutable approval audit trail
+- `azuread_application.validator`/`azuread_application.executor` - Entra app registrations with app-role enforcement
 
 ## Token Lifetime and Rotation
 
