@@ -1,7 +1,7 @@
 # Policies
 
-Conftest/OPA policies over the Terraform source of all three trees. Run in CI by the
-`conftest` job in [`checks.yml`](../../.github/workflows/checks.yml).
+Conftest/OPA policies over the Terraform source of all four cloud/data-platform trees. Run in
+CI by the `conftest` job in [`checks.yml`](../../.github/workflows/checks.yml).
 
 ## What lives here, and what does not
 

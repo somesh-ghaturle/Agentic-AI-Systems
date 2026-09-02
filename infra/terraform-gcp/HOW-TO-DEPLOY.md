@@ -315,6 +315,24 @@ alert in the system is at zero and will stay there.
 
 ---
 
+## 6.5 · Staging
+
+`envs/staging/` exists as an **internal validation root.** The GCP handler source tree lives
+in `src/` alongside the AWS and Azure handlers, and `terraform validate` confirms every
+`package_path` resolves. Staging is useful for validate and variable-validation coverage:
+
+```bash
+cd envs/staging
+terraform init
+terraform validate
+```
+
+The staging `terraform.tfvars.example` header mirrors the dev/prod intent (match prod where a
+difference would make a rehearsal unrepresentative), so the root is ready to become a real
+rehearsal.
+
+---
+
 ## 7 · Prod
 
 Same commands, different consequences. `envs/prod/main.tf` annotates every difference; the

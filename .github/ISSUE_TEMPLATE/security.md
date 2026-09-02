@@ -39,8 +39,8 @@ Please report security vulnerabilities **privately** by:
 
 We are interested in reports related to:
 
-- Write boundary bypasses in any of the three Terraform trees (AWS, Azure, GCP)
-- Write boundary bypasses in `examples/hermes-agent/` or `examples/harness-agent/`
+- Write boundary bypasses in any of the four Terraform trees (AWS, Azure, GCP, Snowflake)
+- Write boundary bypasses in `examples/hermes-agent/` or `examples/graph-agent/`
 - Compromised approval gate implementations
 - Supply chain attacks via Terraform modules
 - Authentication/authorization flaws in deployed infrastructure

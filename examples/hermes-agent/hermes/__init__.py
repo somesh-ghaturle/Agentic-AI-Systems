@@ -16,6 +16,8 @@ from .approvals import (
 from .router import (
     ApprovalExecutor,
     Hermes,
+    ModelProfile,
+    ModelRouter,
     Result,
     Route,
     Router,
@@ -45,6 +47,8 @@ __all__ = [
     "ApprovalStore",
     "Event",
     "Hermes",
+    "ModelProfile",
+    "ModelRouter",
     "Result",
     "Route",
     "Router",

@@ -202,6 +202,8 @@ only if the deny policy is actually attached. Neither is automatic.
 
 ## Getting help
 
+- [FAQ.md](FAQ.md) — the questions this raises most often, including what to do instead of
+  disabling the approval gate
 - [THREAT-MODEL.md](THREAT-MODEL.md) — what these controls do and do not stop, including the
   assumptions that are weakest
 - [MODULES.md](../infra/MODULES.md) — what each Terraform module contains, per cloud

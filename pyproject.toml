@@ -1,7 +1,7 @@
 # Ruff configuration — the Python half of the parity with `terraform fmt -check`.
 #
 # This repository gated merges on `terraform fmt -check` for the HCL and ran nothing at all
-# over 83 Python files, an asymmetry visible to anyone who opened both. HARDENING-PLAN task 7.
+# over the Python files, an asymmetry visible to anyone who opened both. HARDENING-PLAN task 7.
 #
 # There is no package here to build. This file exists only to configure the linter, which is
 # why it carries no [project] table: `pip install .` is not a thing anyone should do to this

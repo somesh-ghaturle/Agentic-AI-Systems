@@ -112,6 +112,11 @@ are cost decisions rather than performance ones, and each is commented where it 
   A one-minute lag on a table nobody queries is a warehouse resuming every minute forever.
 - `sweep_interval_minutes` in `modules/orchestration` — every sweep resumes a warehouse.
   This trades approval latency directly against standing cost.
+- `cost_monitor_credit_quota` in `modules/state` — attaches Snowflake's native resource monitor
+  to the warehouse. Dev and staging suspend at 100% of their conservative quota; production is
+  notify-only until an operator sets a quota from observed usage and headroom. The static
+  regression checks in `tests/test_cost_monitor.py` protect both the attachment and this
+  environment-specific enforcement posture.
 
 ## Related
 

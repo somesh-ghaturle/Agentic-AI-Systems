@@ -11,7 +11,7 @@ repos:
   # red pipeline, which is worse than having no hook — it teaches them to distrust the hook.
   #
   # `ruff-format` is deliberately not enabled here, for the same reason checks.yml does not
-  # run it: it would rewrite 54 of the 86 Python files in this repository.
+  # run it: it would rewrite most of the Python files in this repository.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.4
     hooks:

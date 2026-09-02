@@ -21,13 +21,20 @@ updates:
   # Python examples
   # ---------------------------------------------------------------------------
   #
-  # Only the five directories with a non-empty requirements.txt. hermes-agent, starter-agent,
-  # and trace-eval are stdlib-only by design — their requirements files exist to say so — and
-  # pointing Dependabot at an empty file achieves nothing.
+  # Every directory with a non-empty requirements.txt. checkpoint-agent, context-compaction,
+  # harness-agent, hermes-agent, multi-agent-debate, starter-agent, tool-discovery, and
+  # examples/trace-eval are stdlib-only by design — their requirements files exist to say so —
+  # and pointing Dependabot at an empty file achieves nothing.
+  #
+  # hermes-dashboard points at backend/ because that is where the FastAPI app and its
+  # requirements.txt live; the compose file and README both install from there.
   - package-ecosystem: pip
     directories:
       - /examples/e2e-agent
+      - /examples/graph-agent
+      - /examples/hermes-dashboard/backend
       - /examples/langchain-agent
+      - /examples/memory-agent
       - /examples/rag-faiss
       - /examples/rag-langchain
       - /examples/ray-orchestrator
@@ -40,6 +47,29 @@ updates:
       # langchain-core in both LangChain trees — so ungrouped updates would also arrive as
       # near-duplicate PRs that have to be merged in step or not at all.
       example-dependencies:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies
+
+  # ---------------------------------------------------------------------------
+  # Service dependencies
+  # ---------------------------------------------------------------------------
+  #
+  # services/trace-eval-service exposes the repository's trace evaluation logic as a small
+  # FastAPI service for local development and CI smoke checks. It is a deployable service, not
+  # an example, so it gets its own group rather than sharing "example-dependencies" — grouping
+  # it with the examples would mislabel what the PR is actually bumping.
+  - package-ecosystem: pip
+    directories:
+      - /services/trace-eval-service
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      service-dependencies:
         patterns:
           - "*"
     commit-message:

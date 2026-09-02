@@ -27,3 +27,8 @@ output "execution_state_table" {
   description = "Fully qualified execution-state table."
   value       = "${snowflake_database.main.name}.${snowflake_schema.app.name}.${snowflake_hybrid_table.execution_state.name}"
 }
+
+output "cost_monitor_name" {
+  description = "Resource monitor bounding the warehouse's credit spend. Null when cost_monitor_credit_quota is null — no monitor exists to name."
+  value       = try(snowflake_resource_monitor.warehouse_cost[0].name, null)
+}

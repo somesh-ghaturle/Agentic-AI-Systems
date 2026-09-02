@@ -2,17 +2,22 @@
 
 Each tree's `ARCHITECTURE.md` section 2 explains *how* its boundary is drawn. This document
 takes the other view: given an adversary already inside, what do they reach, and which of the
-three clouds still refuses?
+four trees still refuses?
 
 It exists because "the boundary holds" is not a claim you can check. "A compromised
-orchestrator cannot invoke a write tool on any of the three clouds, and here is why, and here
+orchestrator cannot invoke a write tool in any of the four trees, and here is why, and here
 is the one case where that is false" is.
 
+**Snowflake is included, and it is not a fourth cloud.** It is a data platform running on one of
+the other three, with no VPC and no cloud IAM, so its boundary is made of role grants rather
+than policy objects. That difference changes the answers below often enough that averaging it
+into "the clouds" would be misleading, and omitting it would leave a deployed tree unmodelled.
+
 **Method.** Four adversaries, defined by capability rather than identity. For each: what they
-hold, what they reach, and a per-cloud verdict. Everything asserted here is traceable to a file
+hold, what they reach, and a per-tree verdict. Everything asserted here is traceable to a file
 in the repository; where the answer differs by cloud, it says so rather than averaging.
 
-**The claim under test**, made three times in three clouds:
+**The claim under test**, made four times in four trees:
 
 > A state-changing action cannot reach production without a human approving that specific
 > action.
@@ -25,7 +30,7 @@ in the repository; where the answer differs by cloud, it says so rather than ave
 |---|---|
 | Write tools (`process_refund`) | The only components that change state. Everything else is arrangement. |
 | Approval records | Both the concurrency control and the audit trail. Corrupt them and approvals become replayable or deniable. |
-| The approval executor's identity | The single principal permitted to invoke write tools on all three clouds. |
+| The approval executor's identity | The single principal permitted to invoke write tools in all four trees. |
 | Trace stream | The record that a write happened. Its absence is what makes an incident unreconstructable. |
 | Read tools | Not gated. See §3 — this is the largest genuine gap. |
 
@@ -37,7 +42,7 @@ flowchart LR
     V --> H(["Human"])
     H --> E["Approval executor"]
     E -->|"only path"| W[("Write tools")]
-    O -.->|"BLOCKED<br/>all three clouds"| W
+    O -.->|"BLOCKED<br/>all four trees"| W
 
     classDef bad fill:#fdecea,stroke:#c0392b
     classDef good fill:#eaf7ea,stroke:#2d8a34
@@ -45,7 +50,7 @@ flowchart LR
     class M bad
 ```
 
-The trust boundary that matters is the dotted line. Every control in all three trees exists to
+The trust boundary that matters is the dotted line. Every control in all four trees exists to
 keep it dotted.
 
 ---
@@ -66,10 +71,13 @@ permitted to make.
 | **AWS** | Identity policy built from `read_tool_arns`; write tools' resource policy names `approval_executor_arn` | **Yes**, but note that for a same-account caller Lambda grants invocation if the identity policy allows it **or** the resource policy does. The two locks are both allow-shaped, so widening either one is sufficient to break it. |
 | **Azure** | `app_role_assignment_required = true` on every tool service principal | **Yes, on one lock.** Easy Auth and output shape are *not* independent — with the Entra lock off, the orchestrator obtains a valid token for the write tool's own audience and Easy Auth accepts it. |
 | **GCP** | Lock 1: `roles/run.invoker` to the executor only. Lock 2: an IAM **deny** policy on the orchestrator | **Yes, strongest.** A deny policy cannot be overridden by a later grant, so unlike AWS and Azure it survives an operator adding a broad project-level invoke role. |
+| **Snowflake** | `USAGE` on write procedures granted to the executor role alone; the orchestrator role is a leaf with no inbound grants; every tool procedure is `EXECUTE AS OWNER`, so a caller role holds no table privilege of its own | **Yes, and the easiest to widen.** Snowflake RBAC is purely additive — there is no deny primitive to fall back on — and role grants are **transitive**. One `GRANT ROLE executor TO ROLE <anything the orchestrator inherits>` hands over every write tool at once, which is why the suite walks the graph rather than checking a single edge. |
 
 **The asymmetry, stated plainly.** GCP is the only tree where the boundary survives a
 subsequent well-meaning broad grant. Azure is the only tree where a single attribute flip makes
 the split decorative while every diagram, output, and role assignment still looks correct.
+Snowflake is the only tree where the widening is *transitive* — the dangerous grant need not
+mention the orchestrator or the executor, only two roles that already connect to each.
 
 ---
 
@@ -89,19 +97,30 @@ all hold — the injected model can *propose* a write, and a human sees it.
 proposal that a human reads. That is the whole design, and it has two consequences worth
 stating rather than glossing:
 
-1. **The human is the control.** Nothing in any of the three trees defends against a reviewer
+1. **The human is the control.** Nothing in any of the four trees defends against a reviewer
    approving a plausible-looking malicious write. Argument fingerprinting guarantees that what
    executes is what was shown — it guarantees nothing about whether what was shown should have
    been approved. Approval fatigue is therefore a security property of the deployment, not a UX
    concern, and this repository does not address it.
 
-2. **Reads are not gated at all, on any cloud.** An injected model can call every read tool
+2. **Reads are not gated at all, in any tree.** An injected model can call every read tool
    with arbitrary arguments. If those tools reach customer records, that is an exfiltration
    channel the write boundary neither sees nor constrains — the trace records it, which makes
    it detectable afterwards, not prevented.
 
-**Verdict: all three clouds equal, and all three incomplete.** The write boundary is a control
+**Verdict: all four trees equal, and all four incomplete.** The write boundary is a control
 on state change. It is not a data-exfiltration control and should not be described as one.
+
+Snowflake deserves a note of its own, because the read surface is the platform's whole purpose.
+The orchestrator role is granted exactly four things: submit a proposal, Cortex Search, the
+guarded `COMPLETE` wrapper, and the read tool procedures. Three of those are read paths into the
+warehouse, and an injected model reaches all three. The boundary constrains what it can
+*change*, not what it can *see*, and on a data platform that gap is wider than it is elsewhere.
+
+One control here is worth naming because it is easy to lose: the orchestrator holds
+`COMPLETE_GUARDED`, **not** raw `SNOWFLAKE.CORTEX_USER`. Granting the raw role would leave the
+guarded wrapper in place, still looking like a control, while making its use optional — so the
+suite asserts the raw grant is absent rather than that the wrapper exists.
 
 ---
 
@@ -112,16 +131,17 @@ captured callback, a re-clicked link.
 
 **What it buys: at most one execution of the exact arguments a human already approved.**
 
-The claim is a compare-and-set in all three trees, which is what makes replay collapse rather
+The claim is a compare-and-set in all four trees, which is what makes replay collapse rather
 than accumulate:
 
-| Cloud | Primitive |
+| Tree | Primitive |
 |---|---|
 | AWS | DynamoDB conditional write — `attribute_exists(approval_id) AND (status = pending OR (status = executing AND claimed_at < stale))` |
 | Azure | Cosmos ETag with `if_match` (`shared/cosmos_io.py`) |
 | GCP | Firestore transaction |
+| Snowflake | Conditional `UPDATE` on the hybrid table guarded by `ARGUMENTS_FINGERPRINT` and status, then `SQLROWCOUNT = 1` — the row count *is* the compare-and-set |
 
-Same invariant, three primitives. A double-clicked approve button, a redelivered queue message,
+Same invariant, four primitives. A double-clicked approve button, a redelivered queue message,
 and a retried invocation all collapse into one execution.
 
 **Two further limits on what a claim is worth:**
@@ -135,8 +155,9 @@ and a retried invocation all collapse into one execution.
   tool is idempotent on the approval ID. If a write tool is ever added that is *not*
   idempotent, this is the assumption that breaks, and it breaks silently.
 
-**Verdict: equal across all three clouds.** This is the one adversary where the trees are
-genuinely at parity.
+**Verdict: equal across all four trees.** This is the one adversary where they are genuinely at
+parity — including Snowflake, whose SQL formulation looks least like the other three and
+enforces exactly the same invariant.
 
 ---
 
@@ -156,9 +177,14 @@ below **passes `terraform validate`**, applies cleanly, and looks correct in the
 | Azure | `app_role_assignment_required = false` | One word in a file full of one-word settings. Azure Policy *cannot* guard it: Entra app registrations are Graph objects with no ARM representation. |
 | GCP | `roles/cloudfunctions.invoker` instead of `roles/run.invoker` | A gen2 function is a Cloud Run service underneath. The wrong role grants nothing — silent in the safe direction for read tools, silent in the **dangerous** direction for write tools, which are then invokable by anyone holding `run.invoker` from any other grant. |
 | GCP | `serviceAccount:` in a deny policy's principals | Deny policies take `principal://` form. The allow-policy form is accepted and matches nothing. |
+| Snowflake | One more `snowflake_grant_account_role` edge | The module already creates a legitimate one — `TASK_OWNER` inherits `EXECUTOR` — so another looks like the same pattern. Inheritance is transitive, so the new edge need not name the orchestrator or the executor to connect them. |
+| Snowflake | A tool procedure loses `EXECUTE AS OWNER` | It becomes `EXECUTE AS CALLER`, and the boundary silently changes from "the procedure's owner holds the privilege" to "whoever called it does". |
+| Snowflake | `CLAIM_APPROVAL` drops its `SQLROWCOUNT` check | The procedure still compiles and still returns. Two executors racing the same approval both believe they won, and one human approval becomes two invocations. |
+| Snowflake | `APPROVE` granted to a machine role | A role that can move a record to `APPROVED` approves its own proposal. Every other check in the suite still passes. |
 
 **What catches these:** the static suites under `infra/*/tests/`, which read source rather than
-plans and so need no credentials. Each has been mutation-tested — the mutations above were
+plans and so need no credentials. Snowflake's is the one that walks a graph rather than checking
+a resource, because transitivity means no single resource is the answer. Each has been mutation-tested — the mutations above were
 verified to fail them.
 
 **What does not catch these:** `terraform validate`, `terraform plan`, and code review by
@@ -169,20 +195,22 @@ allocation. It is also the only one where the defense is a test rather than a cl
 
 ---
 
-## 6 · Which cloud survives what
+## 6 · Which tree survives what
 
-| Adversary | AWS | Azure | GCP |
-|---|---|---|---|
-| A1 · Compromised orchestrator | Holds — two allow-shaped locks | Holds — **one** lock | Holds — allow **and** deny |
-| A1 + a later broad invoke grant | **Fails** | **Fails** | **Holds** — deny wins |
-| A2 · Prompt-injected model (write path) | Holds | Holds | Holds |
-| A2 · Prompt-injected model (read path) | **No control** | **No control** | **No control** |
-| A3 · Replayed approval claim | Holds | Holds | Holds |
-| A4 · Careless Terraform change | Caught by tests | Caught by tests | Caught by tests |
-| Cloud admin, out of band (§7) | Not defended | Detected — `modules/entra-audit` | Not defended |
+| Adversary | AWS | Azure | GCP | Snowflake |
+|---|---|---|---|---|
+| A1 · Compromised orchestrator | Holds — two allow-shaped locks | Holds — **one** lock | Holds — allow **and** deny | Holds — role graph, orchestrator is a leaf |
+| A1 + a later broad invoke grant | **Fails** | **Fails** | **Holds** — deny wins | **Fails, transitively** — no deny primitive exists |
+| A2 · Prompt-injected model (write path) | Holds | Holds | Holds | Holds |
+| A2 · Prompt-injected model (read path) | **No control** | **No control** | **No control** | **No control** — and the widest surface, being a warehouse |
+| A3 · Replayed approval claim | Holds | Holds | Holds | Holds |
+| A4 · Careless Terraform change | Caught by tests | Caught by tests | Caught by tests | Caught by tests |
+| Admin action out of band (§7) | Not defended | Detected — `modules/entra-audit` | Not defended | Not defended — `ACCOUNTADMIN` can grant anything |
 
-The one row where the three genuinely differ is the second. Everything else is either parity or
-a shared gap.
+The one row where they genuinely differ is the second, and adding Snowflake sharpens it rather
+than muddying it: GCP is override-proof, AWS and Azure fail to a broad grant that names the
+resource, and Snowflake fails to one that names neither party. Everything else is parity or a
+shared gap.
 
 ---
 
@@ -191,8 +219,9 @@ a shared gap.
 Listing these is the point of the document. A threat model that only lists what is covered is
 marketing.
 
-- **A human approving a bad write.** No control anywhere in the three trees. See §3.
-- **Read-side exfiltration.** Not gated on any cloud. Traced, not prevented.
+- **A human approving a bad write.** No control anywhere in the four trees. See §3.
+- **Read-side exfiltration.** Not gated in any tree. Traced, not prevented. Widest on Snowflake,
+  where the read tools are queries over the warehouse the platform exists to hold.
 - **Cloud-admin action outside Terraform.** Anyone who can edit IAM directly can undo any of
   this. Azure compensates with `modules/entra-audit` as a *detective* control, which is
   narrower than prevention and is described that way.
@@ -205,6 +234,14 @@ marketing.
   hypothesis.
 - **Non-idempotent write tools.** The stale-claim reclaim in §4 assumes idempotency on the
   approval ID. Nothing enforces it.
+- **Snowflake: `ACCOUNTADMIN` is unbounded and there is no deny.** Every other tree can at least
+  express "this principal may not do this thing". Snowflake RBAC is additive only, so the
+  boundary is the *absence* of a grant — which nothing but the test suite can assert.
+- **Snowflake: approvals are polled, not delivered.** A Task sweeps for approved proposals on a
+  schedule, so an approval waits for the next sweep. That is a latency property rather than a
+  security one, but it means "approved" and "executing" are further apart here than in the trees
+  that suspend and resume on a callback, and any reasoning about a claim's age has to allow for
+  it.
 
 ---
 
@@ -216,6 +253,9 @@ marketing.
    record is evidence. Azure's `approval_record_ttl_seconds` defaults to null for the same
    reason; setting it is a records-policy decision, and setting it shortens the audit trail.
 4. Reviewers read what they approve.
+5. On Snowflake, that no role outside the tree is granted into the orchestrator or executor
+   roles. The suite proves the tree does not create such an edge; it cannot prove an operator
+   did not add one by hand.
 
 Assumption 4 is the weakest and the least enforceable, and it is where a real deployment should
 spend its next control.
@@ -225,15 +265,23 @@ spend its next control.
 ## Verify
 
 ```bash
-# The boundary suites, all three trees — the A4 defenses
+# The boundary suites, all four trees — the A4 defenses
 python3 -m unittest discover -s infra/terraform-aws/tests
 python3 -m unittest discover -s infra/terraform-azure/tests
 python3 -m unittest discover -s infra/terraform-gcp/tests
+python3 -m unittest discover -s infra/terraform-snowflake/tests
 
 # The claim primitives referenced in §4
 grep -rn "ConditionExpression" infra/terraform-aws/src/approval_executor/executor.py
 grep -rn "def claim" infra/terraform-azure/src/shared/cosmos_io.py
 grep -rn "transaction" infra/terraform-gcp/src/approval_executor/main.py
+grep -rn "SQLROWCOUNT" infra/terraform-snowflake/modules/approval/main.tf
+
+# The §2 claim that the orchestrator cannot reach the executor transitively — the one
+# assertion in this document that walks a graph rather than reading a single resource.
+python3 -m unittest infra.terraform-snowflake.tests.test_write_boundary 2>/dev/null \
+  || (cd infra/terraform-snowflake && python3 -m unittest discover -s tests -v \
+      | grep -E 'role_graph|leaf|execute_as_owner')
 ```
 
 Related: each tree's `ARCHITECTURE.md` section 2, [SECURITY.md](../SECURITY.md) for what to do

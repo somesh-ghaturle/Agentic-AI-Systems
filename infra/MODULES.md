@@ -1,7 +1,8 @@
 # Terraform Modules Catalog
 
-> **Purpose:** Central reference for all Terraform modules across the four implementations.
-> **Scope:** AWS, Azure, GCP, and Snowflake trees.
+> **Purpose:** Central reference for all Terraform modules across the four provider
+> implementations and the hybrid proof of concept.
+> **Scope:** AWS, Azure, GCP, Snowflake, and hybrid trees.
 > **Last Updated:** 2026-08-25
 
 This document lists every module in the repository, its purpose, dependencies, and status.
@@ -21,6 +22,7 @@ This document lists every module in the repository, its purpose, dependencies, a
 | Azure | 12 | Entra audit alerts | `app_role_assignment_required = true` + audit |
 | GCP | 10 | IAM Deny policies | `google_iam_policy` with deny rules |
 | Snowflake | 10 | Not an IaaS peer — a data platform running on one of the other three | Role graph: USAGE on write procedures granted to the executor role alone |
+| Hybrid POC | 4 | Opt-in cross-cloud composition | `enable_resources = false` by default |
 
 **Snowflake is a different kind of entry in this table** and the row above understates it.
 It has no VPC, no cloud IAM, and no general-purpose compute; tools are stored procedures and
@@ -47,13 +49,13 @@ All modules are in `infra/terraform-aws/modules/`.
 
 | Module | Purpose | Dependencies | Terraform Resources | Status | Notes |
 |--------|---------|--------------|---------------------|--------|-------|
-| **approval** | Enforces human approval gate for write actions via DynamoDB. Generates single-use, expiring tokens bound to action fingerprints. | state, tools | `aws_dynamodb_table`, `aws_lambda_function` | **Stable** | Uses condition expressions for fingerprint validation |
-| **archive** | Stores audit logs (full request/response payloads) and provenance records in S3. | - | `aws_s3_bucket`, `aws_s3_bucket_policy` | **Stable** | Lifecycle: 90-day retention, then Glacier |
+| **approval** | Enforces human approval gate for write actions via DynamoDB. Generates single-use, expiring tokens bound to action fingerprints. | state, tools | `aws_dynamodb_table`, `aws_sns_topic`, `aws_lambda_function` | **Stable** | Uses condition expressions for fingerprint validation |
+| **archive** | Stores audit logs (full request/response payloads) and provenance records in S3. | - | `aws_s3_bucket`, `aws_s3_bucket_lifecycle_configuration`, `aws_s3_bucket_object_lock_configuration` | **Stable** | Lifecycle: 90-day retention, then Glacier |
 | **knowledge** | Manages OpenSearch Serverless collection for RAG use cases. | - | `aws_opensearchserverless_collection`, `aws_opensearchserverless_access_policy` | **Stable** | Vector search for embeddings |
 | **observability** | CloudWatch dashboards, metrics, and alarms for the entire system. | - | `aws_cloudwatch_dashboard`, `aws_cloudwatch_metric_alarm` | **Stable** | Monitors approval rates, latency, errors |
-| **orchestration** | Step Functions state machine that coordinates the agent workflow. | approval, tools, state | `aws_sf_state_machine`, `aws_sf_activity` | **Stable** | IAM role restricts to approval-checked tools only |
-| **security** | IAM roles, Lambda policies, and Bedrock guardrails. **Also contains model configuration for AWS.** | - | `aws_iam_role`, `aws_iam_policy`, `aws_lambda_permission`, `aws_bedrock_guardrail` | **Stable** | Bedrock model access lives here (not in a separate module) |
-| **state** | DynamoDB tables for execution state, session tracking, and tool metadata. | - | `aws_dynamodb_table`, `aws_dynamodb_table_item` | **Stable** | Uses on-demand capacity |
+| **orchestration** | Step Functions state machine that coordinates the agent workflow. | approval, tools, state | `aws_sfn_state_machine`, `aws_iam_role_policy` | **Stable** | IAM role restricts to approval-checked tools only |
+| **security** | IAM roles, Lambda policies, and Bedrock guardrails. **Also contains model configuration for AWS.** | - | `aws_kms_key`, `aws_bedrock_guardrail`, `aws_bedrock_guardrail_version` | **Stable** | Bedrock model access lives here (not in a separate module) |
+| **state** | DynamoDB table for execution state, session tracking, and tool metadata. | - | `aws_dynamodb_table` | **Stable** | Uses on-demand capacity |
 | **tools** | Lambda functions for all read and write actions. Split into `read/` and `write/` submodules. | state, security | `aws_lambda_function`, `aws_lambda_permission` | **Stable** | Write tools have no IAM execute permission |
 
 ### AWS-Specific Notes
@@ -75,18 +77,18 @@ All modules are in `infra/terraform-azure/modules/`.
 
 | Module | Purpose | Dependencies | Terraform Resources | Status | Notes |
 |--------|---------|--------------|---------------------|--------|-------|
-| **approval** | Enforces human approval gate for write actions via Cosmos DB. Generates single-use, expiring tokens. | state, tools | `azurerm_cosmosdb_account`, `azurerm_cosmosdb_sql_database`, `azurerm_function_app` | **Stable** | Uses ETag-based conditional writes |
-| **archive** | Stores audit logs and provenance in Storage Tables. | - | `azurerm_storage_account`, `azurerm_storage_table` | **Stable** | Lifecycle: 90-day retention |
+| **approval** | Enforces human approval gate for write actions via Cosmos DB. Generates single-use, expiring tokens. | state, tools | `azurerm_cosmosdb_account`, `azurerm_cosmosdb_sql_container`, `azurerm_servicebus_topic`, `azurerm_linux_function_app` | **Stable** | Uses ETag-based conditional writes |
+| **archive** | Stores audit logs and provenance in Blob Storage. | - | `azurerm_storage_account`, `azurerm_storage_container`, `azurerm_storage_management_policy` | **Stable** | Lifecycle: 90-day retention |
 | **entra-audit** | Entra ID audit alerts for approval bypass attempts. **Tenant-scoped.** | - | `azurerm_monitor_scheduled_query_rules_alert`, `azurerm_monitor_action_group` | **Stable** | Alerts on unauthorized approval attempts |
 | **identity** | Manages user-assigned identities and role assignments for Functions. | - | `azurerm_user_assigned_identity`, `azurerm_role_assignment` | **Stable** | Centralized identity for Azure |
 | **knowledge** | Manages AI Search index for RAG use cases. | - | `azurerm_search_service` | **Stable** | Vector search for embeddings |
 | **model-integration** | Azure OpenAI deployment and configuration. | security | `azurerm_cognitive_account`, `azurerm_cognitive_deployment`, `azurerm_cognitive_account_rai_policy` | **Stable** | Uses Azure OpenAI (not Claude catalog) |
 | **networking** | VNet, subnets, and private endpoints for the deployment. | - | `azurerm_virtual_network`, `azurerm_subnet`, `azurerm_private_endpoint` | **Stable** | Isolates all resources |
-| **observability** | Monitor and alerts for Azure resources. | - | `azurerm_monitor_metric_alert`, `azurerm_dashboard_grafana` | **Stable** | Monitors Function Apps, Cosmos DB |
-| **orchestration** | Logic Apps workflows that coordinate the agent. | approval, tools, state | `azurerm_logic_app_workflow`, `azurerm_logic_app_integration_account` | **Stable** | Uses managed identity |
+| **observability** | Monitor and alerts for Azure resources. | - | `azurerm_log_analytics_workspace`, `azurerm_monitor_metric_alert`, `azurerm_monitor_scheduled_query_rules_alert_v2` | **Stable** | Monitors Function Apps, Cosmos DB |
+| **orchestration** | Logic Apps workflows that coordinate the agent. | approval, tools, state | `azurerm_logic_app_workflow`, `azurerm_logic_app_trigger_http_request` | **Stable** | Uses managed identity |
 | **security** | Security controls and access policies. | - | `azurerm_role_definition`, `azurerm_role_assignment` | **Stable** | RBAC for the deployment |
-| **state** | Storage Tables / Cosmos DB for execution state. | - | `azurerm_cosmosdb_account`, `azurerm_storage_table` | **Stable** | Cosmos DB for approval state, Storage Tables for session |
-| **tools** | Function Apps for all read and write actions. | state, security, identity | `azurerm_function_app`, `azurerm_function_app_function` | **Stable** | Write functions have `app_role_assignment_required = true` |
+| **state** | Storage Table for execution state. | - | `azurerm_storage_account`, `azurerm_storage_table` | **Stable** | Uses Table Storage for session state |
+| **tools** | Linux Function Apps for all read and write actions. | state, security, identity | `azurerm_linux_function_app`, `azurerm_service_plan` | **Stable** | Write functions have `app_role_assignment_required = true` |
 
 ### Azure-Specific Notes
 
@@ -108,16 +110,16 @@ All modules are in `infra/terraform-gcp/modules/`.
 
 | Module | Purpose | Dependencies | Terraform Resources | Status | Notes |
 |--------|---------|--------------|---------------------|--------|-------|
-| **approval** | Enforces human approval gate for write actions via Firestore. | state, tools | `google_firestore_document`, `google_cloudfunctions_function` | **Stable** | Uses Firestore transactions |
-| **archive** | Stores audit logs and provenance in Cloud Storage. | - | `google_storage_bucket`, `google_storage_bucket_iam_policy` | **Stable** | Lifecycle: 90-day retention |
-| **identity** | IAM service accounts and bindings for Cloud Functions. | - | `google_service_account`, `google_project_iam_binding` | **Stable** | Centralized service accounts |
+| **approval** | Enforces human approval gate for write actions via Firestore. | state, tools | `google_firestore_database`, `google_firestore_index`, `google_pubsub_topic`, `google_cloudfunctions2_function` | **Stable** | Uses Firestore transactions |
+| **archive** | Stores audit logs and provenance in Cloud Storage. | - | `google_storage_bucket`, `google_storage_bucket_iam_member` | **Stable** | Lifecycle: 90-day retention |
+| **identity** | IAM service accounts for Cloud Functions and workflows. | - | `google_service_account` | **Stable** | Centralized service accounts |
 | **knowledge** | Manages Vertex AI Vector Search index for RAG. | - | `google_vertex_ai_index` | **Stable** | Vector search for embeddings |
-| **model-integration** | Vertex AI model deployment and configuration. | security | `google_vertex_ai_model`, `google_vertex_ai_endpoint` | **Stable** | Uses Vertex AI (Claude via model garden) |
-| **observability** | Cloud Monitoring dashboards and alerts. | - | `google_monitoring_dashboard`, `google_monitoring_alert_policy` | **Stable** | Monitors Cloud Functions, Firestore |
+| **model-integration** | Vertex AI model and Model Armor service configuration. | security | `google_project_service`, `google_model_armor_template`, `google_model_armor_floorsetting` | **Stable** | Uses Vertex AI (Claude via model garden) |
+| **observability** | Cloud Logging metrics and Monitoring alerts. | - | `google_logging_metric`, `google_monitoring_alert_policy`, `google_logging_project_sink` | **Stable** | Monitors Cloud Functions, Firestore |
 | **orchestration** | Cloud Workflows for agent coordination. | approval, tools, state | `google_workflows_workflow` | **Stable** | Uses service account with least privilege |
-| **security** | IAM policies, including **Deny policies**. | - | `google_iam_policy`, `google_organization_policy` | **Stable** | Deny rules evaluate BEFORE allow rules |
-| **state** | Firestore for execution state storage. | - | `google_firestore_document`, `google_firestore_index` | **Stable** | Uses native Firestore transactions |
-| **tools** | Cloud Functions gen2 for all read/write actions. | state, security, identity | `google_cloudfunctions_function`, `google_cloudfunctions_function_iam_member` | **Stable** | Write functions have no IAM binding |
+| **security** | KMS keys and Secret Manager access controls. | - | `google_kms_key_ring`, `google_kms_crypto_key`, `google_secret_manager_secret_iam_member` | **Stable** | Deny rules are defined in the orchestration module |
+| **state** | Firestore for execution state storage. | - | `google_firestore_database`, `google_firestore_index` | **Stable** | Uses native Firestore transactions |
+| **tools** | Cloud Functions gen2 for all read/write actions. | state, security, identity | `google_cloudfunctions2_function`, `google_cloud_run_service_iam_member` | **Stable** | Write functions have no IAM binding |
 
 ### GCP-Specific Notes
 
@@ -219,6 +221,21 @@ fail silently in production.
 
 Full reasoning lives in each script's header. `terraform-aws/src/README.md` covers the AWS side
 at handler level, and each tree's `HOW-TO-DEPLOY.md` covers its own build step.
+
+---
+
+## Hybrid Terraform POC (`infra/terraform-hybrid/`)
+
+The hybrid tree is an opt-in proof of concept, not a fifth production cloud
+implementation. Its four modules compose selected capabilities across AWS, Azure,
+and GCP, and the environment keeps all resources disabled unless explicitly enabled.
+
+| Module | Purpose | Terraform Resources | Status |
+|--------|---------|---------------------|--------|
+| **aws-orchestrator** | AWS Step Functions orchestration and IAM role. | `aws_sfn_state_machine`, `aws_iam_role` | **Alpha** |
+| **azure-state** | Azure Cosmos DB state store. | `azurerm_cosmosdb_account`, `azurerm_cosmosdb_sql_database` | **Alpha** |
+| **gcp-knowledge** | GCP Vertex AI Vector Search index. | `google_vertex_ai_index` | **Alpha** |
+| **gcp-tools** | GCP Cloud Functions gen2 tool runtime. | `google_cloudfunctions2_function` | **Alpha** |
 
 ---
 
@@ -328,9 +345,10 @@ Each module should:
 **Verify this catalog is complete:**
 ```bash
 # Count modules in each tree
-for cloud in aws azure gcp; do
+for cloud in aws azure gcp snowflake; do
   echo "$cloud: $(ls infra/terraform-$cloud/modules/ | wc -l) modules"
 done
+echo "hybrid: $(find infra/terraform-hybrid/modules -mindepth 1 -maxdepth 1 -type d | wc -l) modules"
 
 # Verify all modules are documented
 grep -c "terraform-aws\|terraform-azure\|terraform-gcp" infra/MODULES.md
@@ -341,6 +359,8 @@ grep -c "terraform-aws\|terraform-azure\|terraform-gcp" infra/MODULES.md
 aws: 8 modules
 azure: 12 modules
 gcp: 10 modules
+snowflake: 10 modules
+hybrid: 4 modules (proof of concept)
 ```
 
 ---
@@ -350,6 +370,7 @@ gcp: 10 modules
 - [AWS Terraform Tree](terraform-aws/README.md)
 - [Azure Terraform Tree](terraform-azure/README.md)
 - [GCP Terraform Tree](terraform-gcp/README.md)
+- [Hybrid Terraform POC](terraform-hybrid/README.md)
 - [Agentic System Architecture](../docs/agentic-system-architecture/README.md)
 - [Building Blocks](../docs/agentic-system-architecture/BUILDING-BLOCKS.md)
 

@@ -117,6 +117,24 @@ The `EP1` plan in prod is not about performance. Consumption plans cannot join a
 
 ---
 
+## 5.5 · Staging
+
+`envs/staging/` exists as an **internal validation root.** The Azure handler source tree lives
+in `src/` alongside the AWS and GCP handlers, and `terraform validate` confirms every
+`package_path` resolves. Staging is useful for validate and variable-validation coverage:
+
+```bash
+cd envs/staging
+terraform init
+terraform validate
+```
+
+The staging `terraform.tfvars.example` header mirrors the dev/prod intent (match prod where a
+difference would make a rehearsal unrepresentative), so the root is ready to become a real
+rehearsal once the handlers land — it is not a throwaway. Do not treat it as deployable today.
+
+---
+
 ## 6 · Component mapping
 
 | Module | Azure services | AWS analogue |

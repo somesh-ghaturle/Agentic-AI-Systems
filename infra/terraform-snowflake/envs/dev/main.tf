@@ -59,6 +59,13 @@ module "state" {
   warehouse_size       = "XSMALL"
   auto_suspend_seconds = 60
   max_cluster_count    = 1
+
+  # A runaway-loop guard, not a budget — the same posture AWS/Azure/GCP dev takes with
+  # daily_cost_threshold_usd = 25. Suspension is on: dev can tolerate a paused warehouse far
+  # more easily than it can tolerate an unbounded loop running up credits unnoticed.
+  cost_monitor_credit_quota              = 10
+  cost_monitor_suspend_trigger           = 100
+  cost_monitor_suspend_immediate_trigger = 110
 }
 
 module "security" {

@@ -1,5 +1,11 @@
 # Hardening plan — 2026-08-14
 
+> **Historical document.** All 11 tasks below are complete. This plan is retained for its
+> task rationale and the contradiction-discovery narrative in task 11 — the shipped controls
+> live in `.github/workflows/checks.yml`, `SECURITY.md`, `docs/THREAT-MODEL.md`,
+> `infra/CHOOSING-A-TREE.md`, `pyproject.toml`, and `.pre-commit-config.yaml`. The current
+> state of the repository is in [REPOSITORY-DISCREPANCIES.md](REPOSITORY-DISCREPANCIES.md).
+
 A follow-on to [REPO-AUDIT.md](REPO-AUDIT.md). That audit read the repository against its own
 claims and fixed what it found. This plan closes the gap that let those findings exist in the
 first place: **the repository has no automated check that would have caught them.**
@@ -55,9 +61,10 @@ Phases 1 and 2 are the agreed scope. Phases 3 onward are sequenced but not commi
 
 ## Phase 1 — Verify the examples (the gap that already bit)
 
-Three of eight examples were covered by `tests/` when this plan was written (nine of twelve now): `starter-agent`, `hermes-agent`, and
-`trace-eval`. The other five — `e2e-agent`, `langchain-agent`, `rag-faiss`, `rag-langchain`,
-`ray-orchestrator` — are covered by nothing.
+Three of eight examples were covered by `tests/` when this plan was written (seventeen of
+twenty now): `starter-agent`, `hermes-agent`, and `trace-eval`. The other five —
+`e2e-agent`, `langchain-agent`, `rag-faiss`, `rag-langchain`, `ray-orchestrator` — are
+covered by nothing.
 
 The two tasks below are deliberately separate jobs rather than one. Task 1 is free and runs on
 every change; task 2 costs minutes and downloads `ray[default]` and `sentence-transformers`, so
@@ -316,7 +323,7 @@ changes.
 
 **Two things deliberately not done.**
 
-`ruff format` is not adopted, here or in the hook. It would rewrite 54 of the 86 Python files in
+`ruff format` is not adopted, here or in the hook. It would rewrite most of the Python files in
 one commit, and in a repository whose Python exists to be read — where `git blame` is the record
 of why each example looks the way it does — that costs more than the uniformity buys. `E501` at
 line-length 100 already holds the one formatting property that matters for reading two files side

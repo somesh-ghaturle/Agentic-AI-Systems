@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, ClassVar
 
 from .approvals import ApprovalStore, fingerprint
 from .tools import (
@@ -84,6 +84,94 @@ class Result:
 # ---------------------------------------------------------------------------
 
 Handler = Callable[[str, Toolbelt], Any]
+
+
+@dataclass(frozen=True)
+class ModelProfile:
+    """A model choice with the limits the caller must enforce."""
+
+    name: str
+    max_tokens: int
+    cost_per_token: float
+
+
+class ModelRouter:
+    """Select a model deterministically, without making a provider call.
+
+    The router returns a copy of the selected profile so callers can attach it to a
+    request trace or pass it to their provider adapter.  Keeping selection separate
+    from invocation means this example remains offline and the approval boundary is
+    unchanged.
+    """
+
+    MODELS: ClassVar[dict[str, ModelProfile]] = {
+        "simple": ModelProfile("gpt-4o-mini", 1000, 0.0000015),
+        "complex": ModelProfile("gpt-4o", 4000, 0.000005),
+        "code": ModelProfile("claude-3-5-sonnet", 4000, 0.000003),
+    }
+    _TECHNICAL_TERMS = frozenset(
+        {
+            "architecture",
+            "debug",
+            "deploy",
+            "design",
+            "implementation",
+            "incident",
+            "integration",
+            "migration",
+            "security",
+            "terraform",
+        }
+    )
+
+    def route(self, query: str, context: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Return the selected model profile as a plain dictionary."""
+        context = context or {}
+        if self._assess_complexity(query, context) > 0.8:
+            profile = self.MODELS["complex"]
+        elif self._is_code_request(query, context):
+            profile = self.MODELS["code"]
+        else:
+            profile = self.MODELS["simple"]
+        return {
+            "name": profile.name,
+            "max_tokens": profile.max_tokens,
+            "cost_per_token": profile.cost_per_token,
+        }
+
+    def _assess_complexity(self, query: str, context: dict[str, Any]) -> float:
+        """Estimate complexity from bounded, explainable request features."""
+        words = query.split()
+        length_score = min(len(words) / 80, 1.0)
+        technical_score = min(
+            len({word.lower().strip(".,:;()[]{}") for word in words} & self._TECHNICAL_TERMS)
+            / 4,
+            1.0,
+        )
+        entity_score = min(len(context.get("entities", ())) / 5, 1.0)
+        file_score = min(len(context.get("files", ())) / 5, 1.0)
+        explicit_score = 1.0 if any(
+            marker in query.lower() for marker in ("complex", "multi-step", "step-by-step")
+        ) else 0.0
+        if explicit_score:
+            return 1.0
+        return min(
+            0.2 * length_score
+            + 0.25 * technical_score
+            + 0.2 * entity_score
+            + 0.15 * file_score
+            + 0.2 * explicit_score,
+            1.0,
+        )
+
+    @staticmethod
+    def _is_code_request(query: str, context: dict[str, Any]) -> bool:
+        if "code" in query.lower() or "program" in query.lower():
+            return True
+        return any(
+            str(file).lower().endswith((".py", ".js", ".ts", ".go", ".rs", ".tf"))
+            for file in context.get("files", ())
+        )
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,9 @@
+:root { font-family: system-ui, sans-serif; color: #17202a; background: #f5f7fa; }
+main { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+article { background: white; border: 1px solid #d8dee6; border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+header { display: flex; justify-content: space-between; }
+header span { text-transform: uppercase; font-size: .8rem; }
+pre { background: #f5f7fa; padding: .75rem; overflow: auto; }
+code { word-break: break-all; font-size: .8rem; }
+button { margin: 1rem .5rem 0 0; padding: .5rem 1rem; }
+.notice { color: #536273; }.error { color: #a61b1b; }.approve { border-color: #3a8d4d; }.reject { opacity: .65; }

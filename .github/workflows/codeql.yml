@@ -18,7 +18,8 @@
 #
 # WHAT THIS DOES NOT COVER, said plainly because the gap is wide and the phrase "SAST scanning
 # in CI" implies otherwise to a reader skimming the badge: CodeQL has no Terraform or HCL
-# analyzer, and by volume roughly half of this repository is infra/ across three clouds. None
+# analyzer, and by volume roughly half of this repository is infra/ across four cloud and
+# data-platform trees plus the opt-in hybrid POC. None
 # of that is scanned here. What guards those trees is the write-boundary suite in checks.yml,
 # and it guards exactly three properties by reading .tf files as text — it is not a general
 # IaC scan and does not become one because this file exists. Closing that gap needs a
@@ -32,12 +33,14 @@ on:
     branches: [main]
     paths:
       - "examples/**"
+      - "services/**"
       - "tests/**"
       - ".github/scripts/**"
       - ".github/workflows/**"
   pull_request:
     paths:
       - "examples/**"
+      - "services/**"
       - "tests/**"
       - ".github/scripts/**"
       - ".github/workflows/**"

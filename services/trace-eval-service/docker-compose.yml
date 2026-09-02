@@ -1,0 +1,9 @@
+services:
+  trace-eval-service:
+    build:
+      context: ../..
+      dockerfile: services/trace-eval-service/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      PYTHONPATH: /app

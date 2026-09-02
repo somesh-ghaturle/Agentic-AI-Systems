@@ -28,7 +28,7 @@ That framing is the thesis of this folder.
 | [CONTEXT-ENGINEERING.md](CONTEXT-ENGINEERING.md) | What the model sees — context rot, compaction, note-taking, sub-agents, just-in-time retrieval |
 | [checklists/design-review.md](checklists/design-review.md) | A design review to run before building, and again before shipping |
 | [REFERENCES.md](REFERENCES.md) | Sourcing and provenance — which claims are measured, which are directional |
-| [infra/](../../infra/) | This architecture as Terraform on three clouds — [AWS](../../infra/terraform-aws/README.md), [Azure](../../infra/terraform-azure/README.md), [GCP](../../infra/terraform-gcp/README.md), each with its own `ARCHITECTURE.md` drawn in that cloud's terms |
+| [infra/](../../infra/) | This architecture as Terraform on four cloud and data-platform trees — [AWS](../../infra/terraform-aws/README.md), [Azure](../../infra/terraform-azure/README.md), [GCP](../../infra/terraform-gcp/README.md), [Snowflake](../../infra/terraform-snowflake/README.md) — each with its own `ARCHITECTURE.md` drawn in that platform's terms, plus an opt-in cross-cloud hybrid POC |
 
 ---
 

@@ -43,7 +43,7 @@ contributor a clean commit and a red pipeline, which is worse than having no hoo
 teaches them the hook cannot be trusted. Raise both together, run `ruff check .` on the new
 version first, and fix what it finds in the same change.
 
-`ruff format` is not enabled, here or in CI. It would rewrite 54 of the repository's 86 Python
+`ruff format` is not enabled, here or in CI. It would rewrite most of the repository's Python
 files in one commit, and this is a repository whose Python exists to be read. `E501` at
 line-length 100 already holds the one formatting property that matters for reading two files
 side by side.

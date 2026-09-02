@@ -1,5 +1,10 @@
 # Repository audit and remediation plan — 2026-08-14
 
+> **Historical document.** The counts below (312 tracked files, 8 examples, 3 Terraform trees,
+> 234 tests) describe the repository as it was on 2026-08-14. The current state is in
+> [REPOSITORY-DISCREPANCIES.md](REPOSITORY-DISCREPANCIES.md). This file is retained for its
+> remediation rationale; the counts and any "current" claims in it should not be treated as live.
+
 A full read of the repository against its own claims, and an end-to-end plan to close every
 finding. Each item was reproduced or read directly from the file named; nothing here is
 inferred from a summary.
@@ -1065,8 +1070,9 @@ accommodate what follows. An audit that gets revised after the fact stops being 
 what was true when it ran.
 
 **What changed in between.** The [hardening plan](HARDENING-PLAN.md) landed its first two
-phases — example syntax and import verification, and Dependabot. The
-[concepts plan](CONCEPTS-PLAN.md) added harness, context, and graph engineering, taking the
+phases — example syntax and import verification, and Dependabot. The concepts plan (since
+removed — its three concepts shipped as `HARNESS-ENGINEERING.md`, `CONTEXT-ENGINEERING.md`,
+and a deepened BUILDING-BLOCKS §4) added harness, context, and graph engineering, taking the
 repository from eight examples to eleven and from 68 tests to 146.
 
 **How these findings were reached.** Round one was a full read. This one is narrower: it comes

@@ -14,10 +14,10 @@ The approval gate enforces a strict boundary between read and write operations. 
 
 ## Components
 
-- `google_cloudfunctions_function.validator` - Validates proposals before human review
-- `google_cloudfunctions_function.executor` - Executes approved actions after token verification
+- `google_cloudfunctions2_function.validator` - Validates proposals before human review
+- `google_cloudfunctions2_function.executor` - Executes approved actions after token verification
 - `google_pubsub_topic.approval_requests` - Notifies humans of pending approvals
-- `google_firestore_database` - Immutable approval audit trail
+- `google_firestore_database.approvals` - Immutable approval audit trail
 
 ## Token Lifetime and Rotation
 
