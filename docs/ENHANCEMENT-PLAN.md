@@ -50,7 +50,7 @@ section saying what has to be decided first.
 | 14 | Add `envs/staging` | Infrastructure | Medium | Done | | 2026-08-30 |
 | 15 | Add Terraform policy-as-code (OPA) | Infrastructure | Medium | Done | | 2026-09-13 |
 | 16 | Add `DECISION-LOGS/` with ADRs | Documentation | Medium | Done | | 2026-08-30 |
-| 17 | Add cost monitoring module | Infrastructure | Medium | Verified | | 2026-09-20 |
+| 17 | Add cost monitoring module | Infrastructure | Medium | Done | | 2026-09-20 |
 | 18 | Document secrets rotation | Infrastructure | Medium | Done | | 2026-09-06 |
 | 19 | Add `HOW-TO-RECOVER.md` per cloud | Infrastructure | Medium | Done | | 2026-09-13 |
 | 20 | Add `multi-agent-debate` example | Examples | Medium | Done | | 2026-09-06 |

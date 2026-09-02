@@ -265,6 +265,28 @@ completes without a human acting, the gate is not wired.
 
 ---
 
+## 6.5 · Staging
+
+`envs/staging/` is a release-rehearsal root, not a scaled-down dev. Its `terraform.tfvars.example`
+header documents the intent: match prod wherever a difference would make the rehearsal
+unrepresentative (network posture, step budgets, model effort) and match dev wherever prod's
+choice is irreversible or merely expensive. The one setting prod has and staging does not is
+`archive_object_lock_days` — see the note in `envs/staging/variables.tf`.
+
+```bash
+cd envs/staging
+cp terraform.tfvars.example terraform.tfvars
+terraform init
+terraform plan
+```
+
+Staging turns on the reversible controls prod keeps (VPC-only collection, PITR on the
+execution-state table) and leaves Object Lock, 7-year retention, and the 30-day KMS window
+to prod so it stays destroyable. Read the header of `envs/staging/main.tf` and the
+[envs/staging](README.md) section of the tree README before the first plan.
+
+---
+
 ## 7 · Prod
 
 ```bash

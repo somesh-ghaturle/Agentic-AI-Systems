@@ -17,7 +17,8 @@ that shape and are a good model.
 ## What counts as a vulnerability here
 
 Nothing in this repository is a running service. There's no deployment to compromise and no
-data in it. What there is, is a claim — made three times, in three clouds:
+data in it. What there is, is a claim — made four times, once in each cloud and data-platform
+tree:
 
 > A state-changing action cannot reach production without a human approving that specific
 > action.

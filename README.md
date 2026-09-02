@@ -47,7 +47,7 @@ It scores the same runs twice — one grader reads the final answer, one reads t
 
 ```text
 Agentic-AI-Systems/
-├── infra/                        three Terraform trees, same architecture per cloud
+├── infra/                        four Terraform trees, same architecture per cloud/platform
 │   ├── CHOOSING-A-TREE.md        which tree to start from, and what you give up
 │   ├── MODULES.md                every module, its dependencies and status
 │   ├── policies/                 OPA policies — do the resources agree with each other?
@@ -114,7 +114,7 @@ The per-tree files are shown once under `terraform-gcp/` but exist in all four, 
 
 - **Roadmap**: [ROADMAP.md](ROADMAP.md) — a practical view of the repo's direction, current priorities, and future themes.
 - **Discussion starters**: [docs/DISCUSSION-TOPICS.md](docs/DISCUSSION-TOPICS.md) — a ready-to-use set of prompts for GitHub Discussions on architecture, safety, governance, and reuse.
-- **Docs preview**: [docs-preview workflow](.github/workflows/docs-preview.yml) — builds a lightweight static HTML review for Markdown changes in pull requests.
+- **Docs preview**: [docs-preview workflow](.github/workflows/docs-preview.yml) — builds a lightweight static HTML review for Markdown changes in pull requests. Run it locally with `python3 .github/scripts/docs_preview.py . docs-preview`; the output is a generated artifact, so clean it up after with `rm -rf docs-preview` (it is also gitignored).
 - **Repository audit**: [docs/REPOSITORY-DISCREPANCIES.md](docs/REPOSITORY-DISCREPANCIES.md) — current inconsistencies, generated artifacts, and future cleanup candidates.
 - **Citation metadata**: [CITATION.cff](CITATION.cff) — cite the repository in research, teaching, or engineering work.
 - **Contribution workflow**: [CONTRIBUTING.md](CONTRIBUTING.md) — what a good example, doc, or patch looks like in this repository.
@@ -228,7 +228,7 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 [`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, `tests/`, `docs/`, the root markdown files, `pyproject.toml`, or the workflow's own scripts — twelve jobs, checking:
 
 - `terraform fmt -check` across all four trees, plus a provider-pin check that `terraform validate` cannot see
-- `ruff check` over all 86 Python files, against the rules in `pyproject.toml` — the same command and the same verdict a contributor gets locally
+- `ruff check` over all Python files, against the rules in `pyproject.toml` — the same command and the same verdict a contributor gets locally
 - `terraform validate` on each of the ten environment roots, as a matrix so one broken root does not hide the others
 - `tflint` over all thirty modules and ten roots — `validate` only ever sees a module through a root that calls it, which is why nothing reported that twelve Azure modules pinned no provider version
 - `checkov` over the trees, failing on any finding not skipped by name and with a reason in [`.checkov.yaml`](.checkov.yaml)
@@ -257,7 +257,7 @@ Runnable examples, post-mortems, and additional references are welcome via pull 
 
 ## Security
 
-If you believe the write boundary can be bypassed — in any of the three Terraform trees or in the two boundary examples — please report it privately rather than opening an issue. Everything here is designed to be copied, so a public report is a working recipe against every copy already in the wild. See [SECURITY.md](SECURITY.md) for what is in scope and how to report.
+If you believe the write boundary can be bypassed — in any of the four Terraform trees or in the two boundary examples — please report it privately rather than opening an issue. Everything here is designed to be copied, so a public report is a working recipe against every copy already in the wild. See [SECURITY.md](SECURITY.md) for what is in scope and how to report.
 
 ## Further reading
 

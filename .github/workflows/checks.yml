@@ -127,7 +127,7 @@ jobs:
         run: pip install ruff==0.16.4
 
       # The Python half of the parity `terraform fmt -check` above has had all along. Every
-      # .tf file in this repository was gated on formatting while 86 Python files across
+      # .tf file in this repository was gated on formatting while the Python files across
       # examples/, infra/*/src/, tests/ and .github/scripts/ were gated on nothing, and that
       # asymmetry is visible to anyone who opens both halves of the repo.
       #
@@ -136,7 +136,7 @@ jobs:
       # set only in the workflow is a rule that fails for the first time in CI, on someone
       # who had no way to see it coming.
       #
-      # `ruff format` is deliberately NOT run. It would rewrite 54 of the 86 Python files in one
+      # `ruff format` is deliberately NOT run. It would rewrite most of the Python files in one
       # commit, and in a repository whose Python exists to be read — where `git blame` is the
       # record of why each example looks the way it does — that costs more than the uniformity
       # buys. E501 at line-length 100 already holds the one formatting property that matters

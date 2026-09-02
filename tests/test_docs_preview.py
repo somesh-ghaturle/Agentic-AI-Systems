@@ -56,9 +56,16 @@ class TestDocsPreview(unittest.TestCase):
             self.assertFalse((out / ".git" / "ignored.html").exists())
 
     def test_repo_preview_builds(self):
-        code, out_text = run(REPO, REPO / "docs-preview")
-        self.assertEqual(0, code, out_text)
-        self.assertTrue((REPO / "docs-preview" / "index.html").exists())
+        # The repo-root build is the one this test exists to guard, but writing the
+        # output into the repo root leaves generated HTML in the worktree after the
+        # run. Use a temp directory for the output so the build is exercised without
+        # staging artifacts the .gitignore is there to catch when someone runs the
+        # script by hand.
+        with tempfile.TemporaryDirectory() as d:
+            out_dir = pathlib.Path(d)
+            code, out_text = run(REPO, out_dir)
+            self.assertEqual(0, code, out_text)
+            self.assertTrue((out_dir / "index.html").exists())
 
 
 if __name__ == "__main__":

@@ -117,6 +117,29 @@ The `EP1` plan in prod is not about performance. Consumption plans cannot join a
 
 ---
 
+## 5.5 · Staging
+
+`envs/staging/` exists as an **internal validation root, not a deployable rehearsal.** There is
+no Azure handler source tree in this repo yet — `infra/terraform-aws/src` holds the AWS handlers,
+written against boto3, DynamoDB, and Step Functions task tokens, and they will not run on
+Functions unmodified. Every `package_path` in the staging tfvars is checked with `fileexists()`
+at plan time, so `terraform plan` stops on the first missing zip.
+
+Until the Azure handler source exists (see [Remaining work](#remaining-work)), staging is
+useful for `terraform validate` and variable-validation coverage, and nothing more:
+
+```bash
+cd envs/staging
+terraform init
+terraform validate
+```
+
+The staging `terraform.tfvars.example` header mirrors the dev/prod intent (match prod where a
+difference would make a rehearsal unrepresentative), so the root is ready to become a real
+rehearsal once the handlers land — it is not a throwaway. Do not treat it as deployable today.
+
+---
+
 ## 6 · Component mapping
 
 | Module | Azure services | AWS analogue |

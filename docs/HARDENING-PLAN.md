@@ -316,7 +316,7 @@ changes.
 
 **Two things deliberately not done.**
 
-`ruff format` is not adopted, here or in the hook. It would rewrite 54 of the 86 Python files in
+`ruff format` is not adopted, here or in the hook. It would rewrite most of the Python files in
 one commit, and in a repository whose Python exists to be read — where `git blame` is the record
 of why each example looks the way it does — that costs more than the uniformity buys. `E501` at
 line-length 100 already holds the one formatting property that matters for reading two files side

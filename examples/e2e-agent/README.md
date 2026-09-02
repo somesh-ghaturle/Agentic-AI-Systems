@@ -69,6 +69,13 @@ Observability
 - Audit logs include trace_id to link traces -> logs -> provenance.
 - Replace `ConsoleSpanExporter` with OTLP exporter to send spans to your collector (Jaeger/Tempo/OpenTelemetry Collector).
 
+Requirements
+
+- Python 3.10+ locally (the source uses `str | None` union syntax, which is a runtime
+  `TypeError` on 3.9). The Dockerfile pins 3.11. The repository-wide floor documented in
+  [QUICKSTART.md](../../QUICKSTART.md) is 3.9 for the zero-dependency examples; this one is
+  the exception, alongside `graph-agent` and `multi-agent-debate`.
+
 How to run (local demo)
 
 ```bash

@@ -47,17 +47,29 @@ jobs:
       matrix:
         include:
           - example: e2e-agent
+            path: examples/e2e-agent
             modules: app
           - example: langchain-agent
+            path: examples/langchain-agent
             modules: agent
           - example: rag-faiss
+            path: examples/rag-faiss
             modules: build_index query
           - example: rag-langchain
+            path: examples/rag-langchain
             modules: build_index query_and_answer
           - example: ray-orchestrator
+            path: examples/ray-orchestrator
             modules: orchestrator
           - example: graph-agent
+            path: examples/graph-agent
             modules: graph_agent
+          - example: memory-agent
+            path: examples/memory-agent
+            modules: agent
+          - example: hermes-dashboard
+            path: examples/hermes-dashboard/backend
+            modules: app
     steps:
       - uses: actions/checkout@v7
 
@@ -65,20 +77,26 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: examples/${{ matrix.example }}/requirements.txt
+          cache-dependency-path: ${{ matrix.path }}/requirements.txt
 
       # hermes-agent, harness-agent, context-compaction, starter-agent, trace-eval,
       # checkpoint-agent, multi-agent-debate, and tool-discovery are absent from this matrix on
       # purpose: their requirements.txt files carry no packages because they are stdlib-only,
       # and `checks.yml` already covers them — the `examples` job runs the suites for those
-      # that have one, and `compileall` parses all fourteen. See
+      # that have one, and `compileall` parses all twenty. See
       # docs/DECISION-LOGS/0004-stdlib-only-examples.md for the rule. Adding them here would
       # install nothing and assert nothing that is not already asserted.
       #
-      # graph-agent is the exception among the recent additions and needs Python 3.10+, which
-      # this job's 3.12 satisfies.
+      # graph-agent needs Python 3.10+, which this job's 3.12 satisfies. memory-agent's pins
+      # are optional accelerators — memory.py falls back to a stdlib backend when they are
+      # absent — but the module still imports them inside a bare try/except at load time, so a
+      # pin that no longer installs or no longer imports fails here even though the example
+      # keeps working without it. hermes-dashboard's `path` points at `backend/`, not the
+      # example's top-level requirements.txt: that top-level file is an unused duplicate (see
+      # docs/REPOSITORY-DISCREPANCIES.md), and `backend/requirements.txt` is what
+      # docker-compose.yml and the README actually install.
       - name: Install pinned dependencies
-        run: pip install -q -r examples/${{ matrix.example }}/requirements.txt
+        run: pip install -q -r ${{ matrix.path }}/requirements.txt
 
       # Importing is the whole point of the job. Every entry module except e2e-agent's is
       # `__main__`-guarded, so an import runs the imports and the definitions and no work;
@@ -92,7 +110,7 @@ jobs:
       - name: Import every entry module
         env:
           E2E_AGENT_API_KEY: ci-import-check
-        working-directory: examples/${{ matrix.example }}
+        working-directory: ${{ matrix.path }}
         run: |
           for m in ${{ matrix.modules }}; do
             echo "importing $m"

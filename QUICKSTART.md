@@ -8,7 +8,7 @@ Get the Agentic-AI-Systems repository running locally and deployed in under 30 m
 
 | Tool | Version | Purpose | Install Command |
 |------|---------|---------|-----------------|
-| Python | 3.9+ (3.10+ for `graph-agent` and `multi-agent-debate`) | Run examples | `brew install python` (macOS) / `sudo apt install python3` (Ubuntu) |
+| Python | 3.9+ (3.10+ for `graph-agent`, `multi-agent-debate`, and `e2e-agent`; 3.11 for the `e2e-agent` Docker image) | Run examples | `brew install python` (macOS) / `sudo apt install python3` (Ubuntu) |
 | pip | Latest | Python package manager | `python3 -m ensurepip --upgrade` |
 | Terraform | 1.6+ | Infrastructure as code | `brew install terraform` (macOS) / See [HashiCorp docs](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) |
 | Git | Latest | Version control | `brew install git` / `sudo apt install git` |
