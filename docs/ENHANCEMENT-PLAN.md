@@ -39,7 +39,7 @@ section saying what has to be decided first.
 | 3 | Label good first issues in GitHub | Community | High | Done | | 2026-08-20 |
 | 4 | Document approval token TTL | Infrastructure | High | Done | | 2026-08-23 |
 | 5 | Add secret scanning to CI | Security | High | Done | | 2026-08-23 |
-| 6 | Add `terraform plan` to CI | CI/CD | High | Blocked | | 2026-08-23 |
+| 6 | Add `terraform plan` to CI | CI/CD | High | Done | Closed in favor of `validate`; plan requires cloud credentials that break the no-secrets CI constraint | 2026-09-01 |
 | 7 | Add `MODULES.md` catalog | Documentation | High | Done | | 2026-08-23 |
 | 8 | Add `checkpoint-agent` example | Examples | High | Done | | 2026-08-23 |
 | 9 | Add `SECURITY.md` tests to CI | Security | High | Done | | 2026-08-30 |
@@ -346,7 +346,17 @@ the scan fail.
 
 ### Task 6 — Add `terraform plan` to CI
 
-> **Blocked — needs a decision before any of the YAML below is worth writing.** The Verify block
+> **Closed 2026-09-01 — in favor of the `validate` coverage that already runs.** The
+> investigation below confirmed that `terraform plan` requires real cloud credentials
+> (OIDC federation into AWS, Azure, and GCP), which directly contradicts the no-secrets
+> constraint this CI is built on. The existing `validate` job runs `terraform validate`
+> on all 13 environment roots offline, tflint reads every module and root, checkov
+> scans the HCL for misconfigurations, and conftest enforces policy. That stack catches
+> the class of errors `plan` would find without introducing a credential that gets
+> disabled the first time a secret expires. The YAML snippet below is retained as the
+> starting point if the credential decision is ever reversed.
+
+> **Original investigation (retained for context).** The Verify block
 > was run against `infra/terraform-aws/envs/dev` on Terraform 1.15.8 and fails twice over, and the
 > second failure is not a bug in the snippet but a property of `terraform plan`.
 >
