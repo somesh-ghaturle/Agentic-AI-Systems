@@ -1071,8 +1071,9 @@ accommodate what follows. An audit that gets revised after the fact stops being 
 what was true when it ran.
 
 **What changed in between.** The [hardening plan](HARDENING-PLAN.md) landed its first two
-phases — example syntax and import verification, and Dependabot. The
-[concepts plan](CONCEPTS-PLAN.md) added harness, context, and graph engineering, taking the
+phases — example syntax and import verification, and Dependabot. The concepts plan (since
+removed — its three concepts shipped as `HARNESS-ENGINEERING.md`, `CONTEXT-ENGINEERING.md`,
+and a deepened BUILDING-BLOCKS §4) added harness, context, and graph engineering, taking the
 repository from eight examples to eleven and from 68 tests to 146.
 
 **How these findings were reached.** Round one was a full read. This one is narrower: it comes

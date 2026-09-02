@@ -88,7 +88,6 @@ Agentic-AI-Systems/
 │   ├── agentic-coding-playbook/       working with coding agents day to day
 │   ├── REPO-AUDIT.md                  the 2026-08-14 audit and its 22 tasks
 │   ├── HARDENING-PLAN.md              CI hardening, 11 tasks over 6 phases
-│   ├── CONCEPTS-PLAN.md               adding harness, context, and graph engineering
 │   ├── THREAT-MODEL.md                the write boundary from the adversary's side
 │   ├── MIGRATION-GUIDE.md             retrofitting these patterns into a project you have
 │   ├── FAQ.md                         recurring questions, including the ones commonly answered wrong

@@ -27,9 +27,7 @@ intentionally left in place until their replacement or migration is agreed and v
 
 ## Open discrepancies
 
-None. The follow-up items in the "Future removal or consolidation candidates" section remain
-open by design — they are removal decisions, not defects, and wait on the migration conditions
-noted there.
+None. All consolidation candidates in the section below have been resolved.
 
 ## Generated or unnecessary working-tree files
 
@@ -46,17 +44,17 @@ The root `.gitignore` now covers all of these. None of them are currently commit
 
 The docs-preview test previously wrote to the repository root and did not clean up — a confirmed test-hygiene defect that left stageable HTML in the worktree. `tests/test_docs_preview.py::test_repo_preview_builds` now writes its output to a temp directory, so a full test run no longer stages the preview.
 
-## Future removal or consolidation candidates
+## Consolidation decisions
 
-| Candidate | Why flag it | Removal condition |
+| Candidate | Decision | Action taken |
 | --- | --- | --- |
-| `docs/REPO-AUDIT.md` | Large historical remediation plan overlaps with this current-state report. | Retain only if its historical decisions are still useful; otherwise archive it or merge durable findings into this file. |
-| `docs/CONCEPTS-PLAN.md` | Planning document with historical example counts and overlapping roadmap material. | Remove or archive after confirming every still-relevant concept is represented in `ROADMAP.md` or implementation docs. |
-| `docs/HARDENING-PLAN.md` | Older hardening plan overlaps with `SECURITY.md`, `THREAT-MODEL.md`, and CI configuration. | Consolidate after checking that no unique control rationale or verification command would be lost. |
-| `trace_eval_service/` and `services/trace-eval-service/` | Two service locations may represent overlapping trace-evaluation entry points. **Confirmed:** Both paths exist and contain distinct implementations - root wrapper appears to be a simple entry point while services/ contains the full containerized implementation. | Keep both only while the root wrapper and container service have distinct supported deployment roles; otherwise choose one canonical path. |
-| `examples/rag-faiss/` and `examples/rag-langchain/` | Similar RAG examples with different dependency footprints increase maintenance and dependency-scanning cost. | Retain both only if the framework comparison is an explicit supported goal; otherwise designate one canonical example. |
-| `examples/hermes-dashboard/requirements.txt` | Duplicates `examples/hermes-dashboard/backend/requirements.txt`, while the compose file and README use the backend manifest. | Remove the root duplicate after CI and local setup instructions use one canonical manifest. |
-| Module-level `.terraform.lock.hcl` files | Reusable modules carry lock files in addition to environment-root locks, increasing update and platform-drift maintenance. | Consolidate only after CI proves a shared lock strategy works for all roots and architectures. |
+| `docs/REPO-AUDIT.md` | **Retained.** The root of the historical remediation record; `HARDENING-PLAN.md`, `checks.yml`, and `CONCEPTS-PLAN` references all point back to it. | Already carries a historical-document banner (added in the previous commit). No further action. |
+| `docs/CONCEPTS-PLAN.md` | **Removed.** All 9 tasks complete; the three concepts shipped as `agentic-system-architecture/HARNESS-ENGINEERING.md`, `CONTEXT-ENGINEERING.md`, and a deepened BUILDING-BLOCKS §4; all three sources are in `REFERENCES.md`. | Deleted. Updated the three remaining references (`README.md` file tree, `ENHANCEMENT-PLAN.md` docs index, `REPO-AUDIT.md` inline reference). |
+| `docs/HARDENING-PLAN.md` | **Retained.** All 11 tasks complete, but the plan carries unique rationale narrative (the task-11 contradiction discovery, the per-task "why this exists") not fully captured in the shipped controls. | Added a historical-document banner linking to the shipped artifacts and this report. |
+| `trace_eval_service/` and `services/trace-eval-service/` | **Retained (distinct roles).** `trace_eval_service/` is the importable FastAPI package (the scoring logic, tested by `test_trace_eval_service.py`, run by the Dockerfile as `trace_eval_service.app:app`). `services/trace-eval-service/` is the container layer (Dockerfile, docker-compose, runtime requirements, README). | Removed the dead `services/trace-eval-service/app.py` re-export shim — nothing imported it (the Dockerfile CMD runs `trace_eval_service.app:app` directly). The container layer keeps its Dockerfile, compose, requirements, and README. |
+| `examples/rag-faiss/` and `examples/rag-langchain/` | **Retained (explicit framework comparison).** The README, QUICKSTART, and `DECISION-LOGS/0004` all frame the pair as a raw-FAISS vs LangChain comparison — `rag-langchain` is "the `rag-faiss` set plus LangChain." Both are referenced across the architecture docs, SECURITY.md, CI, and Dependabot. | No action. The framework comparison is an explicit supported goal. |
+| `examples/hermes-dashboard/requirements.txt` | **Removed.** The CI `example-deps.yml` workflow already installs from `backend/requirements.txt` and labels the root file "an unused duplicate." The docker-compose and README use `backend/requirements.txt`. | Deleted the root duplicate. Added `pydantic==2.11.7` to `backend/requirements.txt` (the backend app imports it directly; the root file had it, the backend file relied on fastapi's transitive pull). Updated `example_deps.py` to gather pins from all `requirements.txt` files under an example (not just the top-level one), so the dependency checker reads the canonical manifest. |
+| Module-level `.terraform.lock.hcl` files | **Removed (44 files).** CI runs `terraform init` only at the 14 env roots; tflint reads HCL directly without init; modules are validated through the roots that call them. | Deleted all 44 module-level lock files. Added a `.gitignore` rule (`infra/terraform-*/modules/*/.terraform.lock.hcl`) so a local `terraform init` inside a module does not re-stage them. The 14 env-root locks remain as the source of truth. |
 
 ## Verification performed
 
@@ -68,12 +66,11 @@ The docs-preview test previously wrote to the repository root and did not clean 
   21 skipped`). The FastAPI/OpenTelemetry dependency gap and missing security classifications
   identified by the clean-environment audit are now resolved.
 - The worktree should be cleaned of generated artifacts before the audit report is committed.
-- Current Python file count: 131 tracked files total, 123 in checked directories (examples/, infra/*/src/, tests/, .github/scripts/); the remaining 8 are infra tree tests, the root `trace_eval_service/` wrapper, and `services/trace-eval-service/`.
+- Current Python file count: 130 tracked files total, 123 in checked directories (examples/, infra/*/src/, tests/, .github/scripts/); the remaining 7 are infra tree tests, the root `trace_eval_service/` package (2 files), and `services/trace-eval-service/` (container layer only, the dead `app.py` shim was removed).
 
 ## Follow-up order
 
 1. ~~Correct the confirmed "three clouds/trees" wording - done~~
 2. ~~Remove temporary generated files from local worktrees - done~~
-3. Decide whether the historical planning documents remain useful.
-4. Decide whether the two trace-eval service paths and the two RAG examples are intentionally
-   distinct.
+3. ~~Decide whether the historical planning documents remain useful - done~~ (CONCEPTS-PLAN removed, REPO-AUDIT and HARDENING-PLAN retained with banners)
+4. ~~Decide whether the two trace-eval service paths and the two RAG examples are intentionally distinct - done~~ (trace-eval paths retained with distinct roles, dead shim removed; RAG examples retained as an explicit framework comparison)

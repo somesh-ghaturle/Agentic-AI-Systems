@@ -206,7 +206,11 @@ def check(root):
     ]
     for example in examples:
         edges.setdefault(example.name, set())
-        pins = declared(example / "requirements.txt")
+        pins = set()
+        for req in sorted(example.rglob("requirements.txt")):
+            if "__pycache__" in req.parts:
+                continue
+            pins |= declared(req)
         modules = imported(example)
 
         third_party = set()

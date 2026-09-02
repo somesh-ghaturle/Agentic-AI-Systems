@@ -1,5 +1,11 @@
 # Hardening plan — 2026-08-14
 
+> **Historical document.** All 11 tasks below are complete. This plan is retained for its
+> task rationale and the contradiction-discovery narrative in task 11 — the shipped controls
+> live in `.github/workflows/checks.yml`, `SECURITY.md`, `docs/THREAT-MODEL.md`,
+> `infra/CHOOSING-A-TREE.md`, `pyproject.toml`, and `.pre-commit-config.yaml`. The current
+> state of the repository is in [REPOSITORY-DISCREPANCIES.md](REPOSITORY-DISCREPANCIES.md).
+
 A follow-on to [REPO-AUDIT.md](REPO-AUDIT.md). That audit read the repository against its own
 claims and fixed what it found. This plan closes the gap that let those findings exist in the
 first place: **the repository has no automated check that would have caught them.**

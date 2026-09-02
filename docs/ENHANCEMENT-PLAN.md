@@ -2327,6 +2327,5 @@ git status --short
 - [README.md](../README.md) — Repository overview
 - [REPO-AUDIT.md](REPO-AUDIT.md) — Previous audit and remediation (fully resolved)
 - [HARDENING-PLAN.md](HARDENING-PLAN.md) — CI hardening tasks
-- [CONCEPTS-PLAN.md](CONCEPTS-PLAN.md) — Conceptual additions
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — How to contribute
 - [THREAT-MODEL.md](THREAT-MODEL.md) — Security threat model
