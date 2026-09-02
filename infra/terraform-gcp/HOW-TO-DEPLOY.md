@@ -317,15 +317,9 @@ alert in the system is at zero and will stay there.
 
 ## 6.5 · Staging
 
-`envs/staging/` exists as an **internal validation root, not a deployable rehearsal.** There is
-no GCP handler source tree in this repo yet — `infra/terraform-aws/src` holds the AWS handlers,
-written against boto3, DynamoDB, OpenSearch, and Step Functions task tokens, and they will not
-run on Cloud Functions unmodified. Every `package_path` in the staging tfvars is read at plan
-time to compute its deployment hash, so a missing zip is a plan-time error rather than an
-apply-time one.
-
-Until the GCP handler source exists (see the `ARCHITECTURE.md` "Remaining work" section),
-staging is useful for `terraform validate` and variable-validation coverage, and nothing more:
+`envs/staging/` exists as an **internal validation root.** The GCP handler source tree lives
+in `src/` alongside the AWS and Azure handlers, and `terraform validate` confirms every
+`package_path` resolves. Staging is useful for validate and variable-validation coverage:
 
 ```bash
 cd envs/staging
@@ -335,7 +329,7 @@ terraform validate
 
 The staging `terraform.tfvars.example` header mirrors the dev/prod intent (match prod where a
 difference would make a rehearsal unrepresentative), so the root is ready to become a real
-rehearsal once the handlers land — it is not a throwaway. Do not treat it as deployable today.
+rehearsal.
 
 ---
 

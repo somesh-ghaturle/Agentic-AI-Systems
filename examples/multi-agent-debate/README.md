@@ -3,6 +3,10 @@
 Several agents argue about a proposal. The debate makes the proposal better and records what
 was never resolved — and it does **not** approve anything.
 
+Requires Python 3.10+ — the `debate/transcript.py` and `debate/panel.py` modules use `X | Y`
+union syntax in type annotations. The repository-wide floor is 3.9 for the zero-dependency
+examples; this is one of the exceptions, alongside `graph-agent` and `e2e-agent`.
+
 ```bash
 python3 agent.py                                          # the demo, three outcomes
 python3 -m unittest tests.test_multi_agent_debate -v      # from the repository root

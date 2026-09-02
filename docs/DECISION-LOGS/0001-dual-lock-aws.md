@@ -4,7 +4,7 @@
 
 ## Context
 
-The claim this repository makes, three times in three clouds:
+The claim this repository makes, four times in four trees:
 
 > A state-changing action cannot reach production without a human approving that specific action.
 

@@ -2,9 +2,8 @@
 
 > **Historical document.** The counts below (312 tracked files, 8 examples, 3 Terraform trees,
 > 234 tests) describe the repository as it was on 2026-08-14. The current state is in
-> [REPOSITORY-DISCREPANCIES.md](REPOSITORY-DISCREPANCIES.md) (591 tracked files, 20 example
-> directories, 5 Terraform trees, 27 test files). This file is retained for its remediation
-> rationale; the counts and any "current" claims in it should not be treated as live.
+> [REPOSITORY-DISCREPANCIES.md](REPOSITORY-DISCREPANCIES.md). This file is retained for its
+> remediation rationale; the counts and any "current" claims in it should not be treated as live.
 
 A full read of the repository against its own claims, and an end-to-end plan to close every
 finding. Each item was reproduced or read directly from the file named; nothing here is
