@@ -7,7 +7,10 @@
 Two of the three trees call Claude. The AWS `reason` handler calls it on Bedrock; the GCP one
 calls it on Vertex, where
 [`modules/model-integration/variables.tf:12`](../../infra/terraform-gcp/modules/model-integration/variables.tf)
-documents `claude-opus-4-5@20251101` as the model identifier shape.
+documents `claude-opus-5` as the model identifier shape. (That file named
+`claude-opus-4-5@20251101` when this ADR was written; task 46 moved the tree to the bare
+current-generation identifier. The decision below is unaffected — it turns on the guardrail,
+not on which Claude the other two trees call.)
 
 Azure could serve Claude too, through the Azure AI model catalog. It does not. It provisions
 Azure OpenAI and deploys `gpt-4o` by default. That is the single largest cross-tree divergence

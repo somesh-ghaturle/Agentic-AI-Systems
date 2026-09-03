@@ -9,7 +9,7 @@ variable "location" {
 }
 
 variable "model_id" {
-  description = "Vertex AI model identifier the reason handler requests, e.g. \"claude-opus-4-5@20251101\". Passed to handlers as an environment variable; nothing here validates that it exists or is enabled."
+  description = "Vertex AI model identifier the reason handler requests, e.g. \"claude-opus-5\". Passed to handlers as an environment variable; nothing here validates that it exists or is enabled."
   type        = string
 }
 

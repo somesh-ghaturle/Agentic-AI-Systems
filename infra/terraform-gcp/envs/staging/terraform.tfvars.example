@@ -59,7 +59,7 @@ firestore_location = "nam5"
 # Not `region`. Anthropic model availability on Vertex AI is region-specific — us-east5
 # and europe-west1 carry the broadest selection. Match prod exactly.
 vertex_location = "us-east5"
-model_id        = "claude-opus-4-5@20251101"
+model_id        = "claude-opus-5"
 
 # ---------------------------------------------------------------------------
 # Cost

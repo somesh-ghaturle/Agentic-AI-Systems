@@ -26,9 +26,18 @@ from anthropic import AnthropicVertex
 from contracts import error, ok
 from gcp_http import json_response, request_json
 
-# Vertex model IDs carry an @-suffixed version. Pinned rather than floating: a model that
-# moves underneath a versioned prompt makes results non-reproducible.
-DEFAULT_MODEL = "claude-opus-4-5@20251101"
+# Bare identifier, not an @-suffixed snapshot. Current-generation Vertex models are addressed
+# by the bare first-party ID; the @-suffixed form addresses dated snapshots of older models.
+#
+# This gives up the pin, and that is worth stating rather than absorbing. The previous value,
+# Opus 4.5 pinned to its 2025-11-01 snapshot, froze the weights under a versioned prompt — the
+# property this comment used to claim. But 4.5 predates adaptive thinking, and the call sends
+# `thinking={"type": "adaptive"}`, so the pinned tree could not have run at all. The trade was
+# forced by that mismatch, not chosen for it.
+#
+# What still ties a result to what produced it: PROMPT_VERSION below, and the resolved model
+# string emitted on every trace.
+DEFAULT_MODEL = "claude-opus-5"
 
 # Bumped whenever the system prompt changes. Emitted on every trace, because a result you
 # cannot tie to the prompt that produced it is not reproducible.

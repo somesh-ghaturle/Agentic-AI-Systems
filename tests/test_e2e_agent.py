@@ -49,9 +49,21 @@ def import_app(api_key):
     return result.returncode, result.stderr
 
 
+# Every third-party module `app.py` imports at module scope, not just the first one. The guard
+# checked `fastapi` alone, which is all-or-nothing only in CI: the `examples` job installs
+# nothing and skips, `example-deps` installs the pinned requirements and runs. A working tree
+# with fastapi but not opentelemetry — an ordinary state for anyone who installed one example's
+# requirements and not this one's — satisfied the guard and then failed on the import, reporting
+# a missing-key assertion for a missing package. Failing for the wrong reason is the same defect
+# as passing for the wrong reason, which is what this guard already existed to prevent.
+_REQUIRED = ("fastapi", "pydantic", "opentelemetry", "opentelemetry.sdk")
+_MISSING = [m for m in _REQUIRED if importlib.util.find_spec(m) is None]
+
+
 @unittest.skipIf(
-    importlib.util.find_spec("fastapi") is None,
-    "e2e-agent's dependencies are not installed; this suite runs in the example-deps job",
+    _MISSING,
+    f"e2e-agent's dependencies are not installed ({', '.join(_MISSING)}); "
+    "this suite runs in the example-deps job",
 )
 class TestE2EAgentFailsClosed(unittest.TestCase):
     """The `examples` CI job installs nothing, so this class skips there and runs in

@@ -52,7 +52,7 @@ variable "vertex_location" {
 variable "model_id" {
   description = "Vertex AI model identifier the reason handler requests. Nothing here validates that it exists or that Model Garden terms have been accepted for it — see HOW-TO-DEPLOY.md."
   type        = string
-  default     = "claude-opus-4-5@20251101"
+  default     = "claude-opus-5"
 }
 
 variable "tools" {

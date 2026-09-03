@@ -79,6 +79,13 @@ section saying what has to be decided first.
 | 43 | Hybrid cloud proof-of-concept | Future | Low | Done | Opt-in Terraform topology; all resources disabled by default | 2026-11-01 |
 | 44 | Edge agents proof-of-concept | Future | Low | Done | Offline SQLite state, file approval gate, and unprivileged container | 2026-11-15 |
 | 45 | Human-in-the-loop UX dashboard | Future | Low | Done | React/FastAPI dashboard with WebSocket approval updates | 2026-11-01 |
+| 46 | Fix the GCP `reason` model/thinking mismatch | Infrastructure | High | Done | Pinned model predated the adaptive-thinking call it was paired with | 2026-09-10 |
+| 47 | Complete the `e2e-agent` test dependency guard | CI/CD | High | Done | Guard named one of four imports; partial envs failed for the wrong reason | 2026-09-10 |
+| 48 | Audit model pins across the four trees | Infrastructure | Medium | Not Started | | 2026-10-03 |
+| 49 | Refresh `hermes-agent` router model profiles | Examples | Medium | Not Started | | 2026-10-03 |
+| 50 | Revisit the `py39` floor | Repository | Low | Not Started | Python 3.9 reached EOL 2025-10 | 2026-12-01 |
+| 51 | Re-evaluate ADR 0002 against Claude on Foundry | Documentation | Low | Not Started | ADR names its own reopen condition | 2026-12-01 |
+| 52 | Add an MCP server example behind the write boundary | Examples | Medium | Not Started | | 2026-10-31 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
 tree, and kept current as tasks have landed since. Thirty-three tasks now pass: 1, 2, 3, 4, 5, 7,
@@ -2282,6 +2289,245 @@ durable atomic storage, origin controls, and TLS are required before deployment.
 
 ---
 
+## Phase 6 — Model Currency & Drift (2026-09-03 onwards)
+
+Phase 6 came from a repository-wide review on 2026-09-03 rather than from the original plan.
+Its subject is the class of decay this document had no task for: the repository pins model
+identifiers in nine places across four Terraform trees and one example, and nothing in CI reads
+any of them. The trees drifted apart silently, and one drifted far enough to stop working.
+
+### Task 46 — Fix the GCP `reason` model/thinking mismatch
+
+**Goal.** Make the GCP tree's pinned model and its API call agree, so the tree can run with its
+own defaults.
+
+**Status: Done.** [`infra/terraform-gcp/src/reason/main.py`](../infra/terraform-gcp/src/reason/main.py),
+plus the three `envs/*/variables.tf` defaults, the three `terraform.tfvars.example` files, and
+[`modules/model-integration/variables.tf`](../infra/terraform-gcp/modules/model-integration/variables.tf).
+
+**The defect.** `DEFAULT_MODEL` was `claude-opus-4-5@20251101` while the call 110 lines below
+sent `thinking={"type": "adaptive"}`. Adaptive thinking arrived with the 4.6 generation; Opus 4.5
+takes the older `budget_tokens` form. The tree could not have served a request with the defaults
+it shipped.
+
+The comment above the call — "adaptive thinking is on by default for this model family" — is
+true of the Opus 5 family and not of 4.5. The AWS handler carries the same call and the same
+comment against `anthropic.claude-opus-5`, where both are correct. So this was not a design
+disagreement between the trees: the call sites were modernised together and the GCP pin was left
+behind.
+
+**Why CI stayed green.** [`infra/terraform-gcp/src/tests/test_handlers.py`](../infra/terraform-gcp/src/tests/test_handlers.py)
+stubs the `anthropic` module with a `SimpleNamespace`, so no test has ever evaluated the model
+string against the parameters sent with it. A stub cannot reject an argument the real SDK would.
+That gap is task 48's subject, not this one's.
+
+**What the fix gives up, stated rather than absorbed.** The old comment argued for an
+`@`-suffixed snapshot on reproducibility grounds: weights that move underneath a versioned prompt
+make results non-reproducible. That argument was sound and the fix loses it — current-generation
+Vertex models are addressed by the bare identifier, and `claude-opus-5` is not a frozen snapshot.
+The trade was forced by the mismatch rather than chosen on its merits, and the replacement comment
+says so. `PROMPT_VERSION` and the resolved model string on every trace remain the tie between a
+result and what produced it.
+
+Vertex supports adaptive thinking, `effort`, and structured outputs, so the rest of the call
+needed no change. Region availability is still unvalidated by Terraform, which the `model_id`
+description already says.
+
+[ADR 0002](DECISION-LOGS/0002-azure-openai-vs-claude.md) quoted the old identifier as the Vertex
+shape; its Context paragraph now quotes the new one and notes the change. The decision itself is
+untouched — it turns on the Azure guardrail, not on which Claude the other trees call.
+
+**Verify.**
+
+```bash
+grep -rn 'claude-opus-4-5' infra/                      # no hits
+grep -n 'DEFAULT_MODEL' infra/terraform-gcp/src/reason/main.py
+python3 -m unittest discover -s infra/terraform-gcp/src/tests   # 39 tests
+python3 -m unittest discover -s infra/terraform-gcp/tests       # 11 tests
+terraform fmt -check -recursive infra/
+cd infra/terraform-gcp/envs/dev && terraform init -backend=false && terraform validate
+```
+
+---
+
+### Task 47 — Complete the `e2e-agent` test dependency guard
+
+**Goal.** Make [`tests/test_e2e_agent.py`](../tests/test_e2e_agent.py) skip when any dependency
+it needs is absent, not only when the first one is.
+
+**Status: Done.**
+
+**The defect.** The guard tested `importlib.util.find_spec("fastapi")`. `app.py` imports four
+third-party modules at module scope — `fastapi`, `pydantic`, `opentelemetry`, and
+`opentelemetry.sdk`. In CI the distinction never showed: the `examples` job installs nothing and
+skips, `example-deps` installs the pinned requirements and runs. A working tree holding `fastapi`
+but not `opentelemetry` — the ordinary state after installing some other example's requirements —
+passed the guard and then failed on the import, reporting a missing-`E2E_AGENT_API_KEY` assertion
+for a missing package.
+
+The suite's own docstring argues that a test passing for the wrong reason is worse than one that
+does not run. Failing for the wrong reason is the same defect wearing the opposite sign, and it
+is worse in one respect: it sends a reader looking for a security regression that is not there.
+
+**Verified in both directions**, because a guard that skips everywhere would be a worse bug than
+the one it replaced:
+
+- Partial environment (`fastapi` present, `opentelemetry.sdk` absent): 3 skipped, and the skip
+  message names the missing module rather than the package that was present.
+- Complete environment (a venv built from `examples/e2e-agent/requirements.txt`): 3 run, 3 pass.
+
+**Verify.**
+
+```bash
+python3 -m unittest tests.test_e2e_agent -v    # skips, naming the missing module
+
+python3 -m venv /tmp/venv-e2e
+/tmp/venv-e2e/bin/pip install -r examples/e2e-agent/requirements.txt
+/tmp/venv-e2e/bin/python -m unittest tests.test_e2e_agent -v   # 3 run, 3 pass
+```
+
+---
+
+### Task 48 — Audit model pins across the four trees
+
+**Goal.** Give the repository one place that knows every model identifier it pins, and a check
+that fails when they drift apart.
+
+**Status: Not Started.**
+
+**Action.** The identifiers as of 2026-09-03, after task 46:
+
+| Tree | Pinned | Assessment |
+| ------ | -------- | ------------ |
+| AWS | `anthropic.claude-opus-5` | Current |
+| GCP | `claude-opus-5` | Current as of task 46 |
+| Snowflake | `claude-sonnet-4-5` | Behind — but Cortex publishes its own catalog |
+| Azure | `gpt-4o` | Deliberate, per ADR 0002 |
+
+Snowflake is the open question and it is not answerable from this repository: `SNOWFLAKE.CORTEX.COMPLETE`
+serves the models Snowflake chooses to offer, on Snowflake's schedule. Check their current catalog
+before bumping, and record the answer either way — "Cortex does not offer it yet" is a finding
+worth writing down, not a dead end.
+
+Then add the check. A stdlib test that reads the pins out of the `.tf` files and asserts each is
+on an allowlist this document maintains would have caught task 46 at the point it was introduced.
+It must not call a network: the constraint that makes every other suite here safe to gate merges
+on applies to this one too. The allowlist goes stale on its own schedule, which is the honest
+version of the problem rather than a solution to it.
+
+**Verify.** A test that fails when a pin leaves the allowlist, and passes on the current tree.
+
+---
+
+### Task 49 — Refresh `hermes-agent` router model profiles
+
+**Goal.** Stop teaching cost routing with prices that no longer hold.
+
+**Status: Not Started.**
+
+**Action.** [`examples/hermes-agent/hermes/router.py:108-110`](../examples/hermes-agent/hermes/router.py)
+hardcodes `gpt-4o-mini`, `gpt-4o`, and `claude-3-5-sonnet` with per-token costs. Nothing calls an
+API, so nothing is broken — the example is a deterministic offline router and that is the point of
+it. But its numbers are the lesson, and they are wrong now.
+
+Two options, and the choice is worth making explicitly rather than defaulting into: refresh the
+figures and accept that they decay again, or restructure the profiles so the *ratios* carry the
+lesson and the absolute figures are visibly illustrative. The second survives contact with time;
+the first is more concrete for a reader. `tests/test_hermes_agent.py` asserts on the names and
+must move with whichever is chosen. `README.md:132` and this document's own task 41 listing quote the
+same profiles.
+
+**Verify.** `python3 -m unittest tests.test_hermes_agent -v`, and no stale figure left in the
+example's README or this document.
+
+---
+
+### Task 50 — Revisit the `py39` floor
+
+**Goal.** Decide whether the Python floor should still be 3.9.
+
+**Status: Not Started.**
+
+**Action.** Python 3.9 reached end of life in October 2025. [`pyproject.toml`](../pyproject.toml)
+holds ruff at `target-version = "py39"`, and the reasoning there is careful and still internally
+consistent: the floor is what keeps `UP` from rewriting nine examples into syntax their READMEs
+promise they do not need. Raising it is therefore not a one-line change — it is a decision about
+what the examples claim to run on, and the READMEs are part of the diff.
+
+CI runs 3.12 throughout, so nothing here is tested on 3.9 anyway. That gap is itself an argument,
+in either direction: either the floor is real and should be exercised, or it is not and should be
+raised to something that is.
+
+**Verify.** `ruff check .` clean at whatever floor is chosen, and every example README agreeing
+with it.
+
+---
+
+### Task 51 — Re-evaluate ADR 0002 against Claude on Microsoft Foundry
+
+**Goal.** Test the ADR against the condition it named for its own reopening.
+
+**Status: Not Started.**
+
+**Action.** [ADR 0002](DECISION-LOGS/0002-azure-openai-vs-claude.md) closes with: "`azurerm`
+gaining first-class coverage for a Claude catalog deployment *and* an attachable content filter
+on it. At that point the divergence costs more than it buys and the tree should move, keeping the
+same handler contract."
+
+Claude is now a first-party offering on Microsoft Foundry, which is one half of that condition.
+The `azurerm` half was not verifiable during the 2026-09-03 review — checking it needs the
+provider schema, and the Azure tree was not initialised locally. So this task is "go check the
+trigger you already wrote down", not "the trade has flipped".
+
+Two questions decide it. Does `azurerm` carry a first-class resource for a Foundry Claude
+deployment, or does it still need `azapi`? And can a content filter be bound to it in Terraform,
+the way `rai_policy_name` binds one to `azurerm_cognitive_deployment`? Both must be yes. The
+guardrail is the entire reason this tree is on Azure OpenAI, and the ADR's alternative 2 already
+rejected giving it up.
+
+If the answer is no, record that in the ADR with the date. An ADR whose reopen condition has been
+tested and not met is stronger than one that has merely not been revisited.
+
+**Verify.** Either an amended ADR recording the check and its date, or a migrated tree whose
+handler contract is unchanged and whose filter is bound in Terraform.
+
+---
+
+### Task 52 — Add an MCP server example behind the write boundary
+
+**Goal.** Show what a tool server looks like when its writes have to pass the same approval gate
+as everything else in this repository.
+
+**Status: Not Started.**
+
+**Action.** MCP is defined in [`GLOSSARY.md`](agentic-coding-playbook/GLOSSARY.md), named
+throughout the playbook, and listed in
+[`infra/terraform-aws/checklists/pre-apply.md`](../infra/terraform-aws/checklists/pre-apply.md)
+as something to vet like a CI plugin. No example implements one. The repository warns about
+untrusted tool servers without showing what a trusted one looks like, which is the weaker half of
+the lesson.
+
+This is the most on-theme example missing. The repository's organising property is that a
+state-changing action cannot reach production without a human approving that specific action; MCP
+is the standard way tools now arrive from outside the codebase. The interesting question is
+exactly the one this repo is built to answer: what has to stay true when the tool list is supplied
+by a server you do not own.
+
+[`examples/tool-discovery/`](../examples/tool-discovery/README.md) already did the neighbouring
+work — its README notes that directory-loaded tools are "closer to how a plugin system or an MCP
+server's tool list actually behaves" — so the read/write split and the two-registry structure
+should be reused rather than re-derived.
+
+Keep the dependency posture of the surrounding examples: if the protocol can be spoken over stdio
+with the standard library, do that, and stay in the dependency-free `examples` CI job. Adding a
+dependency moves it to `example-deps` and should be a decision, not a side effect.
+
+**Verify.** A suite asserting a write tool advertised by the server cannot execute without an
+approval claim, plus the mutation test the other example suites here carry — break the boundary
+and confirm the suite goes red.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -2329,6 +2575,7 @@ git status --short
 | 2026-08-19 | Task 3 resolved: deleted duplicate `GOOD-FIRST-ISSUE`, kept GitHub's default | somesh-ghaturle |
 | 2026-08-22 | Completed task 11: CodeQL over Python and workflows; Terraform gap recorded | somesh-ghaturle |
 | 2026-08-22 | Completed task 10: packaging divergence catalogued in `infra/MODULES.md` | somesh-ghaturle |
+| 2026-09-03 | Added Phase 6 (tasks 46-52) from a model-currency review; completed 46 and 47 | somesh-ghaturle |
 
 ---
 
