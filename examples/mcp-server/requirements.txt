@@ -1,0 +1,3 @@
+# Standard library only. The protocol is JSON-RPC over stdio, which is `json` and `sys.stdin`;
+# the approval claim needs `hashlib` and `uuid`. An MCP SDK would move this example into the
+# example-deps CI job to gain nothing the boundary depends on.

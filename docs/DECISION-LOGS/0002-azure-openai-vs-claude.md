@@ -1,6 +1,6 @@
 # ADR 0002 — Azure calls Azure OpenAI while the other two trees call Claude
 
-**Status: Accepted** · Decided 2026-08-07 · Confirmed 2026-08-14 · Scope: `infra/terraform-azure/`
+**Status: Accepted** · Decided 2026-08-07 · Confirmed 2026-08-14 · Reopen condition tested 2026-09-03, not met · Scope: `infra/terraform-azure/`
 
 ## Context
 
@@ -78,3 +78,38 @@ imports — see the header of
 `azurerm` gaining first-class coverage for a Claude catalog deployment *and* an attachable
 content filter on it. At that point the divergence costs more than it buys and the tree should
 move, keeping the same handler contract.
+
+### Tested 2026-09-03 — condition not met, decision stands
+
+The condition above has two halves. The first has been met and the second has not, so the
+decision is unchanged.
+
+**Claude is now a first-party offering on Microsoft Foundry** — Sonnet 4.5, Haiku 4.5, and Opus
+4.1, in public preview. When this ADR was written that was the "Azure AI model catalog", and the
+question it raised was whether vendor parity had become cheap enough to take. On the Azure side,
+it has.
+
+**`azurerm` still cannot express the deployment.** A Claude deployment requires a
+`modelProviderData` property — `organizationName`, `countryCode`, `industry` — which the
+Cognitive Services resource provider uses to auto-accept the Anthropic Marketplace offer. That
+property is absent from the resource specification the provider is generated from, so
+`azurerm_cognitive_deployment` cannot create a Claude deployment at all; attempting it fails
+with `AnthropicOrganizationCreationException`. Tracked as
+[hashicorp/terraform-provider-azurerm#31140](https://github.com/hashicorp/terraform-provider-azurerm/issues/31140),
+open since 2025-11-19 and still open when this was checked.
+
+**The documented workaround is the thing alternative 1 rejected.** It is `azapi_resource` with
+`schema_validation_enabled = false` and a hand-written body — no schema validation, no plan-time
+type checking. The other route offered is creating the deployment in the portal and importing
+it, which is a control clicked into place after apply: the exact failure the Context section
+gives as the reason this tree has a Terraform-owned filter in the first place.
+
+**The content-filter half is therefore moot rather than separately failed.** `rai_policy_name`
+binds a policy to an `azurerm_cognitive_deployment`. With no first-class resource for the
+deployment, there is nothing for it to bind to, and a filter attached through an unvalidated
+`azapi` body is not the first-class binding the condition asks for.
+
+So the guardrail argument holds unchanged, and the trade is still worth making. Recording this
+matters more than it might look: an untested reopen condition and a tested one that failed look
+identical from outside, and only one of them is evidence. Re-test when #31140 closes — that
+issue closing is the single signal that makes this worth revisiting, and nothing before it is.
