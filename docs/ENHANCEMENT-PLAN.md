@@ -2070,9 +2070,9 @@ Extend `examples/hermes-agent/hermes/router.py`:
 ```python
 class ModelRouter:
     MODELS = {
-        "simple": {"name": "gpt-4o-mini", "max_tokens": 1000, "cost_per_token": 0.0000015},
-        "complex": {"name": "gpt-4o", "max_tokens": 4000, "cost_per_token": 0.000005},
-        "code": {"name": "claude-3-5-sonnet", "max_tokens": 4000, "cost_per_token": 0.000003},
+        "simple": {"name": "claude-haiku-4-5", "max_tokens": 1000, "relative_cost": 0.5},
+        "complex": {"name": "claude-opus-5", "max_tokens": 4000, "relative_cost": 2.5},
+        "code": {"name": "claude-sonnet-5", "max_tokens": 4000, "relative_cost": 1.0},
     }
 
     def route(self, query: str, context: dict) -> str:

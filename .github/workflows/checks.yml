@@ -496,6 +496,34 @@ jobs:
       - name: Example dependencies are declared, and acyclic
         run: python3 .github/scripts/example_deps.py examples
 
+  # The README badge says "Python 3.9+" and nine example READMEs repeat it. Until this job
+  # existed nothing checked it: every other job here pins 3.12, so the floor was a claim the
+  # repository made about itself and never tested. That is the same defect this tree keeps
+  # finding in its own work — task 5's secret-scan job that ran a removed subcommand, task 47's
+  # dependency guard that named one of four imports — a check that looks present and verifies
+  # nothing.
+  #
+  # Deliberately installs nothing. The claim being tested is the zero-dependency one, so the
+  # suites that need fastapi or opentelemetry skip here by their own guards rather than being
+  # excluded by name from this file; a list of exclusions in a workflow goes stale silently,
+  # a guard beside the import does not. tests/test_example_deps.py skips too, on version: the
+  # script it tests reads sys.stdlib_module_names, which is 3.10+.
+  #
+  # If this job becomes a burden, that is the signal to raise the floor rather than to delete
+  # the job — and at that point the badge, QUICKSTART.md, and the example READMEs move with it.
+  examples-py39:
+    name: examples (3.9 floor)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.9"
+
+      - name: Example suites on the advertised floor
+        run: python3 -m unittest discover -s tests
+
   docs:
     name: docs
     runs-on: ubuntu-latest

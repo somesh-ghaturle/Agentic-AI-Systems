@@ -21,6 +21,20 @@ line-length = 100
 # Two examples genuinely need 3.10+: graph-agent, because LangGraph dropped 3.9, and e2e-agent,
 # which ships a 3.11 Dockerfile. Both say so where a reader will look. Raising this to match
 # them would let ruff rewrite the other nine into syntax their READMEs promise they do not need.
+#
+# Reviewed 2026-09-03 against the fact that Python 3.9 went end-of-life in October 2025, and
+# deliberately kept. Two things decided it. The examples are stdlib-only and actually run on
+# 3.9 — checked, not assumed: the full suite passes on 3.9.6 with 62 skips, all of them either
+# a dependency the fast job does not install or the one CI script that needs 3.10+. And the
+# alternative floor is worse than it looks: 3.10 reaches end-of-life in October 2026, so it
+# would buy a month, and 3.11 would drop users on distributions still shipping 3.9 to gain
+# nothing an example here uses.
+#
+# What was wrong was not the floor, it was that nothing tested it. Every job in checks.yml
+# pinned 3.12, so "Python 3.9+" was a claim about the repository that the repository never
+# checked. The `examples (3.9 floor)` job now runs the suite on 3.9 and is the thing that makes
+# this line mean something. Raise the floor when that job becomes a burden — and move the
+# README badge, QUICKSTART.md, and the example READMEs in the same change.
 target-version = "py39"
 
 extend-exclude = [

@@ -123,12 +123,14 @@ class TestModelRouting(unittest.TestCase):
         self.router = ModelRouter()
 
     def test_simple_requests_use_the_small_model(self):
-        self.assertEqual(self.router.route("what is the refund policy")["name"], "gpt-4o-mini")
+        self.assertEqual(
+            self.router.route("what is the refund policy")["name"], "claude-haiku-4-5"
+        )
 
     def test_code_requests_use_the_code_model(self):
         self.assertEqual(
             self.router.route("fix this", {"files": ["service.py"]})["name"],
-            "claude-3-5-sonnet",
+            "claude-sonnet-5",
         )
 
     def test_explicit_complex_requests_use_the_complex_model(self):
@@ -136,8 +138,25 @@ class TestModelRouting(unittest.TestCase):
             "complex multi-step architecture security migration",
             {"entities": ["api", "db", "queue", "worker", "audit"]},
         )
-        self.assertEqual(profile["name"], "gpt-4o")
+        self.assertEqual(profile["name"], "claude-opus-5")
         self.assertGreater(profile["max_tokens"], 1000)
+
+    def test_tiers_are_ordered_by_relative_cost(self):
+        """The ordering is the lesson; the absolute figures deliberately are not.
+
+        Asserting `simple < code < complex` pins what the router is actually for — spending
+        more only when the request earns it — without pinning numbers that go stale. The
+        previous profiles carried per-token dollar figures, and a test that asserted those
+        would have had to be edited every time a price moved, for no gain in what it proved.
+        """
+        cheap = self.router.route("what is the refund policy")["relative_cost"]
+        code = self.router.route("fix this", {"files": ["service.py"]})["relative_cost"]
+        dear = self.router.route(
+            "complex multi-step architecture security migration",
+            {"entities": ["api", "db", "queue", "worker", "audit"]},
+        )["relative_cost"]
+        self.assertLess(cheap, code)
+        self.assertLess(code, dear)
 
 
 # ---------------------------------------------------------------------------

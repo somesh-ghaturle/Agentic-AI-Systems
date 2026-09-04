@@ -13,8 +13,18 @@ right up until it meets `faiss` and `faiss-cpu`.
 
 import importlib.util
 import pathlib
+import sys
 import tempfile
 import unittest
+
+# The script under test reads `sys.stdlib_module_names`, added in 3.10, to tell a stdlib import
+# from a third-party one. That makes this suite — not the examples — the one piece of the tree
+# with a floor above the repository's 3.9. The distinction matters: the examples are what the
+# README's "Python 3.9+" promises, and the `examples-py39` CI job exists to hold that promise
+# to account. CI tooling running on the version CI actually uses is not a broken promise, so
+# this skips rather than forcing a rewrite of the script to suit a version it never runs on.
+_NEEDS_310 = sys.version_info < (3, 10)
+_SKIP_REASON = "example_deps.py uses sys.stdlib_module_names, added in Python 3.10"
 
 SCRIPT = (
     pathlib.Path(__file__).resolve().parent.parent / ".github" / "scripts" / "example_deps.py"
@@ -24,6 +34,7 @@ deps = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(deps)
 
 
+@unittest.skipIf(_NEEDS_310, _SKIP_REASON)
 class TestNormalise(unittest.TestCase):
     """PEP 503: lowercase, and runs of -_. collapse to a single dash."""
 
@@ -42,6 +53,7 @@ class TestNormalise(unittest.TestCase):
         self.assertEqual(deps.normalise("faiss-cpu"), "faiss-cpu")
 
 
+@unittest.skipIf(_NEEDS_310, _SKIP_REASON)
 class TestDeclared(unittest.TestCase):
     """Requirements syntax that has to come off before names can be compared."""
 
@@ -69,6 +81,7 @@ class TestDeclared(unittest.TestCase):
         self.assertEqual(deps.declared(pathlib.Path("/nonexistent/requirements.txt")), set())
 
 
+@unittest.skipIf(_NEEDS_310, _SKIP_REASON)
 class TestSatisfiedBy(unittest.TestCase):
     """Where import name and distribution name diverge."""
 
@@ -90,6 +103,7 @@ class TestSatisfiedBy(unittest.TestCase):
         self.assertFalse(deps.satisfied_by("langgraph", set()))
 
 
+@unittest.skipIf(_NEEDS_310, _SKIP_REASON)
 class TestImported(unittest.TestCase):
     """ast rather than regex, which is what makes guarded imports visible."""
 
@@ -123,6 +137,7 @@ class TestImported(unittest.TestCase):
         self.assertEqual([p.name for p in found["ray"]], ["m.py"])
 
 
+@unittest.skipIf(_NEEDS_310, _SKIP_REASON)
 class TestFindCycle(unittest.TestCase):
     """The graph that can actually cycle: example to example."""
 
@@ -157,6 +172,7 @@ class TestFindCycle(unittest.TestCase):
         self.assertIsNone(deps.find_cycle({"a": {"c"}, "b": {"c"}, "c": set()}))
 
 
+@unittest.skipIf(_NEEDS_310, _SKIP_REASON)
 class TestEndToEnd(unittest.TestCase):
     """The check against a tree built to fail, then fixed."""
 
@@ -199,6 +215,7 @@ class TestEndToEnd(unittest.TestCase):
         self.assertEqual(self._run(), 1)
 
 
+@unittest.skipIf(_NEEDS_310, _SKIP_REASON)
 class TestTheRealTree(unittest.TestCase):
     """The check has to pass on this repository, or it is not wired up honestly."""
 

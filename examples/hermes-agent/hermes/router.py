@@ -88,11 +88,23 @@ Handler = Callable[[str, Toolbelt], Any]
 
 @dataclass(frozen=True)
 class ModelProfile:
-    """A model choice with the limits the caller must enforce."""
+    """A model choice with the limits the caller must enforce.
+
+    `relative_cost` is a multiple of the cheapest tier, not a price. That is a deliberate
+    change from the per-token dollar figures this held previously, and the reason is that
+    those figures were wrong within a year of being written while the code around them was
+    still correct — an example that teaches cost routing with stale prices teaches the
+    arithmetic and misteaches the inputs.
+
+    Ratios survive that. What a router needs to decide is whether the expensive model is
+    worth it *relative* to the cheap one, and tier spacing moves far more slowly than the
+    absolute numbers do. A caller that needs real prices should read them from its provider
+    at runtime; this field exists to make the routing decision explainable offline.
+    """
 
     name: str
     max_tokens: int
-    cost_per_token: float
+    relative_cost: float
 
 
 class ModelRouter:
@@ -104,10 +116,14 @@ class ModelRouter:
     unchanged.
     """
 
+    # Anchored on Claude Sonnet 5 = 1.0. The Sonnet 5 -> Opus 5 spacing is the one ratio here
+    # taken from published per-token input pricing (2026-09-03: $2 and $5 per MTok, so 2.5x).
+    # The Haiku tier sits below Sonnet at 0.5, which encodes the ordering rather than quoting a
+    # rate. Read these as "roughly how much more does this tier cost", never as a price.
     MODELS: ClassVar[dict[str, ModelProfile]] = {
-        "simple": ModelProfile("gpt-4o-mini", 1000, 0.0000015),
-        "complex": ModelProfile("gpt-4o", 4000, 0.000005),
-        "code": ModelProfile("claude-3-5-sonnet", 4000, 0.000003),
+        "simple": ModelProfile("claude-haiku-4-5", 1000, 0.5),
+        "complex": ModelProfile("claude-opus-5", 4000, 2.5),
+        "code": ModelProfile("claude-sonnet-5", 4000, 1.0),
     }
     _TECHNICAL_TERMS = frozenset(
         {
@@ -136,7 +152,7 @@ class ModelRouter:
         return {
             "name": profile.name,
             "max_tokens": profile.max_tokens,
-            "cost_per_token": profile.cost_per_token,
+            "relative_cost": profile.relative_cost,
         }
 
     def _assess_complexity(self, query: str, context: dict[str, Any]) -> float:
