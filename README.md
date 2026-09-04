@@ -83,6 +83,7 @@ Agentic-AI-Systems/
 │   ├── memory-agent/             vector, graph, decay, and session memory offline
 │   ├── edge-agent/               local SQLite state and file approvals
 │   ├── tool-discovery/           discovering and cataloging available tools
+│   ├── mcp-server/               an MCP tool server whose writes need an approval
 │   └── hermes-dashboard/         FastAPI/WebSocket approval UX with React
 ├── docs/
 │   ├── agentic-system-architecture/   the six building blocks, as prose
@@ -183,6 +184,7 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 - [context-compaction](examples/context-compaction/README.md) — what survives when history is compressed, and why truncation drops the wrong things
 - [graph-agent](examples/graph-agent/README.md) — the same read/write split as hermes-agent, as an explicit LangGraph graph
 - [tool-discovery](examples/tool-discovery/README.md) — tools loaded from a directory at runtime, and why the read/write split has to survive being discovered rather than declared
+- [mcp-server](examples/mcp-server/README.md) — an MCP-shaped tool server that advertises a state-changing tool and refuses to run it without a single-use approval bound to that call's arguments
 - [memory-agent](examples/memory-agent/README.md) — offline vector, graph, decay, and session memory patterns
 - [edge-agent](examples/edge-agent/README.md) — local SQLite state and file-based approvals for devices
 - [hermes-dashboard](examples/hermes-dashboard/README.md) — React/FastAPI human approval workflow UX

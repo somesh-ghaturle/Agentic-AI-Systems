@@ -9,9 +9,29 @@ variable "schema_name" {
 }
 
 variable "model_name" {
-  description = "Cortex model identifier. Claude here, matching the AWS and GCP trees; see docs/DECISION-LOGS/0002-azure-openai-vs-claude.md for why Azure differs."
+  description = "Cortex model identifier. Claude here, matching the AWS and GCP trees; see docs/DECISION-LOGS/0002-azure-openai-vs-claude.md for why Azure differs. Held one generation behind AWS and GCP on purpose — see the comment below."
   type        = string
-  default     = "claude-sonnet-4-5"
+
+  # Deliberately not `claude-opus-5`, which the AWS and GCP trees moved to in task 46.
+  #
+  # Checked against Snowflake's model availability documentation on 2026-09-03: Cortex does list
+  # `claude-opus-5`, so "Cortex does not offer it" is not the reason. The reason is how it offers
+  # it — opus-5 is reachable only through cross-region inference, with no native region, while
+  # `claude-sonnet-4-5` runs natively.
+  #
+  # Cross-region inference transmits the prompt and the response out of the account's home region
+  # for the duration of the call. Nothing is stored there, and the transport is encrypted and
+  # mutually authenticated, but the payload still leaves. Turning it on is an ACCOUNTADMIN-only
+  # `ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION`, and it defaults to DISABLED on accounts
+  # created before 2026-03-09.
+  #
+  # So bumping this default would hand every operator a tree that either fails on a parameter
+  # they never set, or works because their account already permits inference payloads to leave
+  # their region — a data-residency decision made for them, in a default, by a repository whose
+  # subject is not making decisions like that for people. A newer model does not outrank that.
+  #
+  # Revisit when opus-5 gains a native Cortex region. Then this is an ordinary version bump.
+  default = "claude-sonnet-4-5"
 }
 
 variable "temperature" {

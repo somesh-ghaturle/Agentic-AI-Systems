@@ -81,11 +81,11 @@ section saying what has to be decided first.
 | 45 | Human-in-the-loop UX dashboard | Future | Low | Done | React/FastAPI dashboard with WebSocket approval updates | 2026-11-01 |
 | 46 | Fix the GCP `reason` model/thinking mismatch | Infrastructure | High | Done | Pinned model predated the adaptive-thinking call it was paired with | 2026-09-10 |
 | 47 | Complete the `e2e-agent` test dependency guard | CI/CD | High | Done | Guard named one of four imports; partial envs failed for the wrong reason | 2026-09-10 |
-| 48 | Audit model pins across the four trees | Infrastructure | Medium | Not Started | | 2026-10-03 |
-| 49 | Refresh `hermes-agent` router model profiles | Examples | Medium | Not Started | | 2026-10-03 |
-| 50 | Revisit the `py39` floor | Repository | Low | Not Started | Python 3.9 reached EOL 2025-10 | 2026-12-01 |
-| 51 | Re-evaluate ADR 0002 against Claude on Foundry | Documentation | Low | Not Started | ADR names its own reopen condition | 2026-12-01 |
-| 52 | Add an MCP server example behind the write boundary | Examples | Medium | Not Started | | 2026-10-31 |
+| 48 | Audit model pins across the four trees | Infrastructure | Medium | Done | Allowlist test; Snowflake held back deliberately, cross-region inference | 2026-10-03 |
+| 49 | Refresh `hermes-agent` router model profiles | Examples | Medium | Done | Ratios replace prices; tier ordering is now the assertion | 2026-10-03 |
+| 50 | Revisit the `py39` floor | Repository | Low | Done | Floor kept and now tested; it had never been exercised | 2026-12-01 |
+| 51 | Re-evaluate ADR 0002 against Claude on Foundry | Documentation | Low | Done | Condition tested 2026-09-03 and not met; decision stands | 2026-12-01 |
+| 52 | Add an MCP server example behind the write boundary | Examples | Medium | Done | 19 tests, two mutations; discovery is not authorization | 2026-10-31 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
 tree, and kept current as tasks have landed since. Thirty-three tasks now pass: 1, 2, 3, 4, 5, 7,
@@ -2070,9 +2070,9 @@ Extend `examples/hermes-agent/hermes/router.py`:
 ```python
 class ModelRouter:
     MODELS = {
-        "simple": {"name": "gpt-4o-mini", "max_tokens": 1000, "cost_per_token": 0.0000015},
-        "complex": {"name": "gpt-4o", "max_tokens": 4000, "cost_per_token": 0.000005},
-        "code": {"name": "claude-3-5-sonnet", "max_tokens": 4000, "cost_per_token": 0.000003},
+        "simple": {"name": "claude-haiku-4-5", "max_tokens": 1000, "relative_cost": 0.5},
+        "complex": {"name": "claude-opus-5", "max_tokens": 4000, "relative_cost": 2.5},
+        "code": {"name": "claude-sonnet-5", "max_tokens": 4000, "relative_cost": 1.0},
     }
 
     def route(self, query: str, context: dict) -> str:
@@ -2393,7 +2393,26 @@ python3 -m venv /tmp/venv-e2e
 **Goal.** Give the repository one place that knows every model identifier it pins, and a check
 that fails when they drift apart.
 
-**Status: Not Started.**
+**Status: Done.** [`tests/test_model_pins.py`](../tests/test_model_pins.py) — 3 tests. Mutation
+tested by reintroducing task 46's exact pin, which the allowlist rejects by name and file.
+
+Writing it surfaced a limit worth recording: the first version scanned comments too, and failed
+on the Snowflake tree the moment that tree explained *why* it does not use `claude-opus-5`. Full-
+line comments are now excluded and Terraform `description` strings deliberately are not — a
+description is contract surface a reader acts on, and task 46's stale identifier was sitting in
+one. That distinction is the whole reason the check is worth having rather than a grep.
+
+**The Snowflake question has an answer, and it is "hold".** Checked against Snowflake's model
+availability documentation on 2026-09-03: Cortex *does* offer `claude-opus-5`, so the convenient
+excuse — "Cortex has not shipped it" — is false. It offers it only through cross-region
+inference, with no native region, while `claude-sonnet-4-5` runs natively. Cross-region inference
+transmits the prompt and response out of the account's home region, is gated on an
+ACCOUNTADMIN-only `CORTEX_ENABLED_CROSS_REGION`, and defaults to DISABLED on accounts created
+before 2026-03-09. Bumping the default would hand every operator a tree that either fails on a
+parameter they never set or works because their account already lets inference payloads leave
+their region — a data-residency decision made for them, in a default, by a repository whose
+subject is not making decisions like that for people. Recorded in the module with the condition
+that reopens it: a native Cortex region for opus-5.
 
 **Action.** The identifiers as of 2026-09-03, after task 46:
 
@@ -2423,7 +2442,22 @@ version of the problem rather than a solution to it.
 
 **Goal.** Stop teaching cost routing with prices that no longer hold.
 
-**Status: Not Started.**
+**Status: Done.** The second option was taken — ratios carry the lesson.
+[`ModelProfile`](../examples/hermes-agent/hermes/router.py) now has `relative_cost`, a multiple
+of the cheapest tier, and the lineup moves to `claude-haiku-4-5`, `claude-sonnet-5`, and
+`claude-opus-5`.
+
+The choice was between refreshing the figures and restructuring so they cannot rot. Refreshing
+loses on its own terms: the example never calls a provider, so nothing in it ever contradicts a
+stale number, and the same edit would be due again within the year. Only one ratio here is taken
+from published pricing — Sonnet 5 to Opus 5, $2 and $5 per MTok on 2026-09-03, so 2.5x — and the
+Haiku tier is placed below Sonnet to encode ordering rather than quote a rate. The comment says
+so, because a number that looks like a price and is not is worse than no number.
+
+`tests/test_hermes_agent.py` gains a test asserting `simple < code < complex`, which is what the
+router is actually for. The cross-vendor mix in the old profiles turned out not to be a lesson —
+neither the README nor the module docstring ever claimed multi-provider routing — so collapsing
+to one vendor cost nothing. Task 41's listing above was updated to match; it is the same code.
 
 **Action.** [`examples/hermes-agent/hermes/router.py:108-110`](../examples/hermes-agent/hermes/router.py)
 hardcodes `gpt-4o-mini`, `gpt-4o`, and `claude-3-5-sonnet` with per-token costs. Nothing calls an
@@ -2446,7 +2480,34 @@ example's README or this document.
 
 **Goal.** Decide whether the Python floor should still be 3.9.
 
-**Status: Not Started.**
+**Status: Done.** The floor stays 3.9 and is now tested — the new `examples (3.9 floor)` job in
+[`checks.yml`](../.github/workflows/checks.yml) runs the suite there.
+
+**The framing in the Action below is what changed under examination.** It treats the choice as
+"raise it or exercise it", and assumes raising is the modern answer. Two facts moved it the other
+way. The examples genuinely run on 3.9 — verified, not assumed: the full suite passes on 3.9.6,
+314 tests at the time, with every skip explained by an absent dependency or the one CI script
+that needs 3.10+. And the alternative floors are worse than they look: 3.10 reaches end of life
+in October 2026, so it buys a month, while 3.11 would drop users on distributions still shipping
+3.9 to gain nothing any example here uses.
+
+So the defect was never the floor. It was that nothing tested it — every job pinned 3.12, which
+made "Python 3.9+" a claim the repository made about itself and never checked. That is the same
+shape as task 5's secret-scan job running a removed subcommand and task 47's guard naming one of
+four imports: a check that looks present and verifies nothing.
+
+Making the job possible turned up three suites that **errored** rather than skipped without their
+dependencies — `test_trace_eval_service`, `test_hermes_dashboard`, and `test_example_deps` — the
+same defect task 47 fixed once in `test_e2e_agent`. Each is now guarded at the import, so the
+3.9 job needs no exclusion list in the workflow; a list there would go stale silently, a guard
+beside the import does not.
+
+**And it exposed a bug in task 47's own fix.** That guard called
+`importlib.util.find_spec("opentelemetry.sdk")`, which imports the parent package to look inside
+it and therefore *raises* rather than returning None when `opentelemetry` is absent — crashing in
+exactly the partial-install case the guard was written to catch. It passed CI because the job
+that runs it installs the dependencies. Found only by running the suite somewhere they were
+missing, which is an argument for the 3.9 job independent of the floor.
 
 **Action.** Python 3.9 reached end of life in October 2025. [`pyproject.toml`](../pyproject.toml)
 holds ruff at `target-version = "py39"`, and the reasoning there is careful and still internally
@@ -2467,7 +2528,25 @@ with it.
 
 **Goal.** Test the ADR against the condition it named for its own reopening.
 
-**Status: Not Started.**
+**Status: Done.** Condition tested 2026-09-03 and **not met**; the decision stands. Recorded in
+[ADR 0002](DECISION-LOGS/0002-azure-openai-vs-claude.md) under "Tested 2026-09-03".
+
+Of the two halves, the first has been met and the second has not. Claude is a first-party
+offering on Microsoft Foundry — Sonnet 4.5, Haiku 4.5, Opus 4.1 in public preview — so on the
+Azure side vendor parity is now purchasable. But `azurerm` still cannot express the deployment:
+a Claude deployment requires a `modelProviderData` property that is absent from the resource
+specification the provider is generated from, so `azurerm_cognitive_deployment` cannot create one
+at all. Tracked as hashicorp/terraform-provider-azurerm#31140, open since 2025-11-19 and still
+open when checked.
+
+The documented workaround is `azapi_resource` with `schema_validation_enabled = false`, or
+creating the deployment in the portal and importing it. Those are precisely what alternative 1
+rejected and what the Context section gives as the reason this tree exists. The content-filter
+half is therefore moot rather than separately failed — `rai_policy_name` binds to an
+`azurerm_cognitive_deployment`, and there is no such resource to bind to.
+
+Re-test when #31140 closes. Nothing before that changes the answer, which is worth stating so the
+next review is a one-line check rather than a repeat of this one.
 
 **Action.** [ADR 0002](DECISION-LOGS/0002-azure-openai-vs-claude.md) closes with: "`azurerm`
 gaining first-class coverage for a Claude catalog deployment *and* an attachable content filter
@@ -2498,7 +2577,32 @@ handler contract is unchanged and whose filter is bound in Terraform.
 **Goal.** Show what a tool server looks like when its writes have to pass the same approval gate
 as everything else in this repository.
 
-**Status: Not Started.**
+**Status: Done.** [`examples/mcp-server/`](../examples/mcp-server/README.md), with
+[`tests/test_mcp_server.py`](../tests/test_mcp_server.py) — 19 tests.
+
+The organising idea is that discovery and authorization come apart. A client can list
+`refund_order`, read its schema, and call it, and none of that is permission to run it. The write
+tool is advertised rather than hidden on purpose: hiding it would be a weaker design that reads
+as a stronger one, since a hidden tool is protected only by the client not guessing its name.
+
+The claim is bound to the arguments, not the tool. `fingerprint()` hashes tool plus arguments
+with `sort_keys=True`, so approving `refund_order` in the abstract is impossible — the test that
+carries the point grants an approval for $10, calls with $4,000, and expects refusal. The token
+is stripped before fingerprinting and before the call, or a caller could approve one action and
+execute another by editing a field afterwards.
+
+`tool-discovery`'s two-registry structure is restated rather than imported. `MCPServer` holds the
+read and write registries as separate fields, so there is no "all tools" collection for a call to
+resolve against and the unguarded branch can only ever see read tools. Restated because the
+inter-example dependency graph is checked and kept shallow, and an example that reaches into a
+sibling for its core mechanism stops being readable alone.
+
+**Mutation tested twice.** Removing the `token is None` check turns 2 tests red; deleting the
+access-level refusal in `ToolRegistry.register` turns 2 different ones red. Both reverted.
+
+Stdlib only, so it stays in the dependency-free `examples` job. Named in `SECURITY.md`'s in-scope
+list with its limits stated — the protocol subset is deliberately small, and a gap in MCP
+conformance is a bug report rather than a vulnerability.
 
 **Action.** MCP is defined in [`GLOSSARY.md`](agentic-coding-playbook/GLOSSARY.md), named
 throughout the playbook, and listed in

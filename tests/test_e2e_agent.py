@@ -56,8 +56,23 @@ def import_app(api_key):
 # requirements and not this one's — satisfied the guard and then failed on the import, reporting
 # a missing-key assertion for a missing package. Failing for the wrong reason is the same defect
 # as passing for the wrong reason, which is what this guard already existed to prevent.
+#
+# `find_spec` on a dotted name imports the parent package to look inside it, so
+# `find_spec("opentelemetry.sdk")` raises ModuleNotFoundError — rather than returning None —
+# when `opentelemetry` itself is absent. An unguarded call therefore crashes at import time in
+# precisely the partial-install case this guard exists to detect, turning a clean skip into a
+# collection error. Catching it is the whole point: a module we cannot even look up is missing.
 _REQUIRED = ("fastapi", "pydantic", "opentelemetry", "opentelemetry.sdk")
-_MISSING = [m for m in _REQUIRED if importlib.util.find_spec(m) is None]
+
+
+def _absent(name):
+    try:
+        return importlib.util.find_spec(name) is None
+    except (ImportError, ValueError):
+        return True
+
+
+_MISSING = [m for m in _REQUIRED if _absent(m)]
 
 
 @unittest.skipIf(

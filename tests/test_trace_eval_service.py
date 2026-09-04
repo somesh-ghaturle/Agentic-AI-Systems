@@ -1,10 +1,40 @@
+"""API tests for the trace-eval service.
+
+    python3 -m unittest tests.test_trace_eval_service -v
+
+Guarded rather than imported outright. This suite needs fastapi, which the dependency-free
+`examples` CI job does not install, and an unguarded module-scope import turns "not applicable
+here" into a collection error — the same defect task 47 fixed in tests/test_e2e_agent.py, where
+a missing package was reported as a failing assertion. A skip says what is true; an error says
+something is broken.
+"""
+
+import importlib.util
 import unittest
 
-from fastapi.testclient import TestClient
 
-from trace_eval_service.app import app
+def _absent(name):
+    # find_spec on a dotted name imports the parent to look inside it, so it raises rather
+    # than returning None when the parent is absent. Either way the module is unavailable.
+    try:
+        return importlib.util.find_spec(name) is None
+    except (ImportError, ValueError):
+        return True
 
 
+_MISSING = [m for m in ("fastapi", "pydantic") if _absent(m)]
+
+if not _MISSING:
+    from fastapi.testclient import TestClient
+
+    from trace_eval_service.app import app
+
+
+@unittest.skipIf(
+    _MISSING,
+    f"trace-eval service dependencies are not installed ({', '.join(_MISSING)}); "
+    "this suite runs in the example-deps job",
+)
 class TestTraceEvalService(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)

@@ -46,6 +46,14 @@ incident.
   A path from discovery to a callable write tool inside that object is in scope even without an
   approval step to bypass, because the claim being tested is "unreachable", not "reachable only
   with approval".
+- **`examples/mcp-server/`** — makes the strongest claim of the examples, because the tool list
+  arrives from a server rather than from the codebase: a tool it advertises as state-changing
+  cannot execute without a single-use approval claim bound to that call's exact arguments. Any
+  route from `tools/call` to a write tool's `run` without a matching claim is in scope, and so
+  is any way to make one approval authorize a different action — approving a $10 refund and
+  executing a $4,000 one is the failure it exists to prevent. The protocol subset is deliberately
+  small and is not itself a security claim; a gap in MCP conformance is a bug report, not a
+  vulnerability.
 - **`examples/approval-gate-fuzzing/`** — a security harness that enumerates bypass strings and
   asserts a naive model can be tricked into following them while the approval-aware guard blocks
   the action. A case that reaches a dangerous write path in the naive branch is in scope even

@@ -129,8 +129,15 @@ boundary:
 from hermes import ModelRouter
 
 profile = ModelRouter().route("fix the deployment", {"files": ["service.py"]})
-# {"name": "claude-3-5-sonnet", "max_tokens": 4000, "cost_per_token": 0.000003}
+# {"name": "claude-sonnet-5", "max_tokens": 4000, "relative_cost": 1.0}
 ```
+
+`relative_cost` is a multiple of the cheapest tier, not a price. The profiles held
+per-token dollar figures until those figures aged out from under code that was still
+correct, which is the failure mode an offline example is most exposed to: nothing calls a
+provider, so nothing ever contradicts a stale number. Tier spacing outlives the rates, and
+it is what the routing decision actually turns on. Read real prices from your provider at
+runtime if you need to bill against them.
 
 The selected profile should be recorded in the trace and enforced by the provider
 adapter. Routing is policy metadata; it is not an authorization decision.
