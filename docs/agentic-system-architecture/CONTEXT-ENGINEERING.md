@@ -132,6 +132,8 @@ much as an API one.
 
 ## Related
 
+- [Evaluation engineering](EVALUATION-ENGINEERING.md) — how you find out whether a context change helped
+
 - [context-compaction](../../examples/context-compaction/README.md) — decisions kept, resolved detail dropped
 - [Harness engineering](HARNESS-ENGINEERING.md) — the loop and continuity side
 - [Building blocks §3](BUILDING-BLOCKS.md) — memory and state

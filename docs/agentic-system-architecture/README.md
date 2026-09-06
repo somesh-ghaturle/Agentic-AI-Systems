@@ -26,6 +26,7 @@ That framing is the thesis of this folder.
 | [PRODUCTION-PRINCIPLES.md](PRODUCTION-PRINCIPLES.md) | Reliability, cost and latency, context and RAG design, observability, security and privacy |
 | [HARNESS-ENGINEERING.md](HARNESS-ENGINEERING.md) | The scaffolding around the model — continuity across context windows, and who decides the work is done |
 | [CONTEXT-ENGINEERING.md](CONTEXT-ENGINEERING.md) | What the model sees — context rot, compaction, note-taking, sub-agents, just-in-time retrieval |
+| [EVALUATION-ENGINEERING.md](EVALUATION-ENGINEERING.md) | How you know it worked — scoring the path rather than the answer, severity design, and mutation-testing the graders |
 | [checklists/design-review.md](checklists/design-review.md) | A design review to run before building, and again before shipping |
 | [REFERENCES.md](REFERENCES.md) | Sourcing and provenance — which claims are measured, which are directional |
 | [infra/](../../infra/) | This architecture as Terraform on four cloud and data-platform trees — [AWS](../../infra/terraform-aws/README.md), [Azure](../../infra/terraform-azure/README.md), [GCP](../../infra/terraform-gcp/README.md), [Snowflake](../../infra/terraform-snowflake/README.md) — each with its own `ARCHITECTURE.md` drawn in that platform's terms, plus an opt-in cross-cloud hybrid POC |
@@ -85,6 +86,10 @@ down, because they are expensive to revisit later.
 **Already have something running:** [PRODUCTION-PRINCIPLES.md](PRODUCTION-PRINCIPLES.md)
 and the design review. Most production problems trace back to a missing structured output
 contract, an unbounded autonomous loop, or no trace-level evaluation.
+
+**Cannot tell whether it is getting better:** [EVALUATION-ENGINEERING.md](EVALUATION-ENGINEERING.md).
+That is the feedback edge in the diagram above, and a suite that only reads final answers cannot
+close it — whether a human authorised an action is not a property of the text a user reads.
 
 **Want to see the patterns in code:** the [examples/](../../examples/) directory has
 runnable implementations. Two implement the building blocks directly —

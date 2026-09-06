@@ -58,6 +58,10 @@ recommendations, which depend heavily on your actual scale and access patterns.
 | "Recency and relevance are different axes" | This document's framing | The consequence — truncation drops old decisions — is demonstrated in [context-compaction](../../examples/context-compaction/README.md) |
 | What a graph buys over a loop | Practitioner consensus + primary | Durable interrupts and node-boundary resumption are documented LangGraph features; the four-row comparison is this document's own |
 | Trace-level evaluation over final-output-only | Emerging practice | Direction well-supported; specific metrics vary by domain |
+| "The answer is a rendering, not a record" | This document's framing | The demonstration — two agents whose answers are both on-topic and only one of which was authorised — is measured in [trace-eval](../../examples/trace-eval/README.md) |
+| Graders must not share information | This document's framing | Follows from ordinary experimental design; the failure it prevents is agreement reported as quality |
+| Severity tiers so warnings do not fail runs | Practitioner consensus | The alarm-fatigue argument is well-established in monitoring practice and transfers directly |
+| Mutation-testing the graders | This repository's own | Found by writing twelve deliberate breaks against [trace-eval](../../examples/trace-eval/README.md); it surfaced a check that had never fired alone. Mutation testing itself is established practice |
 | LLM-as-a-judge validated against human labels | Emerging research + practice | Judge calibration is genuinely necessary and often skipped |
 | Irrelevant context degrades reasoning | Emerging research | Direction supported; magnitude varies by model and task |
 | Hybrid search and re-ranking improve retrieval | Established IR practice | Predates LLMs; well-measured in the IR literature |
