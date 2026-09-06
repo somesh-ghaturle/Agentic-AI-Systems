@@ -55,6 +55,11 @@ only the sessions that were going to be fine anyway.
 <details>
 <summary>Additional diagram</summary>
 
+![Harness agent — the task state machine](../../docs/diagrams/gif/harness-state-machine.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 stateDiagram-v2
     [*] --> PENDING
@@ -64,6 +69,8 @@ stateDiagram-v2
     VERIFIED --> COMPLETE: mark_complete()
     COMPLETE --> [*]
 ```
+
+</details>
 
 </details>
 

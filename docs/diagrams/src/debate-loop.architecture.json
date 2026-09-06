@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Multi-agent debate — the convergence loop",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      { "id": "round", "label": "One round", "focus": ["propose", "critique", "converged", "revise", "budget"], "note": "Each round: propose, every critic critiques, then check convergence." },
+      { "id": "exit", "label": "The exits", "focus": ["converged-yes", "stands-pat", "budget-spent", "dissent", "verdict"], "note": "The loop ends by convergence, standing pat, or budget exhaustion; dissent is always recorded." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 3, "cellW": 188, "cellH": 66, "gapX": 24, "gapY": 60, "origin": [80, 110] },
+  "components": [
+    { "id": "start", "type": "external", "label": "run_debate()", "sublabel": "panel · goal · max_rounds", "row": 0, "col": 1, "size": [188, 60] },
+    { "id": "propose", "type": "backend", "label": "proposer.propose()", "row": 1, "col": 1, "size": [188, 60] },
+    { "id": "validate", "type": "security", "label": "names an action?", "row": 2, "col": 1, "size": [188, 60] },
+    { "id": "error", "type": "external", "label": "DebateError", "row": 2, "col": 0, "size": [168, 56] },
+    { "id": "round", "type": "backend", "label": "round := 1", "row": 2, "col": 2, "size": [168, 56] },
+    { "id": "critique", "type": "backend", "label": "every critic critiques", "sublabel": "round handed in, not inferred", "row": 3, "col": 1, "size": [188, 66] },
+    { "id": "converged", "type": "security", "label": "arbiter.converged()?", "row": 4, "col": 1, "size": [188, 60] },
+    { "id": "converged-yes", "type": "external", "label": "converged = True", "row": 4, "col": 0, "size": [188, 56] },
+    { "id": "revise", "type": "backend", "label": "proposer.revise()", "row": 4, "col": 2, "size": [188, 60] },
+    { "id": "stands-pat", "type": "backend", "label": "stands pat", "sublabel": "converged = False", "row": 5, "col": 2, "size": [188, 60] },
+    { "id": "budget", "type": "security", "label": "round < max_rounds?", "row": 5, "col": 1, "size": [188, 60] },
+    { "id": "budget-spent", "type": "external", "label": "budget spent", "sublabel": "converged = False", "row": 5, "col": 0, "size": [188, 60] },
+    { "id": "dissent", "type": "database", "label": "dissent", "sublabel": "critics still OPPOSE", "row": 6, "col": 1, "size": [188, 60] },
+    { "id": "verdict", "type": "external", "label": "Verdict", "sublabel": "transcript.close()", "row": 7, "col": 1, "size": [188, 56] }
+  ],
+  "connections": [
+    { "from": "start", "to": "propose", "variant": "default" },
+    { "from": "propose", "to": "validate", "variant": "default" },
+    { "from": "validate", "to": "error", "label": "no", "variant": "security", "labelDy": 60 },
+    { "from": "validate", "to": "round", "label": "yes", "variant": "default", "labelDy": 60 },
+    { "from": "round", "to": "critique", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "critique", "to": "converged", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "converged", "to": "converged-yes", "label": "yes", "variant": "emphasis", "labelDy": 54 },
+    { "from": "converged", "to": "revise", "label": "no", "variant": "default", "labelDy": 60 },
+    { "from": "revise", "to": "stands-pat", "label": "None", "variant": "dashed", "labelDy": 30 },
+    { "from": "revise", "to": "budget", "label": "revised", "variant": "default" },
+    { "from": "budget", "to": "budget-spent", "label": "no", "variant": "security", "labelDy": 60 },
+    { "from": "budget", "to": "critique", "label": "yes, round += 1", "variant": "dashed", "fromSide": "bottom", "toSide": "right", "via": [[386, 820], [720, 820], [720, 521]] },
+    { "from": "converged-yes", "to": "dissent", "variant": "default", "fromSide": "left", "toSide": "left", "via": [[15, 642], [15, 896]] },
+    { "from": "stands-pat", "to": "dissent", "variant": "default", "fromSide": "bottom", "toSide": "right" },
+    { "from": "budget-spent", "to": "dissent", "variant": "default", "fromSide": "bottom", "toSide": "left" },
+    { "from": "dissent", "to": "verdict", "variant": "default", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "The round is handed in, not inferred", "items": ["Stamping each turn with its round prevents an off-by-one from reordering dissent", "The loop has three exits — convergence, standing pat, and budget — and all record dissent"] }
+  ]
+}

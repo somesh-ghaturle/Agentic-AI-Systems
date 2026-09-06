@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Graph agent — where the write boundary actually is",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "read", "label": "The read edge", "focus": ["classify", "retrieve"], "note": "classify may read from retrieve freely." },
+      { "id": "write", "label": "The write boundary", "focus": ["classify", "draft", "approval", "human", "execute"], "note": "draft proposes, a human approves, execute acts — and there is no draft→execute edge." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 4, "cellW": 184, "cellH": 70, "gapX": 24, "gapY": 80, "origin": [80, 110] },
+  "components": [
+    { "id": "classify", "type": "backend", "label": "classify", "row": 1, "col": 0, "size": [168, 60] },
+    { "id": "retrieve", "type": "database", "label": "retrieve", "sublabel": "read", "row": 0, "col": 1, "size": [168, 60] },
+    { "id": "draft", "type": "backend", "label": "draft", "sublabel": "proposes, never acts", "row": 1, "col": 1, "size": [184, 66] },
+    { "id": "approval", "type": "security", "label": "approval", "sublabel": "interrupt()", "row": 1, "col": 2, "size": [184, 66] },
+    { "id": "human", "type": "external", "label": "Human", "row": 0, "col": 2, "size": [168, 56] },
+    { "id": "execute", "type": "backend", "label": "execute", "sublabel": "the only node with an effect", "row": 1, "col": 3, "size": [184, 66] }
+  ],
+  "connections": [
+    { "from": "classify", "to": "retrieve", "label": "read", "variant": "default", "fromSide": "top", "toSide": "bottom" },
+    { "from": "classify", "to": "draft", "label": "write", "variant": "dashed" },
+    { "from": "draft", "to": "approval", "variant": "default" },
+    { "from": "approval", "to": "human", "variant": "default", "fromSide": "top", "toSide": "bottom" },
+    { "from": "human", "to": "execute", "variant": "emphasis", "fromSide": "bottom", "toSide": "top" },
+    { "from": "draft", "to": "execute", "label": "no such edge", "variant": "security", "fromSide": "bottom", "toSide": "bottom" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "The missing edge is the boundary", "items": ["There is no draft → execute edge; a human must sit between a proposal and an effect", "If you can draw a direct line from draft to execute, the boundary has a hole in it"] }
+  ]
+}

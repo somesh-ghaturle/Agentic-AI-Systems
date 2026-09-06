@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "The six building blocks — and the feedback edge",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "core",
+        "label": "Orchestration owns the sequence",
+        "focus": ["orch", "model", "tools", "memory"],
+        "note": "The control layer calls the model, the tools, and memory; nothing else knows the order."
+      },
+      {
+        "id": "gate",
+        "label": "Tools hit the approval gate",
+        "focus": ["tools", "approval"],
+        "note": "Only tool writes that are high-impact pay for a human; the rest execute directly."
+      },
+      {
+        "id": "feedback",
+        "label": "Evals feed design back",
+        "focus": ["evals", "orch"],
+        "note": "Trace-level evals return findings to orchestration — the edge that lets the system improve."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 3,
+    "cellW": 200,
+    "cellH": 76,
+    "gapX": 24,
+    "gapY": 72,
+    "origin": [80, 110]
+  },
+  "components": [
+    { "id": "orch", "type": "backend", "label": "4 · Orchestration", "sublabel": "control layer · owns the sequence", "row": 0, "col": 1, "size": [200, 72] },
+    { "id": "model", "type": "cloud", "label": "1 · Model layer", "sublabel": "routing · structured outputs", "row": 1, "col": 0, "size": [200, 72] },
+    { "id": "tools", "type": "messagebus", "label": "2 · Tool layer", "sublabel": "schemas · permissions", "row": 1, "col": 1, "size": [200, 72] },
+    { "id": "memory", "type": "database", "label": "3 · Memory & state", "sublabel": "execution · knowledge · archive", "row": 1, "col": 2, "size": [200, 72] },
+    { "id": "evals", "type": "frontend", "label": "5 · Trace-level evals", "sublabel": "every step, not just output", "row": 2, "col": 0, "size": [200, 72] },
+    { "id": "approval", "type": "security", "label": "6 · Approval gates", "sublabel": "human in the loop", "row": 2, "col": 1, "size": [200, 72] }
+  ],
+  "connections": [
+    { "from": "orch", "to": "model", "variant": "default" },
+    { "from": "orch", "to": "tools", "variant": "default" },
+    { "from": "orch", "to": "memory", "variant": "default" },
+    { "from": "orch", "to": "evals", "variant": "default" },
+    { "from": "tools", "to": "approval", "variant": "emphasis" },
+    { "from": "evals", "to": "orch", "label": "findings", "variant": "dashed", "fromSide": "left", "toSide": "top" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The feedback edge is the point",
+      "items": [
+        "Without evals feeding back into orchestration, the six blocks are a checklist, not a system",
+        "Output-only grading cannot see which step went wrong, so it cannot improve the next run"
+      ]
+    }
+  ]
+}

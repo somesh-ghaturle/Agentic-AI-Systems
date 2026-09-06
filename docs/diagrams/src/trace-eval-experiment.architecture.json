@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Trace eval — the experiment that finds the blind spot",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "subjects", "label": "Same tools, different architecture", "focus": ["case", "hermes", "naive", "run"], "note": "Both subjects get the same case and produce an answer plus a JSONL trace." },
+      { "id": "grade", "label": "Two graders, one verdict", "focus": ["run", "output", "traceg", "verdict"], "note": "An output grader sees only the answer; a trace grader sees only the events." },
+      { "id": "gap", "label": "The blind spot", "focus": ["verdict", "agreed", "gap"], "note": "Where the graders disagree, the answer text was not enough — that is the finding." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 3, "cellW": 196, "cellH": 70, "gapX": 24, "gapY": 64, "origin": [80, 110] },
+  "components": [
+    { "id": "case", "type": "external", "label": "Labelled case", "sublabel": "request · expected path · expected phrases", "row": 0, "col": 1, "size": [196, 66] },
+    { "id": "hermes", "type": "backend", "label": "hermes", "sublabel": "write boundary", "row": 1, "col": 0, "size": [196, 66] },
+    { "id": "naive", "type": "backend", "label": "naive", "sublabel": "no boundary", "row": 1, "col": 2, "size": [196, 66] },
+    { "id": "run", "type": "backend", "label": "Run", "sublabel": "answer + JSONL trace", "row": 2, "col": 1, "size": [196, 66] },
+    { "id": "output", "type": "frontend", "label": "Output grader", "sublabel": "answer only", "row": 3, "col": 0, "size": [196, 66] },
+    { "id": "traceg", "type": "frontend", "label": "Trace grader", "sublabel": "events only", "row": 3, "col": 2, "size": [196, 66] },
+    { "id": "verdict", "type": "security", "label": "Do the verdicts agree?", "row": 4, "col": 1, "size": [196, 60] },
+    { "id": "agreed", "type": "backend", "label": "Nothing new learned", "sublabel": "the answer was enough", "row": 5, "col": 0, "size": [196, 66] },
+    { "id": "gap", "type": "security", "label": "The blind spot", "sublabel": "helpful answer, unauthorised action", "row": 5, "col": 2, "size": [196, 66] }
+  ],
+  "connections": [
+    { "from": "case", "to": "hermes", "variant": "default" },
+    { "from": "case", "to": "naive", "variant": "default" },
+    { "from": "hermes", "to": "run", "variant": "default" },
+    { "from": "naive", "to": "run", "variant": "default" },
+    { "from": "run", "to": "output", "variant": "default" },
+    { "from": "run", "to": "traceg", "variant": "default" },
+    { "from": "output", "to": "verdict", "variant": "default" },
+    { "from": "traceg", "to": "verdict", "variant": "default" },
+    { "from": "verdict", "to": "agreed", "label": "both agree", "variant": "default" },
+    { "from": "verdict", "to": "gap", "label": "output PASS, trace FAIL", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "Why two graders", "items": ["An output-only grader cannot see whether a human authorised an action", "Disagreement between the graders is the experiment's signal, not its failure"] }
+  ]
+}

@@ -11,6 +11,11 @@ Architecture
 
 System architecture (mermaid)
 
+![E2E agent — deployment topology](../../docs/diagrams/gif/e2e-deployment-topology.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
   Client[Client]
@@ -40,6 +45,8 @@ flowchart LR
   classDef infra fill:#f8f9fa,stroke:#333,stroke-width:1px
   class OTel,Traces,Metrics,Audit,Provenance,ModelRegistry,Secrets,CI infra
 ```
+
+</details>
 
 Full diagram with notes on how to read it: [architecture.md](architecture.md). The rendered
 [architecture.svg](architecture.svg) is a hand-exported snapshot — nothing in CI regenerates

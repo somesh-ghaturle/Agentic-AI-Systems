@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Multi-agent system — specialised roles around shared state",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "plan",
+        "label": "Plan and specialise",
+        "focus": ["planner", "retriever", "coder"],
+        "note": "A planner splits the goal into roles; each specialist does one thing."
+      },
+      {
+        "id": "review",
+        "label": "Review and execute",
+        "focus": ["coder", "reviewer", "executor"],
+        "note": "A reviewer gates the coder until the work is approvable, then an executor acts."
+      },
+      {
+        "id": "state",
+        "label": "Shared state",
+        "focus": ["shared", "planner", "retriever", "coder", "reviewer", "executor"],
+        "note": "Every role reads and writes one shared state store — the coordination substrate."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 3,
+    "cellW": 190,
+    "cellH": 76,
+    "gapX": 24,
+    "gapY": 64,
+    "origin": [80, 110]
+  },
+  "components": [
+    { "id": "request", "type": "external", "label": "Request", "row": 0, "col": 1, "size": [168, 58] },
+    { "id": "planner", "type": "backend", "label": "Planner", "sublabel": "decompose the goal", "row": 1, "col": 1, "size": [186, 70] },
+    { "id": "retriever", "type": "database", "label": "Retriever", "sublabel": "gather context", "row": 2, "col": 0, "size": [186, 70] },
+    { "id": "coder", "type": "backend", "label": "Coder", "sublabel": "produce the change", "row": 2, "col": 1, "size": [186, 70] },
+    { "id": "shared", "type": "database", "label": "Shared state", "sublabel": "the coordination substrate", "row": 2, "col": 2, "size": [186, 70] },
+    { "id": "reviewer", "type": "security", "label": "Reviewer", "sublabel": "gate the work", "row": 3, "col": 1, "size": [186, 70] },
+    { "id": "executor", "type": "backend", "label": "Executor", "sublabel": "act on approval", "row": 4, "col": 1, "size": [186, 70] },
+    { "id": "response", "type": "external", "label": "Response", "row": 5, "col": 1, "size": [168, 58] }
+  ],
+  "connections": [
+    { "from": "request", "to": "planner", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "planner", "to": "retriever", "variant": "default" },
+    { "from": "planner", "to": "coder", "variant": "default" },
+    { "from": "retriever", "to": "coder", "variant": "default" },
+    { "from": "coder", "to": "reviewer", "variant": "default" },
+    { "from": "reviewer", "to": "coder", "label": "revise", "variant": "dashed", "fromSide": "left", "toSide": "left" },
+    { "from": "reviewer", "to": "executor", "label": "approve", "variant": "emphasis", "labelDy": 24 },
+    { "from": "executor", "to": "response", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "shared", "to": "planner", "variant": "dashed", "fromSide": "top", "toSide": "top" },
+    { "from": "shared", "to": "retriever", "variant": "dashed", "fromSide": "bottom", "toSide": "bottom" },
+    { "from": "shared", "to": "coder", "variant": "dashed" },
+    { "from": "shared", "to": "reviewer", "variant": "dashed" },
+    { "from": "shared", "to": "executor", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "The cost of specialisation",
+      "items": [
+        "Each role is a separate agent with its own prompt, model choice, and failure mode",
+        "Shared state is the only coordination channel — a stale read is the most common multi-agent bug"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "When this is a mistake",
+      "items": [
+        "If the reviewer almost always approves, the split is paying for coordination it does not use",
+        "Start single-agent; add roles only when a demonstrated need resists a better prompt"
+      ]
+    }
+  ]
+}

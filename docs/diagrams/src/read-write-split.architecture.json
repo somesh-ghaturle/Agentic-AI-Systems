@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Separate read from write — the tool boundary",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "read",
+        "label": "Reads run free",
+        "focus": ["agent", "read"],
+        "note": "Read tools are idempotent and side-effect free; the agent calls them without a gate."
+      },
+      {
+        "id": "write",
+        "label": "Writes pay for validation",
+        "focus": ["proposals", "validation", "approval", "writetools"],
+        "note": "Every write becomes a proposal, is validated, and only high-impact ones reach a human."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 5,
+    "cellW": 184,
+    "cellH": 76,
+    "gapX": 24,
+    "gapY": 72,
+    "origin": [80, 110]
+  },
+  "components": [
+    { "id": "agent", "type": "backend", "label": "Agent", "sublabel": "reason → act", "row": 1, "col": 0, "size": [184, 70] },
+    { "id": "read", "type": "messagebus", "label": "Read tools", "sublabel": "query · search · fetch", "row": 0, "col": 1, "size": [184, 70] },
+    { "id": "proposals", "type": "backend", "label": "Write proposals", "sublabel": "tool + arguments", "row": 1, "col": 1, "size": [184, 70] },
+    { "id": "validation", "type": "security", "label": "Validation", "sublabel": "ownership · permissions · limits", "row": 1, "col": 2, "size": [184, 70] },
+    { "id": "approval", "type": "security", "label": "Approval gate", "sublabel": "if high-impact", "row": 1, "col": 3, "size": [184, 70] },
+    { "id": "writetools", "type": "messagebus", "label": "Write tools", "sublabel": "create · update · delete", "row": 1, "col": 4, "size": [184, 70] }
+  ],
+  "connections": [
+    { "from": "agent", "to": "read", "variant": "default" },
+    { "from": "agent", "to": "proposals", "variant": "default" },
+    { "from": "proposals", "to": "validation", "variant": "default" },
+    { "from": "validation", "to": "approval", "variant": "emphasis" },
+    { "from": "approval", "to": "writetools", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Why the split exists",
+      "items": [
+        "Reads cannot corrupt state, so they run without a gate and stay fast",
+        "Every write is a proposal first — validation and approval happen before the effect, not after"
+      ]
+    }
+  ]
+}

@@ -26,6 +26,11 @@ coordination bugs rather than on the actual task.
 A centralized control loop owned by one primary agent, which does the reasoning, calls the
 tools, and retrieves the context.
 
+![Single-agent system — one loop, no delegation](../diagrams/gif/single-agent-system.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     A["Request"] --> B["Agent<br/>reason → act → observe"]
@@ -35,6 +40,8 @@ flowchart LR
     D --> B
     B --> E["Response"]
 ```
+
+</details>
 
 **Best for:** focused workflows with reasonably defined steps. Customer support handling
 billing lookups. Document Q&A. Data extraction. A code assistant scoped to one repository.
@@ -60,6 +67,11 @@ That degradation is the real signal to decompose — not the task *sounding* com
 Work decomposed across specialized agents — Planner, Retriever, Coder, Reviewer, Executor —
 coordinating toward a shared goal.
 
+![Multi-agent system — specialised roles around shared state](../diagrams/gif/multi-agent-system.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     A["Request"] --> B["Planner"]
@@ -72,6 +84,8 @@ flowchart TB
     F --> G["Response"]
     H[("Shared state")] -.-> B & C & D & E & F
 ```
+
+</details>
 
 **Best for:** complex, multi-domain, long-running tasks with parallel workstreams and
 genuine review loops. Research synthesis across many sources. Large refactors with an

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Harness agent — the task state machine",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "main", "label": "The happy path", "focus": ["pending", "claimed", "verified", "complete"], "note": "A task is claimed once per session, verified, then marked complete." },
+      { "id": "retry", "label": "The retry self-loop", "focus": ["claimed"], "note": "A failed verify retries in place — it stays CLAIMED and never regresses to PENDING." }
+    ]
+  },
+  "lanes": [
+    { "id": "main", "label": "Task lifecycle" }
+  ],
+  "states": [
+    { "id": "pending", "type": "start", "label": "PENDING", "sublabel": "awaiting a session", "lane": "main", "col": 0, "step": "01", "tag": "entry" },
+    { "id": "claimed", "type": "active", "label": "CLAIMED", "sublabel": "one session owns it", "lane": "main", "col": 1, "step": "02", "tag": "work" },
+    { "id": "verified", "type": "active", "label": "VERIFIED", "sublabel": "verify() passed", "lane": "main", "col": 2, "step": "03", "tag": "check" },
+    { "id": "complete", "type": "success", "label": "COMPLETE", "sublabel": "mark_complete()", "lane": "main", "col": 3, "step": "04", "tag": "done" }
+  ],
+  "transitions": [
+    { "id": "claim", "from": "pending", "to": "claimed", "label": "claim()", "variant": "default", "labelDy": 65 },
+    { "id": "pass", "from": "claimed", "to": "verified", "label": "verify passed", "variant": "emphasis", "labelDy": 65 },
+    { "id": "done", "from": "verified", "to": "complete", "label": "mark_complete()", "variant": "default", "labelDy": 65 }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Claim is exclusive", "items": ["claim() takes the task once per session — two sessions cannot work the same task", "A failed verify retries in place; it never returns to PENDING"] }
+  ]
+}

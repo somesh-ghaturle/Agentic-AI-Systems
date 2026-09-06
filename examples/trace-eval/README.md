@@ -32,6 +32,11 @@ python3 examples/trace-eval/eval.py
 
 ## The experiment
 
+![Trace eval — the experiment that finds the blind spot](../../docs/diagrams/gif/trace-eval-experiment.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     CASE["Labelled case<br/>request · expected path · expected phrases"]
@@ -59,6 +64,8 @@ flowchart TB
     classDef subject fill:#f8f9fa,stroke:#333,stroke-width:1px
     class SUBJECTS subject
 ```
+
+</details>
 
 Neither grader is given the other's information. The moment they share it, the comparison
 stops measuring anything. The same diagram with notes on how to read it:

@@ -20,6 +20,11 @@ Not maintained by hand. `graph.get_graph().draw_mermaid()` emits this, which is 
 version of "the topology is a value rather than a trace" — the diagram cannot drift from the
 code because the code produces it.
 
+![Graph agent — the topology the graph draws itself](../../docs/diagrams/gif/graph-agent-topology.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 graph TD;
 	__start__([__start__]):::first
@@ -42,6 +47,8 @@ graph TD;
 	classDef first fill-opacity:0
 	classDef last fill:#bfb6fc
 ```
+
+</details>
 
 ## What the graph actually buys
 

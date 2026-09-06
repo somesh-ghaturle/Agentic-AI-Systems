@@ -56,6 +56,11 @@ machine principal that can approve its own proposal turns the gate into a formal
 <details>
 <summary>Additional diagram</summary>
 
+![Multi-agent debate — the convergence loop](../../docs/diagrams/gif/debate-loop.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TD
     Start["run_debate(panel, goal, max_rounds)"] --> Prop["proposer.propose()"]
@@ -82,6 +87,8 @@ flowchart TD
     Dissent --> Close["transcript.close()"]
     Close --> Verdict["Verdict"]
 ```
+
+</details>
 
 </details>
 

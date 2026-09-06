@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "E2E agent — deployment topology",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      { "id": "request", "label": "The request path", "focus": ["client", "apigw", "agent", "otel", "traces", "metrics"], "note": "A request flows through the gateway to the agent; telemetry fans out to traces and metrics." },
+      { "id": "supply", "label": "What the agent depends on", "focus": ["agent", "modelreg", "secrets", "ci", "audit", "provenance"], "note": "CI ships the model registry and the agent; the agent reads secrets and writes audit + provenance." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 5, "cellW": 184, "cellH": 70, "gapX": 24, "gapY": 64, "origin": [80, 110] },
+  "components": [
+    { "id": "modelreg", "type": "database", "label": "Model Registry", "row": 0, "col": 0, "size": [184, 66] },
+    { "id": "ci", "type": "backend", "label": "CI/CD Pipeline", "sublabel": "ships model + agent", "row": 0, "col": 1, "size": [184, 66] },
+    { "id": "audit", "type": "database", "label": "Audit Store", "sublabel": "SIEM", "row": 1, "col": 3, "size": [184, 66] },
+    { "id": "traces", "type": "database", "label": "Tracing Backend", "sublabel": "Jaeger / Tempo", "row": 1, "col": 4, "size": [184, 66] },
+    { "id": "client", "type": "external", "label": "Client", "row": 2, "col": 0, "size": [168, 58] },
+    { "id": "apigw", "type": "backend", "label": "API Gateway", "sublabel": "load balancer", "row": 2, "col": 1, "size": [184, 66] },
+    { "id": "agent", "type": "backend", "label": "E2E Agent", "sublabel": "FastAPI", "row": 2, "col": 2, "size": [184, 66] },
+    { "id": "otel", "type": "messagebus", "label": "OpenTelemetry", "sublabel": "collector", "row": 2, "col": 3, "size": [184, 66] },
+    { "id": "secrets", "type": "security", "label": "Secrets Manager", "row": 3, "col": 0, "size": [184, 66] },
+    { "id": "provenance", "type": "database", "label": "Provenance Store", "sublabel": "immutable object storage", "row": 3, "col": 3, "size": [184, 66] },
+    { "id": "metrics", "type": "database", "label": "Metrics Backend", "sublabel": "Prometheus", "row": 3, "col": 4, "size": [184, 66] }
+  ],
+  "connections": [
+    { "from": "client", "to": "apigw", "variant": "default" },
+    { "from": "apigw", "to": "agent", "variant": "default" },
+    { "from": "agent", "to": "otel", "variant": "default" },
+    { "from": "otel", "to": "traces", "variant": "default", "fromSide": "top", "toSide": "bottom" },
+    { "from": "otel", "to": "metrics", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "from": "agent", "to": "audit", "variant": "default", "fromSide": "top", "toSide": "bottom" },
+    { "from": "agent", "to": "provenance", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "agent", "to": "secrets", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "from": "ci", "to": "modelreg", "variant": "default" },
+    { "from": "ci", "to": "agent", "variant": "emphasis", "fromSide": "bottom", "toSide": "top" },
+    { "from": "modelreg", "to": "agent", "variant": "dashed", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Three telemetry sinks", "items": ["Traces, metrics, and audit/provenance are separate stores with separate retention", "Provenance is immutable — it exists to be admissible, not just readable"] }
+  ]
+}

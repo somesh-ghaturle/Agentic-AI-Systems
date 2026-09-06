@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Hermes — the read/write split, in one process",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      { "id": "read", "label": "Router process — read only", "focus": ["router", "handler", "toolbelt", "readtools", "answer"], "note": "The router process holds only the read registry; it can answer but cannot change state." },
+      { "id": "write", "label": "Approval executor — sole writer", "focus": ["writeproposal", "gate", "approval", "claim", "writetools", "effect"], "note": "Only the approval executor holds the write registry; a proposal becomes an effect through a bound, single-use approval." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 5, "cellW": 180, "cellH": 66, "gapX": 24, "gapY": 60, "origin": [80, 110] },
+  "components": [
+    { "id": "request", "type": "external", "label": "Request", "row": 0, "col": 0, "size": [168, 56] },
+    { "id": "router", "type": "backend", "label": "Hermes router", "sublabel": "first match wins", "row": 0, "col": 1, "size": [180, 66] },
+    { "id": "handler", "type": "backend", "label": "Handler", "sublabel": "research · status · act", "row": 0, "col": 2, "size": [180, 66] },
+    { "id": "toolbelt", "type": "security", "label": "Toolbelt", "sublabel": "refuses non-read", "row": 0, "col": 3, "size": [180, 66] },
+    { "id": "readtools", "type": "messagebus", "label": "Read tools", "sublabel": "kb_search · fetch · status", "row": 0, "col": 4, "size": [180, 66] },
+    { "id": "answer", "type": "external", "label": "Answer returned", "row": 1, "col": 4, "size": [180, 60] },
+    { "id": "writeproposal", "type": "backend", "label": "WriteProposal", "sublabel": "tool + args + fingerprint", "row": 2, "col": 2, "size": [180, 66] },
+    { "id": "gate", "type": "security", "label": "Human approves?", "row": 2, "col": 3, "size": [180, 66] },
+    { "id": "pending", "type": "external", "label": "Request ends pending", "sublabel": "nothing changed", "row": 3, "col": 2, "size": [180, 60] },
+    { "id": "approval", "type": "security", "label": "Approval", "sublabel": "bound to fingerprint · single-use", "row": 2, "col": 4, "size": [180, 66] },
+    { "id": "claim", "type": "backend", "label": "Claim", "sublabel": "compare-and-set", "row": 3, "col": 4, "size": [180, 66] },
+    { "id": "writetools", "type": "messagebus", "label": "Write tools", "sublabel": "restart · post · delete", "row": 3, "col": 3, "size": [180, 66] },
+    { "id": "effect", "type": "backend", "label": "State changed", "sublabel": "trace recorded", "row": 4, "col": 3, "size": [180, 60] }
+  ],
+  "connections": [
+    { "from": "request", "to": "router", "variant": "default" },
+    { "from": "router", "to": "handler", "variant": "default" },
+    { "from": "handler", "to": "toolbelt", "variant": "default" },
+    { "from": "toolbelt", "to": "readtools", "variant": "default" },
+    { "from": "readtools", "to": "answer", "variant": "emphasis" },
+    { "from": "handler", "to": "writeproposal", "label": "wants to change state", "variant": "dashed", "labelDy": 24 },
+    { "from": "writeproposal", "to": "gate", "variant": "default" },
+    { "from": "gate", "to": "pending", "label": "no", "variant": "security" },
+    { "from": "gate", "to": "approval", "label": "yes", "variant": "emphasis", "labelDy": 60 },
+    { "from": "approval", "to": "claim", "variant": "default" },
+    { "from": "claim", "to": "writetools", "variant": "default" },
+    { "from": "writetools", "to": "effect", "variant": "emphasis" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Two registries, two processes", "items": ["The router process can only read; the approval executor is the sole holder of write tools", "An approval is bound to a proposal fingerprint, single-use, and expiring — it cannot be replayed"] }
+  ]
+}

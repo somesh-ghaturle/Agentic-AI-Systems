@@ -20,6 +20,11 @@ python3 examples/hermes-agent/agent.py --approve "restart the billing service"
 
 ## The shape of it
 
+![Hermes — the read/write split, in one process](../../docs/diagrams/gif/hermes-shape.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     REQ["Request"] --> ROUTE["Hermes router<br/>ordered rules, first match wins"]
@@ -52,6 +57,8 @@ flowchart TB
     classDef boundary fill:#f8f9fa,stroke:#333,stroke-width:1px
     class NOAUTH,AUTH boundary
 ```
+
+</details>
 
 The two boxes are two objects. `Hermes` is constructed with the read registry and refuses
 the write one; `ApprovalExecutor` is constructed with the write registry and refuses the

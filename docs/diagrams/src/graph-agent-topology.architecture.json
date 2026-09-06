@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Graph agent — the topology the graph draws itself",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "main", "label": "The main rail", "focus": ["start", "classify", "draft", "approval", "execute", "respond", "end"], "note": "A linear rail from start to end; retrieval is the only branch." },
+      { "id": "branch", "label": "The retrieval branch", "focus": ["classify", "retrieve", "respond"], "note": "classify may retrieve before draft; both draft and retrieve converge on respond." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 3, "cellW": 184, "cellH": 70, "gapX": 24, "gapY": 56, "origin": [80, 110] },
+  "components": [
+    { "id": "start", "type": "external", "label": "__start__", "row": 0, "col": 0, "size": [168, 56] },
+    { "id": "classify", "type": "backend", "label": "classify", "sublabel": "route the intent", "row": 1, "col": 0, "size": [184, 66] },
+    { "id": "retrieve", "type": "database", "label": "retrieve", "sublabel": "side branch", "row": 2, "col": 1, "size": [184, 66] },
+    { "id": "draft", "type": "backend", "label": "draft", "sublabel": "proposes, never acts", "row": 2, "col": 0, "size": [184, 66] },
+    { "id": "approval", "type": "security", "label": "approval", "sublabel": "interrupt()", "row": 3, "col": 0, "size": [184, 66] },
+    { "id": "execute", "type": "backend", "label": "execute", "sublabel": "the only effect", "row": 4, "col": 0, "size": [184, 66] },
+    { "id": "respond", "type": "backend", "label": "respond", "row": 5, "col": 0, "size": [184, 60] },
+    { "id": "end", "type": "external", "label": "__end__", "row": 6, "col": 0, "size": [168, 56] }
+  ],
+  "connections": [
+    { "from": "start", "to": "classify", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "classify", "to": "draft", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "classify", "to": "retrieve", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "from": "draft", "to": "approval", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "approval", "to": "execute", "variant": "emphasis", "fromSide": "bottom", "toSide": "top" },
+    { "from": "execute", "to": "respond", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "retrieve", "to": "respond", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "from": "respond", "to": "end", "variant": "default", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "One node has an effect", "items": ["execute is the only node that touches the world; everything upstream proposes", "approval interrupts before execute — the boundary is in the graph, not the prompt"] }
+  ]
+}

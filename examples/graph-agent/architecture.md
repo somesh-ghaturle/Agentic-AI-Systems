@@ -57,6 +57,11 @@ and `TestTopology` does.
 <details>
 <summary>Additional diagram</summary>
 
+![Graph agent — where the write boundary actually is](../../docs/diagrams/gif/graph-write-boundary.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     C["classify"] -->|read| R["retrieve"]
@@ -69,6 +74,8 @@ flowchart LR
     classDef good fill:#eaf7ea,stroke:#2d8a34
     class E good
 ```
+
+</details>
 
 </details>
 

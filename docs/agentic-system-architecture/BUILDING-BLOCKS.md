@@ -3,6 +3,11 @@
 The six layers every agentic system has, whether or not they were designed. Naming them
 makes the implicit decisions explicit.
 
+![The six building blocks — and the feedback edge](../diagrams/gif/building-blocks-overview.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     A["4 · Orchestration control layer"] --> B["1 · Model layer<br/>routing · structured outputs"]
@@ -12,6 +17,8 @@ flowchart TB
     A --> F["5 · Trace-level evals"]
     F -. "findings" .-> A
 ```
+
+</details>
 
 ---
 
@@ -90,6 +97,11 @@ Every tool needs, without exception:
 
 Hard architectural split, not a convention:
 
+![Separate read from write — the tool boundary](../diagrams/gif/read-write-split.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     A["Agent"] --> B["Read tools<br/>query · search · fetch"]
@@ -98,6 +110,8 @@ flowchart LR
     D --> E["Approval gate<br/>if high-impact"]
     E --> F["Write tools<br/>create · update · delete"]
 ```
+
+</details>
 
 Read tools can be liberally available. Write tools go through validation and, for
 high-impact actions, human approval. The model **proposes** writes; application code
@@ -308,6 +322,11 @@ external messages — require human-in-the-loop authorization.
 
 ### The enforcement flow
 
+![The enforcement flow — code decides, not the prompt](../diagrams/gif/enforcement-flow.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     A["Model proposes<br/>action + arguments"] --> B["App code validates<br/>ownership · permissions · limits"]
@@ -317,6 +336,8 @@ flowchart LR
     D -- approved --> E["Tool executes"]
     E --> F["Log: proposal · validation · approver · result"]
 ```
+
+</details>
 
 **The model proposes. Application code decides. A human authorizes. The tool executes.**
 

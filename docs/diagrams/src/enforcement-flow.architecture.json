@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "The enforcement flow — code decides, not the prompt",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "validate",
+        "label": "Validate in code",
+        "focus": ["model", "appcode", "reject"],
+        "note": "Application code checks ownership, permissions, and limits before a human is ever asked."
+      },
+      {
+        "id": "approve",
+        "label": "Present to a human",
+        "focus": ["appcode", "human", "execute"],
+        "note": "Only valid proposals reach a human, who sees what, to whom, and why."
+      },
+      {
+        "id": "audit",
+        "label": "Log the whole arc",
+        "focus": ["execute", "log"],
+        "note": "Proposal, validation, approver, and result are all written to the audit log."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 5,
+    "cellW": 184,
+    "cellH": 76,
+    "gapX": 24,
+    "gapY": 80,
+    "origin": [80, 110]
+  },
+  "components": [
+    { "id": "model", "type": "cloud", "label": "Model proposes", "sublabel": "action + arguments", "row": 1, "col": 0, "size": [184, 70] },
+    { "id": "appcode", "type": "backend", "label": "App code validates", "sublabel": "ownership · permissions · limits", "row": 1, "col": 1, "size": [184, 70] },
+    { "id": "reject", "type": "security", "label": "Reject", "sublabel": "structured error to model", "row": 0, "col": 2, "size": [184, 64] },
+    { "id": "human", "type": "external", "label": "Present to human", "sublabel": "what · to whom · why", "row": 2, "col": 2, "size": [184, 70] },
+    { "id": "execute", "type": "backend", "label": "Tool executes", "row": 1, "col": 3, "size": [168, 64] },
+    { "id": "log", "type": "database", "label": "Log", "sublabel": "proposal · validation · result", "row": 1, "col": 4, "size": [184, 70] }
+  ],
+  "connections": [
+    { "from": "model", "to": "appcode", "variant": "default" },
+    { "from": "appcode", "to": "reject", "label": "invalid", "variant": "security" },
+    { "from": "appcode", "to": "human", "label": "valid", "variant": "default" },
+    { "from": "human", "to": "reject", "label": "denied", "variant": "security" },
+    { "from": "human", "to": "execute", "label": "approved", "variant": "emphasis" },
+    { "from": "execute", "to": "log", "variant": "default" },
+    { "from": "reject", "to": "model", "label": "error", "variant": "dashed", "fromSide": "top", "toSide": "top" }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "The prompt is not the boundary",
+      "items": [
+        "Asking the model nicely not to do something is not enforcement; application code is",
+        "A rejection returns a structured error so the model can correct itself inside the loop"
+      ]
+    }
+  ]
+}

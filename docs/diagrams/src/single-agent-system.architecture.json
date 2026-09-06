@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Single-agent system — one loop, no delegation",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "loop",
+        "label": "The reason-act-observe loop",
+        "focus": ["agent", "tools", "context"],
+        "note": "One agent reasons, calls tools, retrieves context, and loops until it can answer."
+      },
+      {
+        "id": "path",
+        "label": "Request to response",
+        "focus": ["request", "agent", "response"],
+        "note": "A single path carries the request to the response; there is no planner/worker split."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 4,
+    "cellW": 190,
+    "cellH": 76,
+    "gapX": 24,
+    "gapY": 72,
+    "origin": [80, 110]
+  },
+  "components": [
+    { "id": "request", "type": "external", "label": "Request", "row": 1, "col": 0, "size": [168, 58] },
+    { "id": "agent", "type": "backend", "label": "Agent", "sublabel": "reason → act → observe", "row": 1, "col": 1, "size": [190, 72] },
+    { "id": "tools", "type": "messagebus", "label": "Tools", "sublabel": "call", "row": 0, "col": 2, "size": [168, 58] },
+    { "id": "context", "type": "database", "label": "Context retrieval", "sublabel": "query · search", "row": 2, "col": 2, "size": [186, 70] },
+    { "id": "response", "type": "external", "label": "Response", "row": 1, "col": 3, "size": [168, 58] }
+  ],
+  "connections": [
+    { "from": "request", "to": "agent", "variant": "default" },
+    { "from": "agent", "to": "tools", "variant": "default" },
+    { "from": "tools", "to": "agent", "variant": "dashed" },
+    { "from": "agent", "to": "context", "variant": "default" },
+    { "from": "context", "to": "agent", "variant": "dashed" },
+    { "from": "agent", "to": "response", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One loop, no handoff",
+      "items": [
+        "A single agent owns the whole trajectory; there is no planner/worker split to coordinate",
+        "Tools and retrieval return into the same loop — the agent decides what to do with each result"
+      ]
+    }
+  ]
+}
