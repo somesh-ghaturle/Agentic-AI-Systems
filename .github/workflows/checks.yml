@@ -564,6 +564,14 @@ jobs:
       - name: Relative links resolve
         run: python3 .github/scripts/linkcheck.py .
 
+      # The counts the prose states, against the counts the tree has. `a2faa35` was titled
+      # "Fix eight stale claims found in full-repo sweep", and the README had drifted again by
+      # the next audit — twelve jobs when there were fourteen, twelve examples when there were
+      # twenty-three. Hand-fixing a number resets the clock; this stops it. It caught a stale
+      # diagram count in the same commit that added it.
+      - name: Documented counts match the tree
+        run: python3 .github/scripts/docs_counts.py .
+
   secret-scan:
     name: Secret scanning
     runs-on: ubuntu-latest

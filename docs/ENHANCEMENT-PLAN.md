@@ -97,10 +97,11 @@ section saying what has to be decided first.
 | 61 | Rewrite `ROADMAP.md` against the current tree | Documentation | Medium | Done | Was 5 weeks stale; named none of the four chapters | 2026-10-06 |
 | 62 | Add `budget-guard` to the root README tree | Documentation | Low | Done | 22 of 23 examples were listed | 2026-12-06 |
 | 63 | Diagram the hybrid Terraform tree | Documentation | Medium | Done | The only architecture document without one | 2026-10-06 |
+| 64 | Check documented counts against the tree | CI/CD | High | Done | Second recurrence of this drift; caught a stale count on its first run | 2026-09-13 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 63 tasks are now `Done`**, the last of
-them — 53 through 63 — on 2026-09-06.
+tree, and kept current as tasks have landed since. **All 64 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -2967,6 +2968,39 @@ tree lacks an embedded diagram.
 
 ---
 
+### Task 64 — Check documented counts against the tree
+
+**Goal.** Stop the counts stated in prose from drifting away from the repository they describe.
+
+**Status: Done.** [`.github/scripts/docs_counts.py`](../.github/scripts/docs_counts.py), wired
+into the `docs` job beside `linkcheck.py`.
+
+This is the second recurrence. Commit `a2faa35` was titled "Fix eight stale claims found in
+full-repo sweep", and by this audit the README had drifted again: it described **twelve jobs**
+when `checks.yml` had fourteen, and **twelve examples** when there were twenty-three — including
+"nine of the twelve examples" have suites, when twenty of the twenty-three do. `CONTRIBUTING.md`
+still said "six of twelve examples" carry an empty `requirements.txt`. Hand-fixing a number
+resets the clock rather than stopping it, which is the argument every other script in
+`.github/scripts/` makes about its own subject.
+
+Ten claims are checked across `README.md`, `CONTRIBUTING.md`, and `ROADMAP.md`. Each is a regex
+with one capture group around the number; digits and number words up to twenty-four are both
+understood, because this repository writes small numbers as words in prose and digits in tables.
+A claim whose regex stops matching is a **failure, not a skip** — rewording the sentence is
+exactly the moment the number needs looking at again.
+
+Reading `checks.yml` is a narrow scan for keys at two spaces of indentation under `jobs:` rather
+than a YAML parse, because PyYAML would be the only dependency in a directory that has none.
+
+**It earned its place on the first run.** It failed immediately on `ROADMAP.md` claiming 46
+diagrams when the tree had 47 — a number stale by one commit, mine, from adding the hybrid
+diagram in task 63 and not updating the roadmap I had rewritten hours earlier.
+
+**Verify.** `python3 .github/scripts/docs_counts.py .` — ten claims, all matching. Reverting any
+one number reproduces a failure naming the file, line, claimed value, and actual value.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -3019,6 +3053,7 @@ git status --short
 | 2026-09-06 | Added task 58: the environment engineering chapter, completing the four-chapter set | somesh-ghaturle |
 | 2026-09-06 | Added task 59: `second-path`, the runnable counterpart to the environment chapter | somesh-ghaturle |
 | 2026-09-06 | Added tasks 60-63: closed four gaps between what the docs claim and what the tree does | somesh-ghaturle |
+| 2026-09-06 | Added task 64: a CI check for documented counts, after the second recurrence of the same drift | somesh-ghaturle |
 
 ---
 
