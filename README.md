@@ -69,6 +69,7 @@ Agentic-AI-Systems/
 │   ├── eval-red-teaming/         prompt-injection probes against an approval gate
 │   ├── approval-gate-fuzzing/    prompt variants that try to bypass approval
 │   ├── harness-agent/            continuity across context windows
+│   ├── budget-guard/             a token budget checked before the spend, not after
 │   ├── multi-agent-debate/       several agents argue; none of them approves
 │   ├── checkpoint-agent/         resuming work after a crash, idempotently
 │   ├── e2e-agent/                tracing, audit, provenance over HTTP

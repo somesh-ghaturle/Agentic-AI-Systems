@@ -5,6 +5,13 @@ state. AWS Step Functions owns sequencing and retries. GCP hosts stateless tool
 functions and the vector index. Azure owns durable execution state. No module grants
 one cloud credentials for another cloud.
 
+![Hybrid — three clouds, no shared credentials](../../docs/diagrams/gif/terraform-hybrid-architecture.gif)
+
+The interactive version is [`docs/diagrams/terraform-hybrid-architecture.html`](../../docs/diagrams/terraform-hybrid-architecture.html),
+and its source of truth is
+[`docs/diagrams/src/terraform-hybrid-architecture.architecture.json`](../../docs/diagrams/src/terraform-hybrid-architecture.architecture.json).
+The dashed lower half is the write path this POC deliberately does not deploy.
+
 ## Safety properties
 
 - Resources are disabled by default in `envs/dev`.
