@@ -86,7 +86,13 @@ jobs:
       # different question from which single version CI proves the trees against.
       #
       # Raise this and the pin in `validate` together — they are the same decision.
-      - uses: hashicorp/setup-terraform@v4
+      #
+      # Pinned by commit SHA rather than the `v4` tag: this is the only third-party action in
+      # the file, and a tag is mutable, so whoever controls it controls a step that runs before
+      # the Terraform trees are read. The `actions/*` and `github/*` uses are GitHub-owned
+      # immutable releases, which is why those keep their tags. Bump the SHA and the trailing
+      # version comment together, or the comment starts lying about what actually runs.
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: "1.15.8"
           terraform_wrapper: false
@@ -186,7 +192,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: hashicorp/setup-terraform@v4
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           # Keep in step with the pin in `fmt` above — see the note there.
           terraform_version: "1.15.8"

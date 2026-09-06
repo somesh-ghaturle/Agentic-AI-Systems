@@ -17,18 +17,23 @@ repository is one way a file like that gets created.
 No dependencies; these run in the fast `examples` CI job.
 """
 
+import importlib.util
 import json
 import pathlib
 import sys
 import tempfile
 import unittest
 
-sys.path.insert(
-    0,
-    str(pathlib.Path(__file__).resolve().parent.parent / "examples" / "checkpoint-agent"),
+# By path under a unique name -- see the note in test_budget_guard.py. That example also
+# ships an agent.py, and whichever of the two imported it as a bare `agent` first used to
+# hand the other its module.
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SPEC = importlib.util.spec_from_file_location(
+    "checkpoint_agent_example", ROOT / "examples/checkpoint-agent" / "agent.py"
 )
-
-import agent as ca
+ca = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = ca
+SPEC.loader.exec_module(ca)
 
 
 class CheckpointTestCase(unittest.TestCase):

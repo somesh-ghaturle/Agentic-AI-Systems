@@ -17,15 +17,24 @@ The four test classes:
     TestBudgetHardCap         the agent never exceeds its budget
 """
 
-import sys
+import importlib.util
 import pathlib
+import sys
 import unittest
 
-sys.path.insert(
-    0, str(pathlib.Path(__file__).resolve().parent.parent / "examples" / "budget-guard")
+# Loaded by path under a name of its own, the way test_edge_agent.py does it, rather than
+# by putting the example directory on sys.path and saying `import agent`. Three examples
+# ship a file called agent.py, and a bare import binds sys.modules["agent"] for the whole
+# discovery run -- whichever test file sorts first wins and the others get its module.
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+SPEC = importlib.util.spec_from_file_location(
+    "budget_guard_example", ROOT / "examples/budget-guard" / "agent.py"
 )
+budget = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = budget
+SPEC.loader.exec_module(budget)
 
-from agent import BudgetGuard, BudgetResult  # noqa: E402
+BudgetGuard = budget.BudgetGuard
 
 
 class TestBudgetSufficient(unittest.TestCase):

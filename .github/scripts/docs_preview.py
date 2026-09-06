@@ -45,10 +45,34 @@ def escape_text(value: str) -> str:
     return html.escape(value, quote=False)
 
 
+# A scheme only counts as one when its colon comes before any path separator, so a relative
+# link like "docs/notes:draft.md" is still a path. Anything else named here is rejected --
+# javascript: and data: are the two that turn a docs link into script execution.
+_SCHEME = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
+SAFE_SCHEMES = ("http:", "https:", "mailto:", "tel:")
+
+
+def safe_href(url: str) -> str:
+    # Browsers strip whitespace and control characters inside a scheme before acting on it,
+    # so "java\tscript:" is live. Test the stripped form, then return the original.
+    probe = re.sub(r"[\s\x00-\x1f]", "", url)
+    match = _SCHEME.match(probe)
+    if match and match.group(0).lower() not in SAFE_SCHEMES:
+        return "#"
+    return url
+
+
 def render_inline(text: str) -> str:
-    text = html.escape(text, quote=False)
+    # quote=True, not False: the link rule below drops group 2 into a quoted href, so a
+    # surviving double quote lets a markdown link close the attribute and append its own
+    # event handler -- [x](" onmouseover="alert(1)) was enough.
+    text = html.escape(text, quote=True)
     text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
-    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
+    text = re.sub(
+        r"\[([^\]]+)\]\(([^)]+)\)",
+        lambda m: f'<a href="{safe_href(m.group(2))}">{m.group(1)}</a>',
+        text,
+    )
     return text
 
 
@@ -209,7 +233,7 @@ def build_site(root: Path, out_dir: Path):
         page_nav = "".join(
             (
                 '<li><a href="'
-                f"{page_rel.as_posix()}"
+                f"{html.escape(page_rel.as_posix(), quote=True)}"
                 f'">{escape_text(page_title)}</a></li>'
             )
             for page_rel, page_title, _ in pages
@@ -220,7 +244,7 @@ def build_site(root: Path, out_dir: Path):
     index_nav = "".join(
         (
             '<li><a href="'
-            f"{rel.with_suffix('.html').as_posix()}"
+            f"{html.escape(rel.with_suffix('.html').as_posix(), quote=True)}"
             f'">{escape_text(title)}</a></li>'
         )
         for rel, title, _ in pages

@@ -26,8 +26,8 @@ Run:
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass, field
-
+from dataclasses import dataclass
+from typing import Callable, ClassVar
 
 # ---------------------------------------------------------------------------
 # Simulated knowledge base -- stands in for whatever the agent reads.
@@ -230,7 +230,7 @@ class BudgetGuard:
             else:
                 self._draft = f"Refined: {self._draft}"
 
-    _HANDLERS = {
+    _HANDLERS: ClassVar[dict[str, Callable[..., None]]] = {
         "gather": _do_gather,
         "analyze": _do_analyze,
         "draft": _do_draft,
@@ -271,7 +271,7 @@ class BudgetGuard:
         """Steps from the current one onward that will not run."""
         all_steps = ["gather", "analyze", "draft", "review", "refine"]
         done = {r.name for r in self.completed}
-        return [s for s in all_steps if s not in done and s != from_step or s == from_step]
+        return [s for s in all_steps if (s not in done and s != from_step) or s == from_step]
 
 
 def main():
