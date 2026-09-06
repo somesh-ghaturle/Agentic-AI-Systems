@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "e2e-agent — one request, four records",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "request-path",
+        "label": "Request path",
+        "focus": ["client", "apigw", "agent"],
+        "note": "A call to /invoke enters through the gateway and is served by the agent."
+      },
+      {
+        "id": "governance-artifacts",
+        "label": "The four records",
+        "focus": ["agent", "otel", "audit", "provenance"],
+        "note": "Span, audit line and provenance file are all written before the response returns."
+      },
+      {
+        "id": "inputs",
+        "label": "Configuration inputs",
+        "focus": ["ci", "registry", "secrets", "agent"],
+        "note": "Secrets and the model registry feed the agent; they are inputs, not outputs."
+      }
+    ]
+  },
+  "components": [
+    { "id": "client", "type": "external", "label": "Client", "pos": [40, 250], "size": [130, 60] },
+    { "id": "apigw", "type": "cloud", "label": "API Gateway", "sublabel": "entry point", "pos": [210, 250], "size": [150, 60] },
+    { "id": "agent", "type": "backend", "label": "FastAPI Agent", "sublabel": "writes all artifacts", "pos": [420, 250], "size": [160, 64] },
+    { "id": "secrets", "type": "security", "label": "Secrets Manager", "sublabel": "API key, no default", "pos": [420, 110], "size": [160, 60] },
+    { "id": "otel", "type": "backend", "label": "OTel Collector", "sublabel": "spans", "pos": [660, 110], "size": [150, 60] },
+    { "id": "traces", "type": "database", "label": "Tracing Backend", "sublabel": "Jaeger or Tempo", "pos": [890, 110], "size": [160, 60] },
+    { "id": "metrics", "type": "database", "label": "Metrics Backend", "sublabel": "Prometheus", "pos": [890, 220], "size": [160, 60] },
+    { "id": "audit", "type": "database", "label": "Audit Store", "sublabel": "append-only, trace_id", "pos": [660, 400], "size": [160, 60] },
+    { "id": "provenance", "type": "database", "label": "Provenance Store", "sublabel": "model + config, trace_id", "pos": [890, 400], "size": [170, 60] },
+    { "id": "registry", "type": "cloud", "label": "Model Registry", "sublabel": "model version", "pos": [420, 400], "size": [160, 60] },
+    { "id": "ci", "type": "cloud", "label": "CI/CD Pipeline", "sublabel": "deploys agent", "pos": [190, 400], "size": [150, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Observability pipeline", "wraps": ["otel", "traces", "metrics"] }
+  ],
+  "connections": [
+    { "id": "client-request", "from": "client", "to": "apigw", "label": "HTTP", "variant": "emphasis" },
+    { "id": "gateway-route", "from": "apigw", "to": "agent", "label": "/invoke", "variant": "emphasis" },
+    { "id": "agent-span", "from": "agent", "to": "otel", "label": "span" },
+    { "id": "otel-traces", "from": "otel", "to": "traces", "label": "OTLP" },
+    { "id": "otel-metrics", "from": "otel", "to": "metrics", "label": "OTLP" },
+    { "id": "agent-audit", "from": "agent", "to": "audit", "label": "audit line" },
+    { "id": "agent-provenance", "from": "agent", "to": "provenance", "label": "provenance file" },
+    { "id": "secrets-key", "from": "secrets", "to": "agent", "label": "API key", "variant": "security", "labelAt": [500, 200] },
+    { "id": "registry-model", "from": "registry", "to": "agent", "label": "model version" },
+    { "id": "ci-publishes", "from": "ci", "to": "registry", "label": "publishes", "variant": "dashed" },
+    { "id": "ci-deploys", "from": "ci", "to": "agent", "label": "deploys", "variant": "dashed", "fromSide": "top" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Request path",
+      "items": ["Client calls /invoke through the gateway", "One FastAPI agent serves the request end to end"]
+    },
+    {
+      "dot": "emerald",
+      "title": "Four records, written first",
+      "items": ["Span, audit line and provenance file precede the response", "trace_id joins all three after the fact"]
+    },
+    {
+      "dot": "rose",
+      "title": "Inputs",
+      "items": ["E2E_AGENT_API_KEY has no default — the app refuses to start", "Model version recorded in provenance"]
+    }
+  ]
+}

@@ -1,0 +1,321 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Hermes \u2014 the write boundary",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "read-path",
+        "label": "Read path",
+        "focus": [
+          "req",
+          "route",
+          "handler",
+          "belt",
+          "readtools",
+          "answer"
+        ],
+        "note": "A read request never leaves the router process, which holds only the read registry."
+      },
+      {
+        "id": "write-path",
+        "label": "Write path",
+        "focus": [
+          "handler",
+          "proposal",
+          "gate",
+          "approval",
+          "claim",
+          "writetools"
+        ],
+        "note": "Changing state requires a proposal, a human, and a single-use approval bound to the fingerprint."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "req",
+      "type": "external",
+      "label": "Request",
+      "pos": [
+        40,
+        150
+      ],
+      "size": [
+        130,
+        60
+      ]
+    },
+    {
+      "id": "route",
+      "type": "backend",
+      "label": "Hermes router",
+      "sublabel": "ordered rules, first match wins",
+      "pos": [
+        210,
+        150
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "handler",
+      "type": "backend",
+      "label": "Handler",
+      "sublabel": "research \u00b7 status \u00b7 act",
+      "pos": [
+        440,
+        150
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "belt",
+      "type": "security",
+      "label": "Toolbelt",
+      "sublabel": "refuses anything not read",
+      "pos": [
+        650,
+        150
+      ],
+      "size": [
+        175,
+        64
+      ]
+    },
+    {
+      "id": "readtools",
+      "type": "backend",
+      "label": "Read tools",
+      "sublabel": "kb_search \u00b7 fetch_document",
+      "pos": [
+        865,
+        150
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "answer",
+      "type": "external",
+      "label": "Answer returned",
+      "pos": [
+        1095,
+        150
+      ],
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "id": "trace",
+      "type": "database",
+      "label": "Trace",
+      "sublabel": "one trace_id",
+      "pos": [
+        210,
+        350
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "proposal",
+      "type": "backend",
+      "label": "WriteProposal",
+      "sublabel": "tool + arguments + fingerprint",
+      "pos": [
+        440,
+        350
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "gate",
+      "type": "security",
+      "label": "Approval gate",
+      "sublabel": "a human approves this action",
+      "pos": [
+        670,
+        350
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "approval",
+      "type": "security",
+      "label": "Approval",
+      "sublabel": "single-use \u00b7 expiring",
+      "pos": [
+        910,
+        350
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "claim",
+      "type": "backend",
+      "label": "Claim",
+      "sublabel": "compare-and-set",
+      "pos": [
+        910,
+        480
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "writetools",
+      "type": "backend",
+      "label": "Write tools",
+      "sublabel": "restart_service \u00b7 delete_record",
+      "pos": [
+        910,
+        610
+      ],
+      "size": [
+        180,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Router process \u2014 holds the read registry only",
+      "wraps": [
+        "route",
+        "handler",
+        "belt",
+        "readtools"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Approval executor \u2014 sole holder of the write registry",
+      "wraps": [
+        "approval",
+        "claim",
+        "writetools"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "req-route",
+      "from": "req",
+      "to": "route",
+      "variant": "emphasis"
+    },
+    {
+      "id": "route-handler",
+      "from": "route",
+      "to": "handler"
+    },
+    {
+      "id": "handler-belt",
+      "from": "handler",
+      "to": "belt"
+    },
+    {
+      "id": "belt-readtools",
+      "from": "belt",
+      "to": "readtools"
+    },
+    {
+      "id": "readtools-answer",
+      "from": "readtools",
+      "to": "answer"
+    },
+    {
+      "id": "handler-proposal",
+      "from": "handler",
+      "to": "proposal",
+      "label": "wants to change state",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "proposal-gate",
+      "from": "proposal",
+      "to": "gate"
+    },
+    {
+      "id": "gate-approval",
+      "from": "gate",
+      "to": "approval",
+      "label": "approved",
+      "variant": "security"
+    },
+    {
+      "id": "approval-claim",
+      "from": "approval",
+      "to": "claim"
+    },
+    {
+      "id": "claim-writetools",
+      "from": "claim",
+      "to": "writetools"
+    },
+    {
+      "id": "route-trace",
+      "from": "route",
+      "to": "trace",
+      "label": "one event per hop",
+      "variant": "dashed",
+      "labelAt": [
+        305,
+        282
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Read path",
+      "items": [
+        "The router process holds only the read registry",
+        "The toolbelt refuses anything that is not a read"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Write path",
+      "items": [
+        "A proposal names tool + arguments and is fingerprinted",
+        "No approval means the request ends pending \u2014 nothing changed"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Executor",
+      "items": [
+        "Approval is bound to the fingerprint, single-use and expiring",
+        "Compare-and-set means only one claim can win"
+      ]
+    }
+  ]
+}

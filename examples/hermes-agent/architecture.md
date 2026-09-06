@@ -3,6 +3,11 @@
 The router and the write boundary in one picture. [README.md](README.md) explains the
 reasoning; this page is the diagram and just enough text to read it.
 
+> **[Interactive architecture diagram](../../docs/diagrams/hermes-agent-architecture.html)** — open in browser for the full interactive view.
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     REQ["Request"] --> ROUTE["Hermes router<br/>ordered rules, first match wins"]
@@ -35,6 +40,9 @@ flowchart TB
     classDef boundary fill:#f8f9fa,stroke:#333,stroke-width:1px
     class NOAUTH,AUTH boundary
 ```
+
+</details>
+
 
 ## Reading it
 

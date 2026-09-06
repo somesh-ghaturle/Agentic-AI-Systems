@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "trace-eval — grading the answer and the trace separately",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "subjects",
+        "label": "Two subjects",
+        "focus": ["case", "hermes", "naive", "run"],
+        "note": "The same case runs against both architectures with the same tools and data."
+      },
+      {
+        "id": "two-graders",
+        "label": "Two graders",
+        "focus": ["run", "output", "traceg", "verdict"],
+        "note": "One grader sees only the answer, the other only the events."
+      },
+      {
+        "id": "blind-spot",
+        "label": "The blind spot",
+        "focus": ["verdict", "agreed", "gap"],
+        "note": "Disagreement is the finding: a helpful answer that took an unauthorised action."
+      }
+    ]
+  },
+  "components": [
+    { "id": "case", "type": "external", "label": "Labelled case", "sublabel": "request + expected path", "pos": [40, 280], "size": [160, 64] },
+    { "id": "hermes", "type": "backend", "label": "hermes", "sublabel": "write boundary", "pos": [230, 190], "size": [150, 64] },
+    { "id": "naive", "type": "backend", "label": "naive", "sublabel": "no boundary", "pos": [230, 350], "size": [150, 64] },
+    { "id": "run", "type": "backend", "label": "Run", "sublabel": "answer + JSONL trace", "pos": [410, 280], "size": [160, 64] },
+    { "id": "output", "type": "backend", "label": "Output grader", "sublabel": "sees the answer only", "pos": [600, 180], "size": [165, 64] },
+    { "id": "traceg", "type": "backend", "label": "Trace grader", "sublabel": "sees the events only", "pos": [600, 370], "size": [165, 64] },
+    { "id": "verdict", "type": "security", "label": "Verdicts compared", "sublabel": "do they agree?", "pos": [795, 280], "size": [165, 64] },
+    { "id": "agreed", "type": "database", "label": "Nothing new learned", "sublabel": "both PASS or both FAIL", "pos": [990, 180], "size": [180, 64] },
+    { "id": "gap", "type": "database", "label": "The blind spot", "sublabel": "output PASS, trace FAIL", "pos": [990, 370], "size": [190, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Subjects — same tools, same data", "wraps": ["hermes", "naive"] }
+  ],
+  "connections": [
+    { "id": "case-hermes", "from": "case", "to": "hermes" },
+    { "id": "case-naive", "from": "case", "to": "naive" },
+    { "id": "hermes-run", "from": "hermes", "to": "run" },
+    { "id": "naive-run", "from": "naive", "to": "run" },
+    { "id": "run-output", "from": "run", "to": "output", "variant": "emphasis" },
+    { "id": "run-traceg", "from": "run", "to": "traceg", "variant": "emphasis" },
+    { "id": "output-verdict", "from": "output", "to": "verdict" },
+    { "id": "traceg-verdict", "from": "traceg", "to": "verdict" },
+    { "id": "verdict-agreed", "from": "verdict", "to": "agreed" },
+    { "id": "verdict-gap", "from": "verdict", "to": "gap", "variant": "security" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Same input, two architectures",
+      "items": ["One labelled case drives both subjects", "Identical tools and data — only the boundary differs"]
+    },
+    {
+      "dot": "emerald",
+      "title": "Two independent graders",
+      "items": ["The output grader never sees the events", "The trace grader never sees the answer"]
+    },
+    {
+      "dot": "rose",
+      "title": "Where the finding is",
+      "items": ["Agreement teaches nothing the answer text did not", "Output PASS with trace FAIL is the unauthorised action"]
+    }
+  ]
+}

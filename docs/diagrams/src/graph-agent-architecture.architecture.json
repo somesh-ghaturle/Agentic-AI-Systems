@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "graph-agent \u2014 approval is the only path to an effect",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "read-branch",
+        "label": "Read branch",
+        "focus": [
+          "start",
+          "classify",
+          "retrieve",
+          "respond"
+        ],
+        "note": "A read question never enters the write path at all."
+      },
+      {
+        "id": "write-branch",
+        "label": "Write branch",
+        "focus": [
+          "classify",
+          "draft",
+          "approval",
+          "human",
+          "execute"
+        ],
+        "note": "draft proposes; only execute has an effect, and only a human reaches it."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "start",
+      "type": "external",
+      "label": "__start__",
+      "pos": [
+        40,
+        290
+      ],
+      "size": [
+        130,
+        60
+      ]
+    },
+    {
+      "id": "classify",
+      "type": "backend",
+      "label": "classify",
+      "sublabel": "read or write?",
+      "pos": [
+        210,
+        290
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "retrieve",
+      "type": "backend",
+      "label": "retrieve",
+      "sublabel": "read only",
+      "pos": [
+        400,
+        170
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "respond",
+      "type": "backend",
+      "label": "respond",
+      "sublabel": "renders the answer",
+      "pos": [
+        805,
+        170
+      ],
+      "size": [
+        165,
+        64
+      ]
+    },
+    {
+      "id": "end",
+      "type": "external",
+      "label": "__end__",
+      "pos": [
+        1020,
+        290
+      ],
+      "size": [
+        140,
+        60
+      ]
+    },
+    {
+      "id": "draft",
+      "type": "backend",
+      "label": "draft",
+      "sublabel": "proposes, never acts",
+      "pos": [
+        400,
+        400
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "approval",
+      "type": "security",
+      "label": "approval",
+      "sublabel": "interrupt()",
+      "pos": [
+        600,
+        400
+      ],
+      "size": [
+        165,
+        64
+      ]
+    },
+    {
+      "id": "human",
+      "type": "external",
+      "label": "Human",
+      "sublabel": "approves or declines",
+      "pos": [
+        600,
+        520
+      ],
+      "size": [
+        165,
+        64
+      ]
+    },
+    {
+      "id": "execute",
+      "type": "backend",
+      "label": "execute",
+      "sublabel": "the only node with an effect",
+      "pos": [
+        805,
+        400
+      ],
+      "size": [
+        180,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "Write path \u2014 nothing here acts without the human",
+      "wraps": [
+        "draft",
+        "approval",
+        "human",
+        "execute"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "start-classify",
+      "from": "start",
+      "to": "classify",
+      "variant": "emphasis"
+    },
+    {
+      "id": "classify-retrieve",
+      "from": "classify",
+      "to": "retrieve",
+      "label": "read"
+    },
+    {
+      "id": "classify-draft",
+      "from": "classify",
+      "to": "draft",
+      "label": "write"
+    },
+    {
+      "id": "retrieve-respond",
+      "from": "retrieve",
+      "to": "respond"
+    },
+    {
+      "id": "draft-approval",
+      "from": "draft",
+      "to": "approval"
+    },
+    {
+      "id": "approval-human",
+      "from": "approval",
+      "to": "human",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "human-execute",
+      "from": "human",
+      "to": "execute",
+      "variant": "security"
+    },
+    {
+      "id": "execute-respond",
+      "from": "execute",
+      "to": "respond",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "respond-end",
+      "from": "respond",
+      "to": "end"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Two branches from one classifier",
+      "items": [
+        "A read question goes straight to retrieve",
+        "Only a write question reaches draft"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "The interrupt",
+      "items": [
+        "approval calls interrupt() and the graph stops there",
+        "The run resumes only when a human answers"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "The missing edge",
+      "items": [
+        "There is no edge from draft to execute",
+        "A classifier that fails open still cannot act alone"
+      ]
+    }
+  ]
+}

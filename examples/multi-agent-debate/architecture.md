@@ -10,6 +10,11 @@ it must refuse to authorize.
 
 ## Where this sits
 
+> **[Interactive architecture diagram](../../docs/diagrams/multi-agent-debate-architecture.html)** — open in browser for the full interactive view.
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     subgraph debate["This example"]
@@ -33,6 +38,9 @@ flowchart LR
     class V bad
 ```
 
+</details>
+
+
 The dotted line is the whole design. A `Verdict` is an input to the approval gate, never a
 substitute for it. Everything in `verdict.py` exists to make that structural rather than
 conventional: there is no approval field, `requires_human_approval` is a property with no
@@ -43,6 +51,10 @@ role is granted the claim capability and deliberately never the approve capabili
 machine principal that can approve its own proposal turns the gate into a formality.
 
 ## The loop
+
+
+<details>
+<summary>Additional diagram</summary>
 
 ```mermaid
 flowchart TD
@@ -70,6 +82,9 @@ flowchart TD
     Dissent --> Close["transcript.close()"]
     Close --> Verdict["Verdict"]
 ```
+
+</details>
+
 
 Three properties of that loop are worth naming, because each is a place the obvious
 implementation is wrong.

@@ -4,6 +4,11 @@ The experiment in one picture: one case, two subjects, two graders, and the cell
 disagree. [README.md](README.md) carries the reasoning and the results; this page is the
 diagram and enough text to read it.
 
+> **[Interactive architecture diagram](../../docs/diagrams/trace-eval-architecture.html)** — open in browser for the full interactive view.
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     CASE["Labelled case<br/>request · expected path · expected phrases"]
@@ -31,6 +36,9 @@ flowchart TB
     classDef subject fill:#f8f9fa,stroke:#333,stroke-width:1px
     class SUBJECTS subject
 ```
+
+</details>
+
 
 ## Reading it
 

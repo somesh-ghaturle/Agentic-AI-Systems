@@ -80,7 +80,7 @@ incident.
 
 The minimal reference examples — `starter-agent`, `langchain-agent`, `rag-faiss`,
 `rag-langchain`, `ray-orchestrator`, `context-compaction`, `context-overflow`, `harness-agent`,
-`trace-eval`, `checkpoint-agent`, `multi-agent-debate`. They read local files, call models, and
+`trace-eval`, `checkpoint-agent`, `multi-agent-debate`, `budget-guard`. They read local files, call models, and
 print. Each says in its own README that it makes no security claim, and that they'd be inadequate
 as production services is documented rather than accidental. `tests/test_security_policy.py`
 checks that every example is named somewhere on this page and that each of these READMEs still

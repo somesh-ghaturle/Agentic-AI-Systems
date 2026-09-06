@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "harness-agent \u2014 the harness verifies, the agent does not",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "the-loop",
+        "label": "The loop",
+        "focus": [
+          "next",
+          "session",
+          "claim",
+          "verify",
+          "retry"
+        ],
+        "note": "One feature per session, and a failed verify returns it to the queue."
+      },
+      {
+        "id": "termination",
+        "label": "How it ends",
+        "focus": [
+          "next",
+          "complete",
+          "exhausted"
+        ],
+        "note": "Either every feature reaches COMPLETE or exhausted() names what never verified."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "start",
+      "type": "external",
+      "label": "Start / resume",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "progress",
+      "type": "database",
+      "label": "progress.json",
+      "sublabel": "the only state",
+      "pos": [
+        430,
+        160
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "next",
+      "type": "backend",
+      "label": "next_feature()",
+      "sublabel": "under the retry cap",
+      "pos": [
+        230,
+        300
+      ],
+      "size": [
+        165,
+        64
+      ]
+    },
+    {
+      "id": "session",
+      "type": "backend",
+      "label": "Session",
+      "sublabel": "one feature, step budget",
+      "pos": [
+        430,
+        300
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "claim",
+      "type": "backend",
+      "label": "claim()",
+      "sublabel": "PENDING to CLAIMED",
+      "pos": [
+        640,
+        300
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "verify",
+      "type": "security",
+      "label": "verify()",
+      "sublabel": "the harness runs it",
+      "pos": [
+        840,
+        300
+      ],
+      "size": [
+        165,
+        64
+      ]
+    },
+    {
+      "id": "complete",
+      "type": "backend",
+      "label": "COMPLETE",
+      "sublabel": "VERIFIED, then COMPLETE",
+      "pos": [
+        840,
+        160
+      ],
+      "size": [
+        165,
+        64
+      ]
+    },
+    {
+      "id": "retry",
+      "type": "backend",
+      "label": "Retry",
+      "sublabel": "stays CLAIMED, attempts + 1",
+      "pos": [
+        840,
+        450
+      ],
+      "size": [
+        165,
+        64
+      ]
+    },
+    {
+      "id": "exhausted",
+      "type": "external",
+      "label": "exhausted()",
+      "sublabel": "names what never verified",
+      "pos": [
+        230,
+        450
+      ],
+      "size": [
+        175,
+        64
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "start-next",
+      "from": "start",
+      "to": "next",
+      "variant": "emphasis"
+    },
+    {
+      "id": "next-session",
+      "from": "next",
+      "to": "session"
+    },
+    {
+      "id": "session-claim",
+      "from": "session",
+      "to": "claim"
+    },
+    {
+      "id": "claim-verify",
+      "from": "claim",
+      "to": "verify"
+    },
+    {
+      "id": "verify-complete",
+      "from": "verify",
+      "to": "complete",
+      "label": "passed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "verify-retry",
+      "from": "verify",
+      "to": "retry",
+      "label": "failed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        922,
+        407
+      ]
+    },
+    {
+      "id": "retry-next",
+      "from": "retry",
+      "to": "next",
+      "fromSide": "left",
+      "toSide": "bottom"
+    },
+    {
+      "id": "next-exhausted",
+      "from": "next",
+      "to": "exhausted",
+      "label": "nothing left",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        312,
+        407
+      ]
+    },
+    {
+      "id": "claim-progress",
+      "from": "claim",
+      "to": "progress",
+      "label": "save",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One feature per session",
+      "items": [
+        "A session claims exactly one feature and gets a step budget",
+        "progress.json is the only state that survives a restart"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Who verifies",
+      "items": [
+        "The harness runs verify(), never the agent",
+        "A failed check keeps the feature CLAIMED and increments attempts"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Honest termination",
+      "items": [
+        "The retry cap stops an unbounded loop",
+        "exhausted() names every feature that never verified"
+      ]
+    }
+  ]
+}

@@ -7,6 +7,11 @@ declares premature victory gets agreement.
 
 ## The loop across context windows
 
+> **[Interactive architecture diagram](../../docs/diagrams/harness-agent-architecture.html)** — open in browser for the full interactive view.
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TD
     Start["Start / resume"] --> Load{"progress.json<br/>exists?"}
@@ -37,11 +42,18 @@ flowchart TD
     Done -- yes --> OK["True"]
 ```
 
+</details>
+
+
 Three saves per session, not one at the end. The failure this design exists for is the session
 that never reaches its end — killed, out of context, crashed — and a save at the end protects
 only the sessions that were going to be fine anyway.
 
 ## The state machine
+
+
+<details>
+<summary>Additional diagram</summary>
 
 ```mermaid
 stateDiagram-v2
@@ -52,6 +64,9 @@ stateDiagram-v2
     VERIFIED --> COMPLETE: mark_complete()
     COMPLETE --> [*]
 ```
+
+</details>
+
 
 `advance` checks the *step*, not just the destination. That distinction is the whole guard:
 `advance(f, COMPLETE)` from `CLAIMED` is exactly what "marked done without testing" looks like

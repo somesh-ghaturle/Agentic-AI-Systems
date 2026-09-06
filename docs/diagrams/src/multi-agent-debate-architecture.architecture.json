@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "multi-agent-debate — the panel proposes, a human executes",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "panel",
+        "label": "The panel",
+        "focus": ["proposer", "safety", "cost", "arbiter", "transcript"],
+        "note": "Every turn is appended to one transcript; the arbiter judges but never acts."
+      },
+      {
+        "id": "gate",
+        "label": "The gate",
+        "focus": ["verdict", "gate", "human", "executor", "writetool"],
+        "note": "The verdict reaches a write tool only through a human at the approval gate."
+      }
+    ]
+  },
+  "components": [
+    { "id": "proposer", "type": "backend", "label": "Proposer", "sublabel": "names an action", "pos": [40, 150], "size": [160, 64] },
+    { "id": "safety", "type": "backend", "label": "Critic", "sublabel": "safety", "pos": [40, 260], "size": [160, 64] },
+    { "id": "cost", "type": "backend", "label": "Critic", "sublabel": "cost", "pos": [40, 370], "size": [160, 64] },
+    { "id": "arbiter", "type": "backend", "label": "Arbiter", "sublabel": "judges only", "pos": [40, 480], "size": [160, 64] },
+    { "id": "transcript", "type": "database", "label": "Transcript", "sublabel": "append-only, round-stamped", "pos": [280, 315], "size": [190, 64] },
+    { "id": "verdict", "type": "security", "label": "Verdict", "sublabel": "proposal + dissent", "pos": [530, 315], "size": [170, 64] },
+    { "id": "gate", "type": "security", "label": "Approval gate", "sublabel": "the only way through", "pos": [760, 315], "size": [175, 64] },
+    { "id": "human", "type": "external", "label": "Human", "sublabel": "approves or declines", "pos": [760, 170], "size": [175, 64] },
+    { "id": "executor", "type": "backend", "label": "Executor", "sublabel": "acts on the approval", "pos": [995, 315], "size": [175, 64] },
+    { "id": "writetool", "type": "database", "label": "Write tool", "sublabel": "the only effect", "pos": [995, 460], "size": [175, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "The debate — no agent here can act", "wraps": ["proposer", "safety", "cost", "arbiter", "transcript"] }
+  ],
+  "connections": [
+    { "id": "proposer-transcript", "from": "proposer", "to": "transcript" },
+    { "id": "safety-transcript", "from": "safety", "to": "transcript" },
+    { "id": "cost-transcript", "from": "cost", "to": "transcript" },
+    { "id": "arbiter-transcript", "from": "arbiter", "to": "transcript" },
+    { "id": "transcript-verdict", "from": "transcript", "to": "verdict", "variant": "emphasis" },
+    { "id": "verdict-gate", "from": "verdict", "to": "gate", "variant": "emphasis" },
+    { "id": "gate-human", "from": "gate", "to": "human", "variant": "security", "fromSide": "top", "toSide": "bottom" },
+    { "id": "human-executor", "from": "human", "to": "executor", "variant": "security" },
+    { "id": "executor-writetool", "from": "executor", "to": "writetool", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The panel",
+      "items": ["Proposer names an action; critics argue it", "Every turn is stamped with the round it belongs to"]
+    },
+    {
+      "dot": "emerald",
+      "title": "The transcript",
+      "items": ["Append-only, so dissent cannot be quietly reordered", "The arbiter judges convergence but never acts"]
+    },
+    {
+      "dot": "rose",
+      "title": "The boundary",
+      "items": ["There is no edge from verdict to executor", "A human at the gate is the only path to a write tool"]
+    }
+  ]
+}

@@ -50,6 +50,7 @@ EXAMPLES = ROOT / "examples"
 # repository's central control as a failure. All three hermes rows are here together because
 # the interesting assertion is the difference between them.
 CASES = [
+    ("budget-guard", "agent.py", ["summarize the refund policy"], 0),
     ("checkpoint-agent", "agent.py", ["deploy-model"], 0),
     ("context-compaction", "compact.py", [], 0),
     ("harness-agent", "agent.py", ["Find and plan deployment for service X"], 0),

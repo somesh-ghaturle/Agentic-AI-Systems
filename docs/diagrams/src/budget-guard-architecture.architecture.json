@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "budget-guard \u2014 the check happens before the spend",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "the-loop",
+        "label": "The autonomous loop",
+        "focus": [
+          "pick",
+          "guard",
+          "run",
+          "ledger"
+        ],
+        "note": "The agent picks its own next step, so the number of steps varies and the bound has to be on cost."
+      },
+      {
+        "id": "degradation",
+        "label": "Degrade, then stop",
+        "focus": [
+          "guard",
+          "run",
+          "stop",
+          "answer"
+        ],
+        "note": "Quick mode is the graceful-degradation layer; stopping names what was skipped."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "request",
+      "type": "external",
+      "label": "Request",
+      "sublabel": "with a token budget",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "id": "pick",
+      "type": "backend",
+      "label": "Pick next step",
+      "sublabel": "the agent chooses",
+      "pos": [
+        240,
+        300
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "guard",
+      "type": "security",
+      "label": "BudgetGuard",
+      "sublabel": "checks before the spend",
+      "pos": [
+        480,
+        300
+      ],
+      "size": [
+        175,
+        64
+      ]
+    },
+    {
+      "id": "run",
+      "type": "backend",
+      "label": "Run the step",
+      "sublabel": "thorough, or quick if tight",
+      "pos": [
+        720,
+        300
+      ],
+      "size": [
+        175,
+        64
+      ]
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "Step records",
+      "sublabel": "step + mode + tokens",
+      "pos": [
+        960,
+        300
+      ],
+      "size": [
+        175,
+        64
+      ]
+    },
+    {
+      "id": "stop",
+      "type": "security",
+      "label": "Stop",
+      "sublabel": "names what it skipped",
+      "pos": [
+        480,
+        470
+      ],
+      "size": [
+        175,
+        64
+      ]
+    },
+    {
+      "id": "answer",
+      "type": "external",
+      "label": "Answer",
+      "sublabel": "complete, or short and honest",
+      "pos": [
+        240,
+        470
+      ],
+      "size": [
+        190,
+        64
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "request-pick",
+      "from": "request",
+      "to": "pick",
+      "variant": "emphasis"
+    },
+    {
+      "id": "pick-guard",
+      "from": "pick",
+      "to": "guard"
+    },
+    {
+      "id": "guard-run",
+      "from": "guard",
+      "to": "run"
+    },
+    {
+      "id": "run-ledger",
+      "from": "run",
+      "to": "ledger"
+    },
+    {
+      "id": "run-pick",
+      "from": "run",
+      "to": "pick",
+      "label": "loop back",
+      "fromSide": "top",
+      "toSide": "top",
+      "labelAt": [
+        560,
+        240
+      ]
+    },
+    {
+      "id": "guard-stop",
+      "from": "guard",
+      "to": "stop",
+      "label": "cannot afford even quick",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        567,
+        417
+      ]
+    },
+    {
+      "id": "stop-answer",
+      "from": "stop",
+      "to": "answer"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Why a loop, not a pipeline",
+      "items": [
+        "Steps: gather, analyze, draft, review, refine",
+        "The agent picks its own next step and can loop back",
+        "Step count varies, so the bound is on cost rather than count"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Before, not after",
+      "items": [
+        "A step count lets the agent start what it cannot finish",
+        "The budget is checked against the next spend, so it never does"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Degrade, then name the loss",
+      "items": [
+        "Quick mode finishes the answer instead of aborting it",
+        "\"skipped: review\" is a fact about the answer, not the budget"
+      ]
+    }
+  ]
+}

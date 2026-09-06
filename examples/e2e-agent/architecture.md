@@ -4,6 +4,11 @@ The request path and the four artifacts it leaves behind, in one picture.
 [README.md](README.md) explains the reasoning; this page is the diagram and just enough
 text to read it.
 
+> **[Interactive architecture diagram](../../docs/diagrams/e2e-agent-architecture.html)** — open in browser for the full interactive view.
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
   Client[Client]
@@ -34,6 +39,8 @@ flowchart LR
   class OTel,Traces,Metrics,Audit,Provenance,ModelRegistry,Secrets,CI infra
 ```
 
+</details>
+
 ## Reading it
 
 **One request, four records.** A call to `/invoke` produces a span, an audit line, a
@@ -57,5 +64,7 @@ environment and the model version from `E2E_AGENT_MODEL`; both are recorded in t
 provenance artifact so a stored answer can be traced back to the configuration that
 produced it. `E2E_AGENT_API_KEY` has no default — the app refuses to start without it.
 
-The rendered [architecture.svg](architecture.svg) is a snapshot of this diagram, exported by
-hand.
+[architecture.svg](architecture.svg) is an older hand-exported snapshot of the Mermaid
+source above, kept for reference; the interactive diagram linked at the top is the current
+one, and its source of truth is
+[`docs/diagrams/src/e2e-agent-architecture.architecture.json`](../../docs/diagrams/src/e2e-agent-architecture.architecture.json).

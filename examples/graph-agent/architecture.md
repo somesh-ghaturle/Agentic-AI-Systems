@@ -11,6 +11,11 @@ Emitted by `graph.get_graph().draw_mermaid()`, not maintained by hand. That is t
 meaning of "the topology is a value rather than a trace" — this diagram cannot drift from the
 code, because the code produces it.
 
+> **[Interactive architecture diagram](../../docs/diagrams/graph-agent-architecture.html)** — open in browser for the full interactive view.
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 graph TD;
 	__start__([__start__]):::first
@@ -34,6 +39,9 @@ graph TD;
 	classDef last fill:#bfb6fc
 ```
 
+</details>
+
+
 The single dotted pair out of `classify` is the only branch in the system. Everything else is
 a fixed edge, which is what makes `test_the_read_branch_never_reaches_execute` a statement
 about the graph rather than about a particular run.
@@ -44,6 +52,10 @@ control flow you have to read the code to establish; here it is an edge set you 
 and `TestTopology` does.
 
 ## Where the write boundary actually is
+
+
+<details>
+<summary>Additional diagram</summary>
 
 ```mermaid
 flowchart LR
@@ -57,6 +69,9 @@ flowchart LR
     classDef good fill:#eaf7ea,stroke:#2d8a34
     class E good
 ```
+
+</details>
+
 
 `draft` produces a proposal object and nothing else. `execute` is the only node that acts.
 Between them the graph suspends. This is the same rule the Terraform trees enforce with role
