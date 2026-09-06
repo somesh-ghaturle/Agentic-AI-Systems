@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Shared, personal, or team knowledge — the one distinction that matters",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "personal", "label": "Never commit", "focus": ["plan", "tasks", "context"], "note": "Working state is per-person and per-task. Committing it creates conflicts and noise." },
+      { "id": "promote", "label": "Promotion path", "focus": ["context", "learnings", "claudemd"], "note": "Something is promoted only once it generalizes, then only once it recurs." },
+      { "id": "shared", "label": "Reviewed like code", "focus": ["claudemd", "rules", "commands", "skills"], "note": "Shared agent configuration goes through PR review, because it changes what every agent does." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 3, "cellW": 210, "cellH": 74, "gapX": 150, "gapY": 40, "origin": [70, 96] },
+  "components": [
+    { "id": "plan", "type": "external", "label": "plan.md", "row": 0, "col": 0, "size": [186, 64] },
+    { "id": "tasks", "type": "external", "label": "tasks.md", "row": 1, "col": 0, "size": [186, 64] },
+    { "id": "context", "type": "external", "label": "context.md", "row": 2, "col": 0, "size": [186, 64] },
+    { "id": "learnings", "type": "database", "label": "docs/learnings/<name>.md", "sublabel": "conflict-resistant layout", "row": 1, "col": 1, "size": [196, 72] },
+    { "id": "claudemd", "type": "backend", "label": "CLAUDE.md", "row": 0, "col": 2, "size": [186, 64] },
+    { "id": "rules", "type": "backend", "label": ".claude/rules/*.md", "row": 1, "col": 2, "size": [186, 64] },
+    { "id": "commands", "type": "backend", "label": ".claude/commands/*.md", "row": 2, "col": 2, "size": [186, 64] },
+    { "id": "skills", "type": "backend", "label": ".claude/skills · agents", "row": 3, "col": 2, "size": [186, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "PERSONAL · gitignored", "wraps": ["plan", "tasks", "context"] },
+    { "kind": "security-group", "label": "SHARED · PR-reviewed", "wraps": ["claudemd", "rules", "commands", "skills"] }
+  ],
+  "connections": [
+    { "from": "plan", "to": "learnings", "variant": "dashed" },
+    { "from": "tasks", "to": "learnings", "variant": "dashed" },
+    { "from": "context", "to": "learnings", "label": "promote what generalizes", "variant": "dashed" },
+    { "from": "learnings", "to": "claudemd", "label": "promote what recurs", "variant": "emphasis" }
+  ],
+  "cards": [
+    { "dot": "violet", "title": "The test for each file", "items": [
+      "Would another engineer's agent behave better with this? Then it is shared",
+      "Is it the state of your current task? Then it is personal, and it is gitignored"
+    ] },
+    { "dot": "emerald", "title": "Why learnings sit in the middle", "items": [
+      "One file per person keeps merge conflicts out of the knowledge base",
+      "Promotion is two-step on purpose: generalizes first, recurs second"
+    ] }
+  ]
+}

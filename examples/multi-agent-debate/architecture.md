@@ -10,7 +10,7 @@ it must refuse to authorize.
 
 ## Where this sits
 
-> **[Interactive architecture diagram](../../docs/diagrams/multi-agent-debate-architecture.html)** — open in browser for the full interactive view.
+![multi-agent-debate — the panel proposes, a human executes](../../docs/diagrams/gif/multi-agent-debate-architecture.gif)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

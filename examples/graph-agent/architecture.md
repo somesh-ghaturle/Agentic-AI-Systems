@@ -11,7 +11,7 @@ Emitted by `graph.get_graph().draw_mermaid()`, not maintained by hand. That is t
 meaning of "the topology is a value rather than a trace" — this diagram cannot drift from the
 code, because the code produces it.
 
-> **[Interactive architecture diagram](../../docs/diagrams/graph-agent-architecture.html)** — open in browser for the full interactive view.
+![graph-agent — approval is the only path to an effect](../../docs/diagrams/gif/graph-agent-architecture.gif)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

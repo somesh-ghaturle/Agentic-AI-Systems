@@ -7,7 +7,7 @@ declares premature victory gets agreement.
 
 ## The loop across context windows
 
-> **[Interactive architecture diagram](../../docs/diagrams/harness-agent-architecture.html)** — open in browser for the full interactive view.
+![harness-agent — the harness verifies, the agent does not](../../docs/diagrams/gif/harness-agent-architecture.gif)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

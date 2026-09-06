@@ -1,0 +1,319 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Snowflake \u2014 the write boundary is a role graph",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "read-side",
+        "label": "What ORCHESTRATOR can do",
+        "focus": [
+          "orch",
+          "readproc",
+          "guarded"
+        ],
+        "note": "The orchestrator role reaches read procedures and the guarded completion, and nothing else."
+      },
+      {
+        "id": "approval",
+        "label": "The approval record",
+        "focus": [
+          "submit",
+          "approvals",
+          "human"
+        ],
+        "note": "A proposal is written, a human approves it, and the row is the gate."
+      },
+      {
+        "id": "write-side",
+        "label": "What EXECUTOR can do",
+        "focus": [
+          "exec",
+          "claim",
+          "writeproc"
+        ],
+        "note": "Only the executor role can claim an approval and call a write procedure."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "workload",
+      "type": "external",
+      "label": "Workload",
+      "sublabel": "AWS role / Azure MI / GCP SA",
+      "pos": [
+        40,
+        250
+      ],
+      "size": [
+        175,
+        60
+      ]
+    },
+    {
+      "id": "orch",
+      "type": "security",
+      "label": "ORCHESTRATOR role",
+      "sublabel": "read and propose",
+      "pos": [
+        265,
+        120
+      ],
+      "size": [
+        180,
+        60
+      ]
+    },
+    {
+      "id": "readproc",
+      "type": "backend",
+      "label": "Read procedures",
+      "sublabel": "TOOLS schema",
+      "pos": [
+        490,
+        80
+      ],
+      "size": [
+        175,
+        60
+      ]
+    },
+    {
+      "id": "guarded",
+      "type": "backend",
+      "label": "COMPLETE_GUARDED",
+      "sublabel": "cortex_guard always on",
+      "pos": [
+        490,
+        165
+      ],
+      "size": [
+        195,
+        60
+      ]
+    },
+    {
+      "id": "submit",
+      "type": "backend",
+      "label": "SUBMIT_PROPOSAL",
+      "sublabel": "APP schema",
+      "pos": [
+        490,
+        275
+      ],
+      "size": [
+        180,
+        60
+      ]
+    },
+    {
+      "id": "approvals",
+      "type": "database",
+      "label": "APPROVALS",
+      "sublabel": "hybrid table",
+      "pos": [
+        715,
+        275
+      ],
+      "size": [
+        170,
+        60
+      ]
+    },
+    {
+      "id": "human",
+      "type": "external",
+      "label": "Human approver",
+      "sublabel": "calls APPROVE",
+      "pos": [
+        930,
+        275
+      ],
+      "size": [
+        170,
+        60
+      ]
+    },
+    {
+      "id": "exec",
+      "type": "security",
+      "label": "EXECUTOR role",
+      "sublabel": "claim and write",
+      "pos": [
+        265,
+        400
+      ],
+      "size": [
+        180,
+        60
+      ]
+    },
+    {
+      "id": "claim",
+      "type": "backend",
+      "label": "CLAIM_APPROVAL",
+      "sublabel": "compare-and-set",
+      "pos": [
+        490,
+        400
+      ],
+      "size": [
+        180,
+        60
+      ]
+    },
+    {
+      "id": "writeproc",
+      "type": "backend",
+      "label": "Write procedures",
+      "sublabel": "TOOLS schema",
+      "pos": [
+        715,
+        400
+      ],
+      "size": [
+        180,
+        60
+      ]
+    },
+    {
+      "id": "traces",
+      "type": "database",
+      "label": "TRACES",
+      "sublabel": "AUDIT schema",
+      "pos": [
+        930,
+        400
+      ],
+      "size": [
+        170,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "ORCHESTRATOR \u2014 reaches no write procedure",
+      "wraps": [
+        "orch",
+        "readproc",
+        "guarded"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "APP schema \u2014 the approval record",
+      "wraps": [
+        "submit",
+        "approvals",
+        "human"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "EXECUTOR \u2014 the only role that writes",
+      "wraps": [
+        "exec",
+        "claim",
+        "writeproc"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "workload-orch",
+      "from": "workload",
+      "to": "orch",
+      "label": "WIF, no key",
+      "variant": "security"
+    },
+    {
+      "id": "workload-exec",
+      "from": "workload",
+      "to": "exec",
+      "label": "WIF, no key",
+      "variant": "security"
+    },
+    {
+      "id": "orch-readproc",
+      "from": "orch",
+      "to": "readproc"
+    },
+    {
+      "id": "orch-guarded",
+      "from": "orch",
+      "to": "guarded"
+    },
+    {
+      "id": "orch-submit",
+      "from": "orch",
+      "to": "submit"
+    },
+    {
+      "id": "submit-approvals",
+      "from": "submit",
+      "to": "approvals"
+    },
+    {
+      "id": "human-approvals",
+      "from": "human",
+      "to": "approvals",
+      "label": "APPROVE",
+      "variant": "security"
+    },
+    {
+      "id": "exec-claim",
+      "from": "exec",
+      "to": "claim"
+    },
+    {
+      "id": "claim-approvals",
+      "from": "claim",
+      "to": "approvals"
+    },
+    {
+      "id": "exec-writeproc",
+      "from": "exec",
+      "to": "writeproc",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "bottom"
+    },
+    {
+      "id": "writeproc-traces",
+      "from": "writeproc",
+      "to": "traces",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Two roles, one account",
+      "items": [
+        "Both roles are reached by workload identity federation, with no key",
+        "Managed-access schemas stop a schema owner granting around the split"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "The boundary",
+      "items": [
+        "ORCHESTRATOR holds no grant on any write procedure",
+        "Procedures run EXECUTE AS OWNER so the caller cannot borrow rights"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Claiming an approval",
+      "items": [
+        "CLAIM_APPROVAL uses SQLROWCOUNT so only one claim can win",
+        "A sweeper task recovers claims that were left stale"
+      ]
+    }
+  ]
+}

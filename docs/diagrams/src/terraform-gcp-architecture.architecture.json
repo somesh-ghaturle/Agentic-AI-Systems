@@ -1,0 +1,347 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "GCP \u2014 the write path has no IAM route",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "read-path",
+        "label": "Read path",
+        "focus": [
+          "caller",
+          "orch",
+          "retrieve",
+          "reason"
+        ],
+        "note": "The state machine invokes retrieval and the model step directly."
+      },
+      {
+        "id": "write-path",
+        "label": "Write path",
+        "focus": [
+          "validator",
+          "topic",
+          "human",
+          "executor",
+          "writetool"
+        ],
+        "note": "Every write goes through validation, a human, and the one principal permitted to invoke it."
+      },
+      {
+        "id": "evidence",
+        "label": "State and evidence",
+        "focus": [
+          "approvals",
+          "traces",
+          "archive"
+        ],
+        "note": "Approvals and traces are retained, then archived under Object Lock."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "caller",
+      "type": "external",
+      "label": "Caller",
+      "sublabel": "workflows.invoker",
+      "pos": [
+        40,
+        240
+      ],
+      "size": [
+        140,
+        60
+      ]
+    },
+    {
+      "id": "orch",
+      "type": "cloud",
+      "label": "Cloud Workflows",
+      "sublabel": "workflow",
+      "pos": [
+        230,
+        240
+      ],
+      "size": [
+        165,
+        60
+      ]
+    },
+    {
+      "id": "retrieve",
+      "type": "backend",
+      "label": "retrieve",
+      "sublabel": "Vertex AI Vector Search",
+      "pos": [
+        440,
+        120
+      ],
+      "size": [
+        170,
+        60
+      ]
+    },
+    {
+      "id": "reason",
+      "type": "backend",
+      "label": "reason",
+      "sublabel": "Claude on Vertex AI",
+      "pos": [
+        650,
+        120
+      ],
+      "size": [
+        170,
+        60
+      ]
+    },
+    {
+      "id": "validator",
+      "type": "security",
+      "label": "approval-validator",
+      "sublabel": "ownership \u00b7 limits",
+      "pos": [
+        440,
+        240
+      ],
+      "size": [
+        175,
+        60
+      ]
+    },
+    {
+      "id": "topic",
+      "type": "messagebus",
+      "label": "Pub/Sub topic",
+      "sublabel": "approval-requests",
+      "pos": [
+        645,
+        240
+      ],
+      "size": [
+        160,
+        60
+      ]
+    },
+    {
+      "id": "human",
+      "type": "external",
+      "label": "Human approver",
+      "pos": [
+        835,
+        240
+      ],
+      "size": [
+        150,
+        60
+      ]
+    },
+    {
+      "id": "executor",
+      "type": "security",
+      "label": "approval-executor",
+      "sublabel": "the only write invoker",
+      "pos": [
+        645,
+        360
+      ],
+      "size": [
+        175,
+        60
+      ]
+    },
+    {
+      "id": "writetool",
+      "type": "backend",
+      "label": "process_refund",
+      "sublabel": "write tool",
+      "pos": [
+        850,
+        360
+      ],
+      "size": [
+        170,
+        60
+      ]
+    },
+    {
+      "id": "approvals",
+      "type": "database",
+      "label": "Approvals",
+      "sublabel": "Firestore",
+      "pos": [
+        440,
+        480
+      ],
+      "size": [
+        165,
+        60
+      ]
+    },
+    {
+      "id": "traces",
+      "type": "database",
+      "label": "Cloud Logging",
+      "sublabel": "shared trace log",
+      "pos": [
+        645,
+        480
+      ],
+      "size": [
+        175,
+        60
+      ]
+    },
+    {
+      "id": "archive",
+      "type": "database",
+      "label": "Archive",
+      "sublabel": "GCS + Bucket Lock",
+      "pos": [
+        845,
+        480
+      ],
+      "size": [
+        165,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Read path \u2014 direct invocation",
+      "wraps": [
+        "retrieve",
+        "reason"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Write path \u2014 gated, no IAM path exists",
+      "wraps": [
+        "validator",
+        "topic",
+        "human",
+        "executor",
+        "writetool"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "State and evidence",
+      "wraps": [
+        "approvals",
+        "traces",
+        "archive"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "caller-orch",
+      "from": "caller",
+      "to": "orch",
+      "variant": "emphasis"
+    },
+    {
+      "id": "orch-retrieve",
+      "from": "orch",
+      "to": "retrieve"
+    },
+    {
+      "id": "orch-reason",
+      "from": "orch",
+      "to": "reason",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [
+          312.5,
+          64
+        ],
+        [
+          735,
+          64
+        ]
+      ]
+    },
+    {
+      "id": "orch-validator",
+      "from": "orch",
+      "to": "validator"
+    },
+    {
+      "id": "validator-topic",
+      "from": "validator",
+      "to": "topic"
+    },
+    {
+      "id": "topic-human",
+      "from": "topic",
+      "to": "human"
+    },
+    {
+      "id": "human-executor",
+      "from": "human",
+      "to": "executor",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "id": "executor-writetool",
+      "from": "executor",
+      "to": "writetool",
+      "variant": "emphasis"
+    },
+    {
+      "id": "executor-approvals",
+      "from": "executor",
+      "to": "approvals",
+      "variant": "dashed"
+    },
+    {
+      "id": "executor-traces",
+      "from": "executor",
+      "to": "traces",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "traces-archive",
+      "from": "traces",
+      "to": "archive"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Orchestration",
+      "items": [
+        "Cloud Workflows runs retrieve, then reason, then the gate",
+        "The executor resolves the workflow callback when it is done"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "The boundary",
+      "items": [
+        "No IAM path exists, and the write tool explicitly denies it",
+        "Only the holder of run.invoker can invoke it"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Evidence",
+      "items": [
+        "Approvals held in Firestore with pessimistic concurrency",
+        "Logs archived to GCS under Bucket Lock"
+      ]
+    }
+  ]
+}

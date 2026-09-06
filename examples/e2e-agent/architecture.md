@@ -4,7 +4,7 @@ The request path and the four artifacts it leaves behind, in one picture.
 [README.md](README.md) explains the reasoning; this page is the diagram and just enough
 text to read it.
 
-> **[Interactive architecture diagram](../../docs/diagrams/e2e-agent-architecture.html)** — open in browser for the full interactive view.
+![e2e-agent — one request, four records](../../docs/diagrams/gif/e2e-agent-architecture.gif)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

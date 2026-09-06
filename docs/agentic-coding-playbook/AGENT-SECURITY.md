@@ -19,6 +19,11 @@ the rest of this kit.
 The dangerous shape is not "the model says something wrong." It is **untrusted input
 reaching a capable agent**, where "capable" means it can execute, write, or transmit.
 
+![Untrusted text reaches the context, and capability turns it into impact](../diagrams/gif/agent-security-threat-model.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     subgraph U["Untrusted input"]
@@ -41,6 +46,8 @@ flowchart LR
     F --> CAP
     CAP --> K["Impact:<br/>exfiltration · code change · lateral movement"]
 ```
+
+</details>
 
 **The core problem:** to a language model, instructions and data occupy the same channel.
 Text inside a file the agent reads can be phrased as an instruction, and there is no

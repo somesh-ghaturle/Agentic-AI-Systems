@@ -1,6 +1,6 @@
 # Architecture
 
-> **[Interactive architecture diagram](../../docs/diagrams/budget-guard-architecture.html)** — open in browser for the full interactive view.
+![budget-guard — the check happens before the spend](../../docs/diagrams/gif/budget-guard-architecture.gif)
 
 ## The decision this example exists to make
 

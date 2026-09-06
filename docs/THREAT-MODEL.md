@@ -34,6 +34,11 @@ in the repository; where the answer differs by cloud, it says so rather than ave
 | Trace stream | The record that a write happened. Its absence is what makes an incident unreconstructable. |
 | Read tools | Not gated. See §3 — this is the largest genuine gap. |
 
+![The only path to a write tool runs through a human](diagrams/gif/threat-model-write-path.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     M["Model<br/><i>untrusted output</i>"] --> O["Orchestrator"]
@@ -49,6 +54,8 @@ flowchart LR
     class W good
     class M bad
 ```
+
+</details>
 
 The trust boundary that matters is the dotted line. Every control in all four trees exists to
 keep it dotted.

@@ -15,6 +15,11 @@ Everything below exists to make that true, and to make it observable when it isn
 Two paths leave the orchestrator. The read path is direct. The write path cannot be
 walked without a human, and the boundary is drawn by IAM rather than by convention.
 
+![AWS — the write path has no direct route](../../docs/diagrams/gif/terraform-aws-architecture.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     caller["Caller<br/><i>StartExecution</i>"]
@@ -67,6 +72,8 @@ flowchart TB
     class validator,topic,human,executor gate
     class writetool denied
 ```
+
+</details>
 
 The dashed red edge is the point of the whole design: **there is no IAM path from the
 state machine to a write tool.** Not a discouraged one — an absent one.

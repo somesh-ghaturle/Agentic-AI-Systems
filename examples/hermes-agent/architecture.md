@@ -3,7 +3,7 @@
 The router and the write boundary in one picture. [README.md](README.md) explains the
 reasoning; this page is the diagram and just enough text to read it.
 
-> **[Interactive architecture diagram](../../docs/diagrams/hermes-agent-architecture.html)** — open in browser for the full interactive view.
+![Hermes — the write boundary](../../docs/diagrams/gif/hermes-agent-architecture.gif)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

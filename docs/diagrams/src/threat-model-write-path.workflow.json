@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Threat model — untrusted output cannot reach a write tool",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "ungated",
+        "label": "The read gap",
+        "focus": ["model", "orchestrator", "readtools"],
+        "note": "Read tools are reachable directly from untrusted model output. This is the largest genuine gap."
+      },
+      {
+        "id": "approval",
+        "label": "The approval path",
+        "focus": ["orchestrator", "validator", "human", "executor"],
+        "note": "A state-changing action is a proposal until a human approves that specific action."
+      },
+      {
+        "id": "blocked",
+        "label": "The absent route",
+        "focus": ["orchestrator", "executor", "writetools"],
+        "note": "No IAM path joins the orchestrator to a write tool in any of the four trees."
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "agent", "label": "Untrusted surface" },
+    { "id": "gate", "label": "Approval path" },
+    { "id": "tools", "label": "Tools" }
+  ],
+  "mainPath": ["model", "orchestrator", "validator", "human", "executor", "writetools"],
+  "nodes": [
+    { "id": "model", "lane": "agent", "col": 0, "type": "external", "label": "Model", "sublabel": "untrusted output", "width": 138 },
+    { "id": "orchestrator", "lane": "agent", "col": 1, "type": "backend", "label": "Orchestrator", "sublabel": "holds no write identity", "width": 138 },
+    { "id": "validator", "lane": "gate", "col": 2, "type": "security", "label": "Validator", "sublabel": "ownership · limits", "width": 138 },
+    { "id": "human", "lane": "gate", "col": 3, "type": "external", "label": "Human approver", "sublabel": "approves this action", "width": 138 },
+    { "id": "executor", "lane": "gate", "col": 4, "type": "security", "label": "Approval executor", "sublabel": "the only write invoker", "tag": "sole principal", "width": 138 },
+    { "id": "readtools", "lane": "tools", "col": 2, "type": "database", "label": "Read tools", "sublabel": "not gated", "width": 138 },
+    { "id": "writetools", "lane": "tools", "col": 5, "type": "database", "label": "Write tools", "sublabel": "the only state change", "width": 138 }
+  ],
+  "edges": [
+    { "id": "model-orch", "from": "model", "to": "orchestrator", "variant": "default" },
+    { "id": "orch-read", "from": "orchestrator", "to": "readtools", "label": "ungated", "variant": "dashed", "role": "branch" },
+    { "id": "orch-validator", "from": "orchestrator", "to": "validator", "label": "proposal", "variant": "emphasis" },
+    { "id": "validator-human", "from": "validator", "to": "human", "variant": "default" },
+    { "id": "human-executor", "from": "human", "to": "executor", "label": "approved", "variant": "default" },
+    { "id": "executor-write", "from": "executor", "to": "writetools", "label": "only path", "variant": "emphasis" },
+    { "id": "orch-write-blocked", "from": "orchestrator", "to": "writetools", "label": "blocked in all four trees", "variant": "security", "role": "error" }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "What the boundary is made of",
+      "items": [
+        "IAM, not convention: the orchestrator holds no principal that can invoke a write tool",
+        "Approval records are both the concurrency control and the audit trail"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Known gap",
+      "items": [
+        "Read tools are not gated — untrusted output reaches them directly",
+        "Absence of a trace is what makes an incident unreconstructable"
+      ]
+    }
+  ]
+}

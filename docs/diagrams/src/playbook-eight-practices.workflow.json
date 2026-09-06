@@ -1,0 +1,205 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "The eight practices — and the one that folds back",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "surface",
+        "label": "Set the surface",
+        "focus": [
+          "surface",
+          "context"
+        ],
+        "note": "A filesystem, a shell and a loop; then a thin context that stays under 200 lines."
+      },
+      {
+        "id": "loop",
+        "label": "Run the loop",
+        "focus": [
+          "plan",
+          "verification",
+          "autonomy"
+        ],
+        "note": "Plan to a file, verify inside the loop, and pick the autonomy bucket per task."
+      },
+      {
+        "id": "fold",
+        "label": "Fold back",
+        "focus": [
+          "hygiene",
+          "judgment",
+          "artifact",
+          "context"
+        ],
+        "note": "Whatever you were prompted for twice becomes an artifact; learnings return to the rules."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "practice",
+      "label": "Practices 1–6"
+    },
+    {
+      "id": "fold",
+      "label": "Practices 7–8 · fold back"
+    }
+  ],
+  "mainPath": [
+    "surface",
+    "context",
+    "plan",
+    "verification",
+    "autonomy",
+    "artifact"
+  ],
+  "nodes": [
+    {
+      "id": "surface",
+      "lane": "practice",
+      "col": 0,
+      "type": "backend",
+      "label": "1 · Agentic surface",
+      "sublabel": "filesystem + shell + loop",
+      "width": 152
+    },
+    {
+      "id": "context",
+      "lane": "practice",
+      "col": 1,
+      "type": "database",
+      "label": "2 · Thin context",
+      "sublabel": "CLAUDE.md ≤200 lines",
+      "width": 152
+    },
+    {
+      "id": "plan",
+      "lane": "practice",
+      "col": 2,
+      "type": "backend",
+      "label": "3 · Plan to a file",
+      "sublabel": "read it, correct it, then run",
+      "width": 152
+    },
+    {
+      "id": "verification",
+      "lane": "practice",
+      "col": 3,
+      "type": "security",
+      "label": "4 · Verification",
+      "sublabel": "tests · lint · build",
+      "width": 152
+    },
+    {
+      "id": "autonomy",
+      "lane": "practice",
+      "col": 4,
+      "type": "security",
+      "label": "5 · Autonomy per task",
+      "sublabel": "green / yellow / red",
+      "width": 152
+    },
+    {
+      "id": "artifact",
+      "lane": "practice",
+      "col": 5,
+      "type": "messagebus",
+      "label": "6 · Twice → artifact",
+      "sublabel": "commands · skills · subagents",
+      "width": 152
+    },
+    {
+      "id": "hygiene",
+      "lane": "fold",
+      "col": 5,
+      "type": "external",
+      "label": "7 · Context hygiene",
+      "sublabel": "one session, one task",
+      "width": 152
+    },
+    {
+      "id": "judgment",
+      "lane": "fold",
+      "col": 1,
+      "type": "external",
+      "label": "8 · Human judgment",
+      "sublabel": "hunt conceptual bugs",
+      "width": 152
+    }
+  ],
+  "edges": [
+    {
+      "id": "s1-s2",
+      "from": "surface",
+      "to": "context",
+      "variant": "default"
+    },
+    {
+      "id": "s2-s3",
+      "from": "context",
+      "to": "plan",
+      "variant": "default"
+    },
+    {
+      "id": "s3-s4",
+      "from": "plan",
+      "to": "verification",
+      "variant": "emphasis"
+    },
+    {
+      "id": "s4-s5",
+      "from": "verification",
+      "to": "autonomy",
+      "variant": "default"
+    },
+    {
+      "id": "s5-s6",
+      "from": "autonomy",
+      "to": "artifact",
+      "variant": "default"
+    },
+    {
+      "id": "s6-s7",
+      "from": "artifact",
+      "to": "hygiene",
+      "variant": "default"
+    },
+    {
+      "id": "s7-s8",
+      "from": "hygiene",
+      "to": "judgment",
+      "label": "review diffs",
+      "variant": "default",
+      "role": "return"
+    },
+    {
+      "id": "s8-s2",
+      "from": "judgment",
+      "to": "context",
+      "label": "learnings.md folds back into the rules",
+      "variant": "dashed",
+      "role": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Why the loop closes",
+      "items": [
+        "Practice 8 is not the end of a list — it is what rewrites practice 2",
+        "Rules that never absorb a learning go stale and get ignored"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "The two that people skip",
+      "items": [
+        "Verification inside the loop, not after the PR is open",
+        "One session, one task: context hygiene is cheaper than debugging a confused agent"
+      ]
+    }
+  ]
+}

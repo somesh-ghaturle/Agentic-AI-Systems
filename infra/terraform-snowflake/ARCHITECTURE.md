@@ -7,6 +7,11 @@ the other three assume.
 
 ## 1 · The layers
 
+![Snowflake — the write boundary is a role graph](../../docs/diagrams/gif/terraform-snowflake-architecture.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     subgraph ext["Outside Snowflake"]
@@ -64,6 +69,8 @@ flowchart TB
     class WT good
     class ORCH bad
 ```
+
+</details>
 
 The dotted line is the whole architecture. Everything else is arrangement.
 

@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Agent security — untrusted text meets real capability",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "inputs",
+        "label": "What is untrusted",
+        "focus": [
+          "issue",
+          "deps",
+          "web",
+          "logs",
+          "fork"
+        ],
+        "note": "Every one of these is attacker-influenced text that reaches the agent's context."
+      },
+      {
+        "id": "collapse",
+        "label": "The collapse",
+        "focus": [
+          "context"
+        ],
+        "note": "In the context window an instruction and a datum are the same thing. That is the whole vulnerability."
+      },
+      {
+        "id": "impact",
+        "label": "What it reaches",
+        "focus": [
+          "shell",
+          "filewrite",
+          "network",
+          "creds",
+          "impact"
+        ],
+        "note": "Capability is what converts a prompt injection into an incident."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 4,
+    "cellW": 190,
+    "cellH": 72,
+    "gapX": 110,
+    "gapY": 44,
+    "origin": [
+      60,
+      90
+    ]
+  },
+  "components": [
+    {
+      "id": "issue",
+      "type": "external",
+      "label": "Issue / ticket text",
+      "row": 0,
+      "col": 0,
+      "size": [
+        178,
+        68
+      ]
+    },
+    {
+      "id": "deps",
+      "type": "external",
+      "label": "Dependency README",
+      "sublabel": "changelogs · docstrings",
+      "row": 1,
+      "col": 0,
+      "size": [
+        178,
+        68
+      ]
+    },
+    {
+      "id": "web",
+      "type": "external",
+      "label": "Web pages fetched",
+      "row": 2,
+      "col": 0,
+      "size": [
+        178,
+        68
+      ]
+    },
+    {
+      "id": "logs",
+      "type": "external",
+      "label": "Log output",
+      "row": 3,
+      "col": 0,
+      "size": [
+        178,
+        68
+      ]
+    },
+    {
+      "id": "fork",
+      "type": "external",
+      "label": "Fork or PR code",
+      "row": 4,
+      "col": 0,
+      "size": [
+        178,
+        68
+      ]
+    },
+    {
+      "id": "context",
+      "type": "backend",
+      "label": "Agent context",
+      "sublabel": "instruction ≡ data",
+      "tag": "trust collapses here",
+      "row": 2,
+      "col": 1,
+      "size": [
+        196,
+        72
+      ]
+    },
+    {
+      "id": "shell",
+      "type": "security",
+      "label": "Shell execution",
+      "row": 0,
+      "col": 2,
+      "size": [
+        178,
+        68
+      ]
+    },
+    {
+      "id": "filewrite",
+      "type": "security",
+      "label": "File write",
+      "row": 1,
+      "col": 2,
+      "size": [
+        178,
+        68
+      ]
+    },
+    {
+      "id": "network",
+      "type": "security",
+      "label": "Network / MCP",
+      "row": 2,
+      "col": 2,
+      "size": [
+        178,
+        68
+      ]
+    },
+    {
+      "id": "creds",
+      "type": "security",
+      "label": "Credentials in env",
+      "row": 3,
+      "col": 2,
+      "size": [
+        178,
+        68
+      ]
+    },
+    {
+      "id": "impact",
+      "type": "database",
+      "label": "Impact",
+      "sublabel": "exfiltration · code change",
+      "row": 2,
+      "col": 3,
+      "size": [
+        196,
+        72
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Untrusted input",
+      "wraps": [
+        "issue",
+        "deps",
+        "web",
+        "logs",
+        "fork"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Capabilities",
+      "wraps": [
+        "shell",
+        "filewrite",
+        "network",
+        "creds"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "issue",
+      "to": "context",
+      "variant": "dashed"
+    },
+    {
+      "from": "deps",
+      "to": "context",
+      "variant": "dashed"
+    },
+    {
+      "from": "web",
+      "to": "context",
+      "variant": "dashed"
+    },
+    {
+      "from": "logs",
+      "to": "context",
+      "variant": "dashed"
+    },
+    {
+      "from": "fork",
+      "to": "context",
+      "variant": "dashed"
+    },
+    {
+      "from": "context",
+      "to": "shell",
+      "variant": "security"
+    },
+    {
+      "from": "context",
+      "to": "filewrite",
+      "variant": "security"
+    },
+    {
+      "from": "context",
+      "to": "network",
+      "variant": "security"
+    },
+    {
+      "from": "context",
+      "to": "creds",
+      "variant": "security"
+    },
+    {
+      "from": "network",
+      "to": "impact",
+      "label": "exfiltration",
+      "variant": "emphasis",
+      "labelDx": -72,
+      "labelDy": 49
+    },
+    {
+      "from": "shell",
+      "to": "impact",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Why filtering input is not the fix",
+      "items": [
+        "The agent cannot separate an instruction from a datum once both are text in one window",
+        "Any of the five sources is enough; you do not control most of them"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Where the control actually goes",
+      "items": [
+        "Constrain capability, not language: what the agent may run, write, and reach",
+        "Credentials in env are reachable by anything the agent executes"
+      ]
+    }
+  ]
+}

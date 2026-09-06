@@ -27,6 +27,11 @@ including the one place GCP is *stronger* than AWS and the one place it is weake
 Two paths leave the orchestrator. The read path is direct. The write path cannot be walked
 without a human, and the boundary is drawn by Cloud IAM rather than by convention.
 
+![GCP — the write path has no IAM route](../../docs/diagrams/gif/terraform-gcp-architecture.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     caller["Caller<br/><i>workflows.invoker</i>"]
@@ -80,6 +85,8 @@ flowchart TB
     class validator,topic,human,executor gate
     class writetool denied
 ```
+
+</details>
 
 The dashed red edge is the point of the whole design, and on GCP it carries two
 independent reasons rather than one. The orchestrator holds no `run.invoker` on that

@@ -149,6 +149,11 @@ people write to it in the same week.
 The artifacts are not a menu of independent good ideas. They form a loop, and the loop is
 the point.
 
+![The daily loop: plan to a file, verify in the loop, fold learnings back](../diagrams/gif/playbook-daily-loop.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TD
     A["CLAUDE.md<br/>stack · commands · boundaries"] --> B["/plan<br/>writes plan.md"]
@@ -162,6 +167,8 @@ flowchart TD
     D -. "context getting long" .-> I["/handoff<br/>state to files"]
     I -. "clear, resume sharp" .-> B
 ```
+
+</details>
 
 Two edges matter more than the boxes:
 

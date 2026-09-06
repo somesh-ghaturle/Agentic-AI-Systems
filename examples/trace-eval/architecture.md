@@ -4,7 +4,7 @@ The experiment in one picture: one case, two subjects, two graders, and the cell
 disagree. [README.md](README.md) carries the reasoning and the results; this page is the
 diagram and enough text to read it.
 
-> **[Interactive architecture diagram](../../docs/diagrams/trace-eval-architecture.html)** — open in browser for the full interactive view.
+![trace-eval — grading the answer and the trace separately](../../docs/diagrams/gif/trace-eval-architecture.gif)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

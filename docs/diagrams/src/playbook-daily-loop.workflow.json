@@ -1,0 +1,228 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "The daily loop — plan, implement, verify, fold back",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "forward",
+        "label": "The forward pass",
+        "focus": [
+          "claudemd",
+          "plan",
+          "read",
+          "implement"
+        ],
+        "note": "Context and plan are written down before any code is generated."
+      },
+      {
+        "id": "verify",
+        "label": "Verification",
+        "focus": [
+          "verify",
+          "review",
+          "checklist"
+        ],
+        "note": "Real output, then the conceptual bugs tests do not catch, then a human reading every line."
+      },
+      {
+        "id": "hygiene",
+        "label": "Context hygiene",
+        "focus": [
+          "implement",
+          "handoff"
+        ],
+        "note": "When context gets long the state goes to files; the next session re-reads the plan and resumes sharp."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "loop",
+      "label": "The loop"
+    },
+    {
+      "id": "close",
+      "label": "Merge + learn"
+    },
+    {
+      "id": "hygiene",
+      "label": "Context hygiene",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "claudemd",
+    "plan",
+    "read",
+    "implement",
+    "verify",
+    "review"
+  ],
+  "nodes": [
+    {
+      "id": "claudemd",
+      "lane": "loop",
+      "col": 0,
+      "type": "database",
+      "label": "CLAUDE.md",
+      "sublabel": "stack · commands · boundaries",
+      "width": 136
+    },
+    {
+      "id": "plan",
+      "lane": "loop",
+      "col": 1,
+      "type": "backend",
+      "label": "/plan",
+      "sublabel": "writes plan.md",
+      "width": 136
+    },
+    {
+      "id": "read",
+      "lane": "loop",
+      "col": 2,
+      "type": "external",
+      "label": "You read the plan",
+      "sublabel": "and correct it",
+      "width": 136
+    },
+    {
+      "id": "implement",
+      "lane": "loop",
+      "col": 3,
+      "type": "backend",
+      "label": "Agent implements",
+      "sublabel": "autonomy chosen up front",
+      "width": 136
+    },
+    {
+      "id": "verify",
+      "lane": "loop",
+      "col": 4,
+      "type": "security",
+      "label": "/verify",
+      "sublabel": "real output, no 'should work'",
+      "width": 136
+    },
+    {
+      "id": "review",
+      "lane": "loop",
+      "col": 5,
+      "type": "security",
+      "label": "/review-diff",
+      "sublabel": "conceptual bugs tests miss",
+      "width": 136
+    },
+    {
+      "id": "checklist",
+      "lane": "close",
+      "col": 5,
+      "type": "external",
+      "label": "Pre-merge checklist",
+      "sublabel": "human reads every line",
+      "width": 136
+    },
+    {
+      "id": "learnings",
+      "lane": "close",
+      "col": 0,
+      "type": "database",
+      "label": "learnings.md",
+      "sublabel": "what it got wrong",
+      "width": 136
+    },
+    {
+      "id": "handoff",
+      "lane": "hygiene",
+      "col": 2,
+      "type": "messagebus",
+      "label": "/handoff",
+      "sublabel": "state to files, then resume",
+      "width": 136
+    }
+  ],
+  "edges": [
+    {
+      "id": "ctx-plan",
+      "from": "claudemd",
+      "to": "plan",
+      "variant": "default"
+    },
+    {
+      "id": "plan-read",
+      "from": "plan",
+      "to": "read",
+      "variant": "default"
+    },
+    {
+      "id": "read-impl",
+      "from": "read",
+      "to": "implement",
+      "variant": "emphasis"
+    },
+    {
+      "id": "impl-verify",
+      "from": "implement",
+      "to": "verify",
+      "variant": "default"
+    },
+    {
+      "id": "verify-review",
+      "from": "verify",
+      "to": "review",
+      "variant": "default"
+    },
+    {
+      "id": "review-checklist",
+      "from": "review",
+      "to": "checklist",
+      "variant": "default"
+    },
+    {
+      "id": "checklist-learnings",
+      "from": "checklist",
+      "to": "learnings",
+      "variant": "default",
+      "role": "return",
+      "label": "what it got wrong"
+    },
+    {
+      "id": "learnings-ctx",
+      "from": "learnings",
+      "to": "claudemd",
+      "label": "promote recurring mistakes",
+      "variant": "dashed",
+      "role": "return"
+    },
+    {
+      "id": "impl-handoff",
+      "from": "implement",
+      "to": "handoff",
+      "label": "context getting long",
+      "variant": "dashed",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Why the plan is a file",
+      "items": [
+        "A plan you can read is a plan you can correct before it costs a diff",
+        "plan.md survives the session; the context window does not"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "What closes the loop",
+      "items": [
+        "learnings.md is only useful if recurring entries get promoted into CLAUDE.md",
+        "Verification runs inside the loop, not after the PR is open",
+        "/handoff writes state to files so a cleared session resumes from the plan, not from memory"
+      ]
+    }
+  ]
+}
