@@ -167,6 +167,7 @@ has two sources of truth that will disagree.
 
 - [harness-agent](../../examples/harness-agent/README.md) — all of the above, in four modules with tests
 - [Context engineering](CONTEXT-ENGINEERING.md) — the other half of harness work
+- [Evaluation engineering](EVALUATION-ENGINEERING.md) — the same move applied to the verdict instead of completion
 - [Building blocks §4](BUILDING-BLOCKS.md) — orchestration and bounded loops
 - [Building blocks §6](BUILDING-BLOCKS.md) — approval gates, the authorization counterpart to completion
 - [Architecture patterns](ARCHITECTURE-PATTERNS.md) — autonomous loops and how to bound them

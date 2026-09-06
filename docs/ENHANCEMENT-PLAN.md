@@ -86,10 +86,21 @@ section saying what has to be decided first.
 | 50 | Revisit the `py39` floor | Repository | Low | Done | Floor kept and now tested; it had never been exercised | 2026-12-01 |
 | 51 | Re-evaluate ADR 0002 against Claude on Foundry | Documentation | Low | Done | Condition tested 2026-09-03 and not met; decision stands | 2026-12-01 |
 | 52 | Add an MCP server example behind the write boundary | Examples | Medium | Done | 19 tests, two mutations; discovery is not authorization | 2026-10-31 |
+| 53 | Fix the red `lint` job | CI/CD | High | Done | 11 ruff findings across three files; two commits' worth of drift | 2026-09-13 |
+| 54 | Fix the red `examples` job | CI/CD | High | Done | Three examples ship an `agent.py`; a bare import bound one for the whole run | 2026-09-13 |
+| 55 | Pin `hashicorp/setup-terraform` to a commit SHA | Security | High | Done | CodeQL `actions/unpinned-tag`, both call sites | 2026-09-13 |
+| 56 | Harden the docs-preview markdown renderer | Security | High | Done | Attribute injection through a link target, and `javascript:` hrefs | 2026-09-13 |
+| 57 | Add `EVALUATION-ENGINEERING.md` | Documentation | Medium | Done | The feedback edge had two examples and no chapter | 2026-10-06 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 52 tasks are now `Done`**, the last of
-them — 46 through 52 — on 2026-09-03.
+tree, and kept current as tasks have landed since. **All 57 tasks are now `Done`**, the last of
+them — 53 through 57 — on 2026-09-06.
+
+Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
+found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
+CodeQL and one found while reading the docs-preview renderer. They are recorded here because a
+plan that only lists intended work makes the tree look tidier than it was, and because both CI
+failures were introduced by earlier tasks in this same document.
 
 This paragraph previously read "Thirty-three tasks now pass", listed thirty-six numbers, and
 recorded task 6 as `Blocked` while the table above it said `Done`. All three were stale. It is
@@ -2647,6 +2658,144 @@ and confirm the suite goes red.
 
 ---
 
+### Task 53 — Fix the red `lint` job
+
+**Goal.** Get `ruff check .` passing again, at the version CI pins.
+
+**Status: Done.** 11 findings across three files, from two unrelated commits — the diagram
+tooling and the phase 9 budget-guard example. Six were autofixable; the rest were not.
+
+`scripts/diagram-gif/embed.py` carried two `SIM115` (bare `open()`) and two `E501`. Moving the
+file read and write to `pathlib` closed all four at once, which is why the fix is smaller than the
+finding count suggests. `os.path.relpath` stayed: the generated link walks *up* out of the
+document's directory, and `Path.relative_to` only learned that with `walk_up` in 3.12, above this
+repository's floor.
+
+`examples/budget-guard/agent.py` needed `RUF012` — `_HANDLERS` annotated `ClassVar`, matching the
+`from typing import Callable, ClassVar` already used in `hermes/router.py` rather than inventing a
+second convention. `Callable[..., None]` and not a spelled-out parameter list, because the call
+site passes `quick` by keyword and a positional signature would misdescribe it.
+
+The `RUF100` in `tests/test_budget_guard.py` is the one worth recording. It removed a
+`# noqa: E402` — which is exactly what this file's own ruff configuration says should happen:
+ruff's E402 exempts `sys.path` modifications outright, so the directive suppressed nothing. A new
+one had drifted back in.
+
+**Verify.** `uv tool run --from ruff==0.16.4 ruff check .` — clean.
+
+---
+
+### Task 54 — Fix the red `examples` job
+
+**Goal.** Get `python3 -m unittest discover -s tests` passing.
+
+**Status: Done.** Seven errors, all `AttributeError: module 'agent' has no attribute
+'CheckpointAgent'`, and the cause is not in either file that reads as broken.
+
+Three examples ship a file called `agent.py`. `test_budget_guard` and `test_checkpoint_agent` both
+put their example directory on `sys.path` and then said `import agent`. Python caches by module
+name, so whichever test module sorted first bound `sys.modules["agent"]` for the entire discovery
+run and handed the other its module. Budget-guard sorts first; checkpoint-agent got budget-guard's
+agent and failed on every test.
+
+It went red when phase 9 added `budget-guard/agent.py`. Neither file changed; a third one arriving
+was enough.
+
+The fix reuses the idiom already in `tests/test_edge_agent.py`, which loads its example by path
+under the name `edge_example` — and is precisely why that third `agent.py` was never affected.
+Both colliding files now do the same. No shared helper: two call sites, and the pattern was
+already in the tree.
+
+**Verify.** Full discovery on both interpreters — 351 tests, `OK (skipped=21)` on 3.12 with
+dependencies, `OK (skipped=62)` on the advertised 3.9 floor. The 62 is the number this plan
+already documents for that job.
+
+---
+
+### Task 55 — Pin `hashicorp/setup-terraform` to a commit SHA
+
+**Goal.** Clear the two open CodeQL `actions/unpinned-tag` alerts.
+
+**Status: Done.** Both call sites in `checks.yml` — the `fmt` job and the `validate` job — moved
+from `@v4` to `@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1`.
+
+`setup-terraform` is the only third-party action in the repository; everything else is
+`actions/*` or `github/*`, which ship immutable releases and are why CodeQL flags two steps rather
+than thirty-four. A tag is mutable, so whoever controls it controls a step that runs before the
+Terraform trees are read.
+
+The SHA was confirmed twice from independent sources — the tags API and `git ls-remote` — both
+resolving `v4` and `v4.0.1` to the same commit. The trailing version comment is not decoration:
+without it the next person cannot tell what they are bumping, and the note in the file says to
+move the comment with the SHA.
+
+**Verify.** No `uses:` outside `actions/` and `github/` resolves to anything but a 40-character
+SHA. All four workflow files still parse, 14 jobs intact.
+
+---
+
+### Task 56 — Harden the docs-preview markdown renderer
+
+**Goal.** Stop `.github/scripts/docs_preview.py` from turning documentation into script execution.
+
+**Status: Done.** Two defects, both in `render_inline`.
+
+The escape ran with `quote=False` while the link rule dropped its second capture group into a
+quoted `href`. A surviving double quote let a markdown link close the attribute and append its own
+event handler. This was enough:
+
+```text
+[x](" onmouseover="alert(1))
+```
+
+Now `quote=True`. The payload is fenced above rather than inlined because `linkcheck.py` skips
+fenced blocks and not code spans — written inline, it reads the attribute break as a relative link
+and reports the document broken.
+
+Second, nothing constrained the URL scheme, so `javascript:` and `data:` hrefs rendered live. The
+new `safe_href` allows `http`, `https`, `mailto` and `tel` and rewrites everything else to `#`. It
+tests a whitespace-stripped copy because browsers strip whitespace and control characters inside a
+scheme before acting on it, which makes `java	script:` live; and it only treats a colon as a
+scheme when it precedes any path separator, so a relative link like `docs/notes:draft.md` stays a
+path.
+
+**Verify.** `tests/test_docs_preview.py` — 4 tests covering the attribute break, the two dangerous
+schemes, the obfuscated variant, and the relative path that must not be rewritten.
+
+---
+
+### Task 57 — Add `EVALUATION-ENGINEERING.md`
+
+**Goal.** Give the feedback edge in the architecture overview its own chapter.
+
+**Status: Done.** [`docs/agentic-system-architecture/EVALUATION-ENGINEERING.md`](agentic-system-architecture/EVALUATION-ENGINEERING.md).
+
+The overview diagram calls trace-level evaluation the edge that "matters as much as the boxes",
+and the folder had a dedicated chapter for context engineering and one for harness engineering
+while evaluation was a section inside `BUILDING-BLOCKS.md`. Two runnable examples already carried
+the argument — `trace-eval` and `eval-red-teaming` — so the material existed and had nowhere to be
+read as a discipline.
+
+The organising claim is the twin of harness engineering's. That chapter's is *the agent is not a
+reliable narrator of its own progress*; this one's is *the answer is not a record of what
+happened*. Harness engineering moves completion out of the model's reach; evaluation engineering
+moves the verdict out of the output's reach. Both are "model proposes, code decides" applied to a
+different decision.
+
+Section 4 follows the same shape as harness engineering's fifth failure mode — a finding that came
+out of running the example rather than reading a source. Mutation-testing `trace-eval`'s graders
+surfaced a check that was present, correct, and had never been the reason anything failed, because
+a boundary check always fired first on every case that should have exercised it. Generalised: a
+check you have never seen fail is a check you do not know you have.
+
+No external primary source, unlike the context and harness chapters. `REFERENCES.md` records that
+honestly — four new rows, two marked as this document's framing and one as this repository's own.
+
+**Verify.** `linkcheck.py` resolves every new relative link; the chapter is reachable from the
+folder README's contents table and reading order, and cross-linked from both sibling chapters.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -2695,6 +2844,7 @@ git status --short
 | 2026-08-22 | Completed task 11: CodeQL over Python and workflows; Terraform gap recorded | somesh-ghaturle |
 | 2026-08-22 | Completed task 10: packaging divergence catalogued in `infra/MODULES.md` | somesh-ghaturle |
 | 2026-09-03 | Added Phase 6 (tasks 46-52) from a model-currency review; completed 46 and 47 | somesh-ghaturle |
+| 2026-09-06 | Added tasks 53-57: two red CI jobs, the CodeQL action pin, the docs-preview XSS fix, and the evaluation chapter | somesh-ghaturle |
 
 ---
 
