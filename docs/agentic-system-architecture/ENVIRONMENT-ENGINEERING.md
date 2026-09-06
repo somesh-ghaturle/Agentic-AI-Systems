@@ -11,7 +11,8 @@ You cannot build an agent that never takes a wrong action. You can build a world
 action is cheap, visible, and reversible. Those are properties of the environment, not of the
 model, and they are decided before the agent ever runs.
 
-Runnable counterparts: [budget-guard](../../examples/budget-guard/README.md),
+Runnable counterparts: [second-path](../../examples/second-path/README.md),
+[budget-guard](../../examples/budget-guard/README.md),
 [checkpoint-agent](../../examples/checkpoint-agent/README.md),
 [approval-gate-fuzzing](../../examples/approval-gate-fuzzing/README.md), and the four
 [infra/](../../infra/) trees.
@@ -54,6 +55,11 @@ The orchestrator's identity policy is built from a variable, and nothing checked
 it. Substituting `tool_arns_by_name` for `read_tool_arns` — a one-word edit that reads as a
 simplification — lets the state machine invoke the write tools directly. No precondition fires,
 `terraform validate` passes, and the plan shows an IAM statement quietly gaining an ARN.
+
+[second-path](../../examples/second-path/README.md) is that failure in about a hundred lines of
+standard library, so the asymmetry can be run rather than described: the same one-word edit that
+opens the boundary leaves the gate's own six-test suite green, and only a check that asks what the
+component can *reach* separates the two configurations.
 
 The lesson is not "AWS IAM is confusing". It is that **a control with two enforcement points and
 one test has one enforcement point**, and that the untested half will be the one that reads as
@@ -201,6 +207,7 @@ a check that looks authoritative and verifies nothing.
 
 ## Related
 
+- [second-path](../../examples/second-path/README.md) — §2 as a runnable demonstration: a correct gate, and the route that never reaches it
 - [budget-guard](../../examples/budget-guard/README.md) — a cap checked before the spend rather than after
 - [checkpoint-agent](../../examples/checkpoint-agent/README.md) — atomic writes, and replay that does not repeat work
 - [approval-gate-fuzzing](../../examples/approval-gate-fuzzing/README.md) — watching the gate refuse, in many phrasings

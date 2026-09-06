@@ -92,10 +92,11 @@ section saying what has to be decided first.
 | 56 | Harden the docs-preview markdown renderer | Security | High | Done | Attribute injection through a link target, and `javascript:` hrefs | 2026-09-13 |
 | 57 | Add `EVALUATION-ENGINEERING.md` | Documentation | Medium | Done | The feedback edge had two examples and no chapter | 2026-10-06 |
 | 58 | Add `ENVIRONMENT-ENGINEERING.md` | Documentation | Medium | Done | Blast radius, failure direction, and the sandbox fidelity gap | 2026-10-06 |
+| 59 | Add the `second-path` example | Examples | Medium | Done | 16 tests, four mutations; the gate suite passes while the boundary is open | 2026-10-06 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 58 tasks are now `Done`**, the last of
-them — 53 through 58 — on 2026-09-06.
+tree, and kept current as tasks have landed since. **All 59 tasks are now `Done`**, the last of
+them — 53 through 59 — on 2026-09-06.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -2841,6 +2842,49 @@ evaluation chapters. `REFERENCES.md` carries four new rows, two marked as this r
 
 ---
 
+### Task 59 — Add the `second-path` example
+
+**Goal.** Give [`ENVIRONMENT-ENGINEERING.md`](agentic-system-architecture/ENVIRONMENT-ENGINEERING.md)
+§2 a runnable counterpart, the way every other chapter in that folder has one.
+
+**Status: Done.** [`examples/second-path/`](../examples/second-path/README.md), with
+[`tests/test_second_path.py`](../tests/test_second_path.py) — 16 tests.
+
+The chapter's load-bearing claim was the only one in the set with no code behind it. `budget-guard`
+covers caps checked before the effect, `checkpoint-agent` covers replay safety, and
+`approval-gate-fuzzing` covers watching a gate refuse — but nothing ran the central argument, that
+a control can be correct and simply not be on the path taken.
+
+It is a small copy of the tree's own AWS finding rather than an invention. `READ_TOOLS` → `TOOLS`
+in the `Orchestrator` constructor is `read_tool_arns` → `tool_arns_by_name` in about a hundred
+lines of standard library: the gate is untouched and still correct, and a write executes with no
+approval because the orchestrator never routes through it.
+
+Distinct from [`tool-discovery`](../examples/tool-discovery/README.md), which argues two registries
+beat a filter. That is about a check going the wrong way. This is about a second grant existing at
+all, which is the failure mode where the check is right and irrelevant.
+
+**The point is asserted, not described.** `TestTheGateIsNotEnough` opens the boundary, then runs
+the entire gate suite programmatically and asserts it still passes — so "a green gate suite is not
+evidence the boundary holds" is a test result rather than a sentence.
+
+**Mutation tested, four breaks, all caught.** The third is the example restated: defaulting the
+orchestrator to `TOOLS` turns 3 tests red while the gate suite alone still passes. The fourth found
+a real gap — deleting the `claim is None` branch does not change whether the call is refused, since
+`None` is not equal to the digest, so the first version of the suite passed with the branch gone.
+What changes is the reason an operator is given. `Refused` exists to carry which control refused
+and why, so the tests now assert the message rather than only the exception.
+
+Stdlib only, so it stays in the dependency-free `examples` job. Named in `SECURITY.md`'s in-scope
+list with the unusual shape stated plainly: the wide configuration is *supposed* to execute an
+unapproved write and its tests assert that it does, so that path is the subject rather than a
+vulnerability, while the same reachability in the default configuration would be a real bug.
+
+**Verify.** `python3 -m unittest tests.test_second_path` — 16 tests. `python3 boundary.py` prints
+the three-stage demonstration, ending with `reachable_writes` naming the tool the gate never saw.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -2891,6 +2935,7 @@ git status --short
 | 2026-09-03 | Added Phase 6 (tasks 46-52) from a model-currency review; completed 46 and 47 | somesh-ghaturle |
 | 2026-09-06 | Added tasks 53-57: two red CI jobs, the CodeQL action pin, the docs-preview XSS fix, and the evaluation chapter | somesh-ghaturle |
 | 2026-09-06 | Added task 58: the environment engineering chapter, completing the four-chapter set | somesh-ghaturle |
+| 2026-09-06 | Added task 59: `second-path`, the runnable counterpart to the environment chapter | somesh-ghaturle |
 
 ---
 

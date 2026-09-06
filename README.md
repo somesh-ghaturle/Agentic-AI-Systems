@@ -84,6 +84,7 @@ Agentic-AI-Systems/
 │   ├── edge-agent/               local SQLite state and file approvals
 │   ├── tool-discovery/           discovering and cataloging available tools
 │   ├── mcp-server/               an MCP tool server whose writes need an approval
+│   ├── second-path/              a correct gate, and the route that never reaches it
 │   └── hermes-dashboard/         FastAPI/WebSocket approval UX with React
 ├── docs/
 │   ├── agentic-system-architecture/   the six building blocks, as prose
