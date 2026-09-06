@@ -5033,10 +5033,10 @@
 
 
         <!-- Connection paths (before components for correct z-order) -->
-        <path data-edge-from="orch" data-edge-to="rt" data-edge-key="0" data-composition-points="270,143;389,143;389,285;508,285" d="M 270 143 L 381 143 Q 389 143 389 151 L 389 277 Q 389 285 397 285 L 508 285" class="a-emphasis" data-animate="edge" style="--step:0" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="orch" data-edge-to="wt" data-edge-key="1" data-composition-points="270,157;389,157;389,420;508,420" d="M 270 157 L 381 157 Q 389 157 389 165 L 389 412 Q 389 420 397 420 L 508 420" class="a-security" data-animate="edge" style="--step:1" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="orch" data-edge-to="deny" data-edge-key="2" data-composition-points="270,129;508,129" d="M 270 129 L 508 129" class="a-security" data-animate="edge" style="--step:2" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="exec" data-edge-to="wt" data-edge-label="allowed" data-edge-key="3" data-composition-points="270,434;508,434" d="M 270 434 L 508 434" class="a-emphasis" data-animate="edge" style="--step:3" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="orch" data-edge-to="rt" data-edge-label="allowed" data-edge-key="0" data-composition-points="168,176;168,214;603,214;603,252" d="M 168 176 L 168 206 Q 168 214 176 214 L 595 214 Q 603 214 603 222 L 603 252" class="a-emphasis" data-animate="edge" style="--step:0" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="orch" data-edge-to="wt" data-edge-label="no binding" data-edge-key="1" data-composition-points="182,176;182,370;603,370;603,394" d="M 182 176 L 182 362 Q 182 370 190 370 L 595 370 Q 603 370 603 378 L 603 394" class="a-security" data-animate="edge" style="--step:1" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="orch" data-edge-to="deny" data-edge-label="denied, evaluated first" data-edge-key="2" data-composition-points="270,143;508,143" d="M 270 143 L 508 143" class="a-security" data-animate="edge" style="--step:2" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="exec" data-edge-to="wt" data-edge-label="allowed" data-edge-key="3" data-composition-points="270,427;508,427" d="M 270 427 L 508 427" class="a-emphasis" data-animate="edge" style="--step:3" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
 
         <!-- Components -->
         <g id="node-orch" data-node-id="orch" data-node-label="Orchestrator SA" tabindex="0" role="button" aria-label="Focus Orchestrator SA, Architecture component" aria-pressed="false" data-node-kind="security" data-node-context="Architecture component">
@@ -5097,12 +5097,21 @@
         </g>
 
         <!-- Connection labels -->
-
-
-
+        <g data-detail="context" data-edge-from="orch" data-edge-to="rt" data-edge-label="allowed" data-edge-key="0">
+          <rect x="363.7" y="224" width="43.6" height="14" rx="3" class="c-mask"/>
+          <text x="385.5" y="234" class="t-backend" font-size="8" text-anchor="middle">allowed</text>
+        </g>
+        <g data-detail="context" data-edge-from="orch" data-edge-to="wt" data-edge-label="no binding" data-edge-key="1">
+          <rect x="363.5" y="350" width="58" height="14" rx="3" class="c-mask"/>
+          <text x="392.5" y="360" class="t-security" font-size="8" text-anchor="middle">no binding</text>
+        </g>
+        <g data-detail="context" data-edge-from="orch" data-edge-to="deny" data-edge-label="denied, evaluated first" data-edge-key="2">
+          <rect x="328.8" y="93" width="120.39999999999999" height="14" rx="3" class="c-mask"/>
+          <text x="389" y="103" class="t-security" font-size="8" text-anchor="middle">denied, evaluated first</text>
+        </g>
         <g data-detail="context" data-edge-from="exec" data-edge-to="wt" data-edge-label="allowed" data-edge-key="3">
-          <rect x="367.2" y="454" width="43.6" height="14" rx="3" class="c-mask"/>
-          <text x="389" y="464" class="t-backend" font-size="8" text-anchor="middle">allowed</text>
+          <rect x="367.2" y="447" width="43.6" height="14" rx="3" class="c-mask"/>
+          <text x="389" y="457" class="t-backend" font-size="8" text-anchor="middle">allowed</text>
         </g>
 
         <!-- Boundary labels (foreground masks keep routes out of titles) -->

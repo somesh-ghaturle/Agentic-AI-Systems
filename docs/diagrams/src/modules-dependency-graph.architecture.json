@@ -2,39 +2,695 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Cross-cloud module dependency graph",
+    "title": "Cross-cloud module dependency graph — AWS, Azure, GCP",
     "quality_profile": "standard",
     "animation": "trace",
     "views": [
-      { "id": "orchestrate", "label": "Orchestration and the gates", "focus": ["orchestration", "approval", "tools"], "note": "Orchestration drives tools and the approval gate; observability feeds back to it." },
-      { "id": "state", "label": "Three stores, one each", "focus": ["state", "knowledge", "archive"], "note": "Execution state, knowledge, and archive are separate stores with separate access patterns." }
+      {
+        "id": "aws",
+        "label": "AWS modules",
+        "focus": [
+          "a-orch",
+          "a-appr",
+          "a-tools",
+          "a-state",
+          "a-astate",
+          "a-sec",
+          "a-know",
+          "a-arch",
+          "a-obs"
+        ],
+        "note": "AWS: orchestration drives the approval gate and tools; observability feeds back."
+      },
+      {
+        "id": "azure",
+        "label": "Azure modules",
+        "focus": [
+          "b-orch",
+          "b-appr",
+          "b-tools",
+          "b-state",
+          "b-ident",
+          "b-sec",
+          "b-know",
+          "b-arch",
+          "b-obs",
+          "b-model",
+          "b-net",
+          "b-entra"
+        ],
+        "note": "Azure adds identity, model-integration, networking, and Entra audit."
+      },
+      {
+        "id": "gcp",
+        "label": "GCP modules",
+        "focus": [
+          "c-orch",
+          "c-appr",
+          "c-tools",
+          "c-state",
+          "c-ident",
+          "c-sec",
+          "c-know",
+          "c-arch",
+          "c-obs",
+          "c-model"
+        ],
+        "note": "GCP adds identity and model-integration."
+      }
     ]
   },
-  "layout": { "mode": "grid", "cols": 4, "cellW": 188, "cellH": 64, "gapX": 24, "gapY": 60, "origin": [80, 110] },
+  "layout": {
+    "mode": "grid",
+    "cols": 3,
+    "cellW": 184,
+    "cellH": 58,
+    "gapX": 40,
+    "gapY": 48,
+    "origin": [
+      80,
+      110
+    ]
+  },
   "components": [
-    { "id": "orchestration", "type": "backend", "label": "orchestration", "sublabel": "pipeline · state machine · graph", "row": 0, "col": 1, "size": [188, 64] },
-    { "id": "approval", "type": "security", "label": "approval", "sublabel": "human in the loop", "row": 0, "col": 2, "size": [168, 60] },
-    { "id": "tools", "type": "messagebus", "label": "tools", "sublabel": "read / write split", "row": 1, "col": 1, "size": [188, 60] },
-    { "id": "identity", "type": "security", "label": "identity", "sublabel": "per-cloud IAM", "row": 1, "col": 2, "size": [168, 60] },
-    { "id": "security", "type": "security", "label": "security", "sublabel": "encryption · secrets", "row": 1, "col": 0, "size": [168, 60] },
-    { "id": "state", "type": "database", "label": "state", "sublabel": "execution state", "row": 2, "col": 1, "size": [168, 60] },
-    { "id": "knowledge", "type": "database", "label": "knowledge", "sublabel": "retrieval index", "row": 2, "col": 0, "size": [168, 60] },
-    { "id": "archive", "type": "database", "label": "archive", "sublabel": "immutable traces", "row": 2, "col": 2, "size": [168, 60] },
-    { "id": "observability", "type": "database", "label": "observability", "sublabel": "traces · metrics · alerts", "row": 3, "col": 1, "size": [188, 60] }
+    {
+      "id": "a-orch",
+      "type": "backend",
+      "label": "orchestration",
+      "row": 0,
+      "col": 0,
+      "size": [
+        184,
+        56
+      ]
+    },
+    {
+      "id": "a-appr",
+      "type": "security",
+      "label": "approval",
+      "row": 1,
+      "col": 0,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "a-tools",
+      "type": "messagebus",
+      "label": "tools",
+      "row": 2,
+      "col": 0,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "a-state",
+      "type": "database",
+      "label": "state",
+      "sublabel": "execution",
+      "row": 3,
+      "col": 0,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "a-astate",
+      "type": "database",
+      "label": "state",
+      "sublabel": "approval",
+      "row": 4,
+      "col": 0,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "a-sec",
+      "type": "security",
+      "label": "security",
+      "row": 5,
+      "col": 0,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "a-know",
+      "type": "database",
+      "label": "knowledge",
+      "row": 6,
+      "col": 0,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "a-arch",
+      "type": "database",
+      "label": "archive",
+      "row": 7,
+      "col": 0,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "a-obs",
+      "type": "database",
+      "label": "observability",
+      "row": 8,
+      "col": 0,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-orch",
+      "type": "backend",
+      "label": "orchestration",
+      "row": 0,
+      "col": 1,
+      "size": [
+        184,
+        56
+      ]
+    },
+    {
+      "id": "b-appr",
+      "type": "security",
+      "label": "approval",
+      "row": 1,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-tools",
+      "type": "messagebus",
+      "label": "tools",
+      "row": 2,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-state",
+      "type": "database",
+      "label": "state",
+      "sublabel": "execution",
+      "row": 3,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-ident",
+      "type": "security",
+      "label": "identity",
+      "sublabel": "Entra",
+      "row": 4,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-sec",
+      "type": "security",
+      "label": "security",
+      "row": 5,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-know",
+      "type": "database",
+      "label": "knowledge",
+      "row": 6,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-arch",
+      "type": "database",
+      "label": "archive",
+      "row": 7,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-obs",
+      "type": "database",
+      "label": "observability",
+      "row": 8,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-model",
+      "type": "cloud",
+      "label": "model-integration",
+      "row": 9,
+      "col": 1,
+      "size": [
+        184,
+        52
+      ]
+    },
+    {
+      "id": "b-net",
+      "type": "cloud",
+      "label": "networking",
+      "row": 10,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "b-entra",
+      "type": "security",
+      "label": "entra-audit",
+      "row": 11,
+      "col": 1,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "c-orch",
+      "type": "backend",
+      "label": "orchestration",
+      "row": 0,
+      "col": 2,
+      "size": [
+        184,
+        56
+      ]
+    },
+    {
+      "id": "c-appr",
+      "type": "security",
+      "label": "approval",
+      "row": 1,
+      "col": 2,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "c-tools",
+      "type": "messagebus",
+      "label": "tools",
+      "row": 2,
+      "col": 2,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "c-state",
+      "type": "database",
+      "label": "state",
+      "sublabel": "execution",
+      "row": 3,
+      "col": 2,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "c-ident",
+      "type": "security",
+      "label": "identity",
+      "sublabel": "IAM",
+      "row": 4,
+      "col": 2,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "c-sec",
+      "type": "security",
+      "label": "security",
+      "row": 5,
+      "col": 2,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "c-know",
+      "type": "database",
+      "label": "knowledge",
+      "row": 6,
+      "col": 2,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "c-arch",
+      "type": "database",
+      "label": "archive",
+      "row": 7,
+      "col": 2,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "c-obs",
+      "type": "database",
+      "label": "observability",
+      "row": 8,
+      "col": 2,
+      "size": [
+        168,
+        52
+      ]
+    },
+    {
+      "id": "c-model",
+      "type": "cloud",
+      "label": "model-integration",
+      "row": 9,
+      "col": 2,
+      "size": [
+        184,
+        52
+      ]
+    }
   ],
   "connections": [
-    { "from": "orchestration", "to": "approval", "variant": "default" },
-    { "from": "orchestration", "to": "tools", "variant": "default", "fromSide": "bottom", "toSide": "top" },
-    { "from": "approval", "to": "state", "variant": "default", "fromSide": "right", "toSide": "top", "via": [[720, 140], [720, 340], [376, 340]] },
-    { "from": "tools", "to": "state", "variant": "default", "fromSide": "bottom", "toSide": "top" },
-    { "from": "tools", "to": "security", "variant": "default" },
-    { "from": "tools", "to": "identity", "variant": "dashed" },
-    { "from": "knowledge", "to": "state", "variant": "default" },
-    { "from": "archive", "to": "state", "variant": "dashed" },
-    { "from": "observability", "to": "orchestration", "variant": "dashed", "fromSide": "right", "toSide": "top", "via": [[720, 512], [720, 80], [386, 80]] }
+    {
+      "from": "a-orch",
+      "to": "a-appr",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "a-orch",
+      "to": "a-tools",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "a-orch",
+      "to": "a-state",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "a-appr",
+      "to": "a-astate",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "a-appr",
+      "to": "a-tools",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "a-tools",
+      "to": "a-state",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "a-tools",
+      "to": "a-sec",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "a-know",
+      "to": "a-state",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "a-arch",
+      "to": "a-state",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "a-obs",
+      "to": "a-orch",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-orch",
+      "to": "b-appr",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "b-orch",
+      "to": "b-tools",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-orch",
+      "to": "b-state",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-appr",
+      "to": "b-state",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-appr",
+      "to": "b-tools",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "b-tools",
+      "to": "b-state",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "b-tools",
+      "to": "b-ident",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-tools",
+      "to": "b-sec",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-know",
+      "to": "b-state",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-arch",
+      "to": "b-state",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-obs",
+      "to": "b-orch",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-model",
+      "to": "b-sec",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-net",
+      "to": "b-orch",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "b-entra",
+      "to": "b-appr",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "c-orch",
+      "to": "c-appr",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "c-orch",
+      "to": "c-tools",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "c-orch",
+      "to": "c-state",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "c-appr",
+      "to": "c-state",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "c-appr",
+      "to": "c-tools",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "c-tools",
+      "to": "c-state",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "c-tools",
+      "to": "c-ident",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "c-tools",
+      "to": "c-sec",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "c-know",
+      "to": "c-state",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "c-arch",
+      "to": "c-state",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "c-obs",
+      "to": "c-orch",
+      "variant": "dashed",
+      "fromSide": "left",
+      "toSide": "left"
+    },
+    {
+      "from": "c-model",
+      "to": "c-sec",
+      "variant": "default",
+      "fromSide": "left",
+      "toSide": "left"
+    }
   ],
   "cards": [
-    { "dot": "cyan", "title": "Same modules, three clouds", "items": ["AWS, Azure, and GCP each implement these nine modules; the dependency shape is identical across them", "The differences are the managed services that back each module — see each platform's ARCHITECTURE.md"] },
-    { "dot": "amber", "title": "Three stores, not one", "items": ["Execution state, knowledge, and archive are separate stores with different access and retention", "Observability feeds back to orchestration — the edge that lets the system improve"] }
+    {
+      "dot": "cyan",
+      "title": "Same shape, three clouds",
+      "items": [
+        "Each cloud implements the same core: orchestration, approval, tools, state, security, knowledge, archive, observability",
+        "Azure adds identity (Entra), model-integration, networking, and entra-audit; GCP adds identity and model-integration"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Observability feeds back",
+      "items": [
+        "In every cloud, observability points back to orchestration — the edge that lets the system improve",
+        "Archive is dashed: it receives traces but does not drive the run"
+      ]
+    }
   ]
 }

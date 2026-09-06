@@ -5042,8 +5042,9 @@
 
         <!-- Transition paths -->
         <path data-edge-from="pending" data-edge-to="claimed" data-edge-label="claim()" data-edge-key="0" data-edge-id="claim" data-composition-points="153,157;189,157" d="M 153 157 L 189 157" class="a-default" data-animate="edge" style="--step:0" stroke-width="1.1" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="claimed" data-edge-to="verified" data-edge-label="verify passed" data-edge-key="1" data-edge-id="pass" data-composition-points="307,157;343,157" d="M 307 157 L 343 157" class="a-emphasis" data-animate="edge" style="--step:1" stroke-width="2" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="verified" data-edge-to="complete" data-edge-label="mark_complete()" data-edge-key="2" data-edge-id="done" data-composition-points="461,157;497,157" d="M 461 157 L 497 157" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.1" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="claimed" data-edge-to="verified" data-edge-label="verify() passed" data-edge-key="1" data-edge-id="pass" data-composition-points="307,157;343,157" d="M 307 157 L 343 157" class="a-emphasis" data-animate="edge" style="--step:1" stroke-width="2" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="claimed" data-edge-to="claimed" data-edge-label="verify() failed, retry" data-edge-key="2" data-edge-id="retry" data-composition-points="248,126;248,222;248,222;248,188" d="M 248 126 L 248 222 L 248 222 L 248 188" class="a-security" data-animate="edge" style="--step:2" stroke-width="1.1" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="verified" data-edge-to="complete" data-edge-label="mark_complete()" data-edge-key="3" data-edge-id="done" data-composition-points="461,157;497,157" d="M 461 157 L 497 157" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.1" marker-end="url(#arrowhead)"/>
 
         <!-- States -->
         <g id="node-pending" data-node-id="pending" data-node-label="PENDING" tabindex="0" role="button" aria-label="Focus PENDING, awaiting a session, Task lifecycle" aria-pressed="false" data-node-kind="start" data-node-sublabel="awaiting a session" data-node-tag="entry" data-node-context="Task lifecycle">
@@ -5089,7 +5090,7 @@
         <g id="node-complete" data-node-id="complete" data-node-label="COMPLETE" tabindex="0" role="button" aria-label="Focus COMPLETE, mark_complete(), Task lifecycle" aria-pressed="false" data-node-kind="success" data-node-sublabel="mark_complete()" data-node-tag="done" data-node-context="Task lifecycle">
           <title>COMPLETE · mark_complete() · Task lifecycle · done</title>
           <rect x="497" y="126" width="118" height="62" rx="7" class="c-mask"/>
-          <rect x="497" y="126" width="118" height="62" rx="7" class="c-database" data-animate="node" style="--step:3" stroke-width="1.5"/>
+          <rect x="497" y="126" width="118" height="62" rx="7" class="c-database" data-animate="node" style="--step:4" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="success" class="semantic-sigil s-database" transform="translate(598 132) scale(0.6875)">
             <circle cx="8" cy="8" r="5.3"/>
             <path d="m5.2 8 1.8 1.8 3.8-4"/>
@@ -5105,11 +5106,15 @@
           <rect x="147.85" y="201" width="46.300000000000004" height="16" rx="4" class="c-mask"/>
           <text x="171" y="212" class="t-muted" font-size="8" text-anchor="middle">claim()</text>
         </g>
-        <g data-detail="context" data-edge-from="claimed" data-edge-to="verified" data-edge-label="verify passed" data-edge-key="1" data-edge-id="pass">
-          <rect x="287.15" y="201" width="75.7" height="16" rx="4" class="c-mask"/>
-          <text x="325" y="212" class="t-backend" font-size="8" text-anchor="middle">verify passed</text>
+        <g data-detail="context" data-edge-from="claimed" data-edge-to="verified" data-edge-label="verify() passed" data-edge-key="1" data-edge-id="pass">
+          <rect x="282.25" y="201" width="85.5" height="16" rx="4" class="c-mask"/>
+          <text x="325" y="212" class="t-backend" font-size="8" text-anchor="middle">verify() passed</text>
         </g>
-        <g data-detail="context" data-edge-from="verified" data-edge-to="complete" data-edge-label="mark_complete()" data-edge-key="2" data-edge-id="done">
+        <g data-detail="context" data-edge-from="claimed" data-edge-to="claimed" data-edge-label="verify() failed, retry" data-edge-key="2" data-edge-id="retry">
+          <rect x="188.1" y="241" width="119.80000000000001" height="16" rx="4" class="c-mask"/>
+          <text x="248" y="252" class="t-security" font-size="8" text-anchor="middle">verify() failed, retry</text>
+        </g>
+        <g data-detail="context" data-edge-from="verified" data-edge-to="complete" data-edge-label="mark_complete()" data-edge-key="3" data-edge-id="done">
           <rect x="436.25" y="201" width="85.5" height="16" rx="4" class="c-mask"/>
           <text x="479" y="212" class="t-muted" font-size="8" text-anchor="middle">mark_complete()</text>
         </g>

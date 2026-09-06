@@ -26,23 +26,24 @@
     { "from": 450, "to": 580, "label": "Claim and execute" }
   ],
   "messages": [
-    { "from": "sm", "to": "v", "y": 180, "label": "proposal + task token", "variant": "emphasis" },
-    { "from": "v", "to": "d", "y": 222, "label": "write record (pending) + fingerprint", "variant": "default" },
-    { "from": "v", "to": "s", "y": 264, "label": "publish approval request", "variant": "default" },
-    { "from": "s", "to": "h", "y": 306, "label": "notify", "variant": "dashed" },
-    { "from": "h", "to": "e", "y": 348, "label": "approve", "variant": "emphasis" },
-    { "from": "e", "to": "d", "y": 390, "label": "claim: pending → executing (If-Match ETag", "variant": "emphasis" },
-    { "from": "e", "to": "w", "y": 432, "label": "invoke with idempotency key", "variant": "emphasis" },
-    { "from": "w", "to": "e", "y": 474, "label": "result", "variant": "return" },
-    { "from": "e", "to": "d", "y": 516, "label": "record outcome", "variant": "default" },
-    { "from": "e", "to": "sm", "y": 558, "label": "POST callback URL", "variant": "return" }
+    { "from": "sm", "to": "v", "y": 180, "label": "proposal + callback URL · ownership · permission · limits", "variant": "emphasis" },
+    { "from": "v", "to": "sm", "y": 212, "label": "valid = false → rejected, no human troubled", "variant": "dashed", "note": "alt: fails any check" },
+    { "from": "v", "to": "d", "y": 240, "label": "write record (pending) + fingerprint", "variant": "default" },
+    { "from": "v", "to": "s", "y": 282, "label": "publish approval request", "variant": "default" },
+    { "from": "s", "to": "h", "y": 324, "label": "notify", "variant": "dashed" },
+    { "from": "h", "to": "e", "y": 366, "label": "approve", "variant": "emphasis" },
+    { "from": "e", "to": "d", "y": 408, "label": "claim: pending → executing (If-Match ETag)", "variant": "emphasis" },
+    { "from": "e", "to": "w", "y": 460, "label": "invoke with idempotency key", "variant": "emphasis" },
+    { "from": "w", "to": "e", "y": 492, "label": "result", "variant": "return" },
+    { "from": "e", "to": "d", "y": 534, "label": "record outcome", "variant": "default" },
+    { "from": "e", "to": "sm", "y": 576, "label": "POST callback URL", "variant": "return" }
   ],
   "activations": [
-    { "participant": "v", "from": 174, "to": 240, "type": "security" },
-    { "participant": "d", "from": 216, "to": 532, "type": "database" },
-    { "participant": "s", "from": 258, "to": 310, "type": "messagebus" },
-    { "participant": "e", "from": 342, "to": 562, "type": "backend" },
-    { "participant": "w", "from": 426, "to": 478, "type": "messagebus" }
+    { "participant": "v", "from": 174, "to": 258, "type": "security" },
+    { "participant": "d", "from": 234, "to": 550, "type": "database" },
+    { "participant": "s", "from": 276, "to": 328, "type": "messagebus" },
+    { "participant": "e", "from": 360, "to": 580, "type": "backend" },
+    { "participant": "w", "from": 444, "to": 496, "type": "messagebus" }
   ],
   "cards": [
     { "dot": "cyan", "title": "Rejected without troubling a human", "items": ["An invalid proposal returns valid=false and never publishes an approval request", "Execution suspends on the task token — the state machine does not hold a connection open"] },

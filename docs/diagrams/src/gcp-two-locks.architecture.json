@@ -19,9 +19,9 @@
     { "id": "deny", "type": "security", "label": "Deny run.routes.invoke", "sublabel": "principal: orchestrator · write tool services", "row": 0, "col": 2, "size": [190, 66] }
   ],
   "connections": [
-    { "from": "orch", "to": "rt", "variant": "emphasis" },
-    { "from": "orch", "to": "wt", "variant": "security" },
-    { "from": "orch", "to": "deny", "variant": "security" },
+    { "from": "orch", "to": "rt", "label": "allowed", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelDy": 30 },
+    { "from": "orch", "to": "wt", "label": "no binding", "variant": "security", "fromSide": "bottom", "toSide": "top" },
+    { "from": "orch", "to": "deny", "label": "denied, evaluated first", "variant": "security", "labelDy": -30 },
     { "from": "exec", "to": "wt", "label": "allowed", "variant": "emphasis", "labelDy": 40 }
   ],
   "cards": [

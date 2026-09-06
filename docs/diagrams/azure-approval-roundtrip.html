@@ -5046,95 +5046,104 @@
         <path d="M 710 142 L 710 695" class="a-default" stroke-width="0.8" stroke-dasharray="3,7"/>
 
         <!-- Activations -->
-        <rect x="165" y="174" width="10" height="66" rx="3" class="c-mask"/>
-        <rect x="165" y="174" width="10" height="66" rx="3" class="c-security" stroke-width="1"/>
-        <rect x="273" y="216" width="10" height="316" rx="3" class="c-mask"/>
-        <rect x="273" y="216" width="10" height="316" rx="3" class="c-database" stroke-width="1"/>
-        <rect x="381" y="258" width="10" height="52" rx="3" class="c-mask"/>
-        <rect x="381" y="258" width="10" height="52" rx="3" class="c-messagebus" stroke-width="1"/>
-        <rect x="597" y="342" width="10" height="220" rx="3" class="c-mask"/>
-        <rect x="597" y="342" width="10" height="220" rx="3" class="c-backend" stroke-width="1"/>
-        <rect x="705" y="426" width="10" height="52" rx="3" class="c-mask"/>
-        <rect x="705" y="426" width="10" height="52" rx="3" class="c-messagebus" stroke-width="1"/>
+        <rect x="165" y="174" width="10" height="84" rx="3" class="c-mask"/>
+        <rect x="165" y="174" width="10" height="84" rx="3" class="c-security" stroke-width="1"/>
+        <rect x="273" y="234" width="10" height="316" rx="3" class="c-mask"/>
+        <rect x="273" y="234" width="10" height="316" rx="3" class="c-database" stroke-width="1"/>
+        <rect x="381" y="276" width="10" height="52" rx="3" class="c-mask"/>
+        <rect x="381" y="276" width="10" height="52" rx="3" class="c-messagebus" stroke-width="1"/>
+        <rect x="597" y="360" width="10" height="220" rx="3" class="c-mask"/>
+        <rect x="597" y="360" width="10" height="220" rx="3" class="c-backend" stroke-width="1"/>
+        <rect x="705" y="444" width="10" height="52" rx="3" class="c-mask"/>
+        <rect x="705" y="444" width="10" height="52" rx="3" class="c-messagebus" stroke-width="1"/>
 
         <!-- Messages -->
-        <g data-edge-from="sm" data-edge-to="v" data-edge-label="proposal + task token" data-edge-key="0">
+        <g data-edge-from="sm" data-edge-to="v" data-edge-label="proposal + callback URL · ownership · permission · limits" data-edge-key="0">
           <path data-composition-edge-from="sm" data-composition-edge-to="v" data-composition-points="69,180;163,180" d="M 69 180 L 163 180" class="a-emphasis" data-animate="edge" style="--step:0" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="55.4" y="160" width="121.2" height="16" rx="3" class="c-mask"/>
-          <text x="116" y="170" class="t-backend" font-size="9" text-anchor="middle">proposal + task token</text>
+          <rect x="-38.20000000000002" y="160" width="308.40000000000003" height="16" rx="3" class="c-mask"/>
+          <text x="116" y="170" class="t-backend" font-size="9" text-anchor="middle">proposal + callback URL · ownership · permission · limits</text>
         </g>
         </g>
 
-        <g data-edge-from="v" data-edge-to="d" data-edge-label="write record (pending) + fingerprint" data-edge-key="1">
-          <path data-composition-edge-from="v" data-composition-edge-to="d" data-composition-points="177,222;271,222" d="M 177 222 L 271 222" class="a-default" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-edge-from="v" data-edge-to="sm" data-edge-label="valid = false → rejected, no human troubled" data-edge-key="1">
+          <path data-composition-edge-from="v" data-composition-edge-to="sm" data-composition-points="163,212;69,212" d="M 163 212 L 69 212" class="a-dashed" data-animate="edge" style="--step:1" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
         <g data-detail="context">
-          <rect x="124.39999999999999" y="202" width="199.20000000000002" height="16" rx="3" class="c-mask"/>
-          <text x="224" y="212" class="t-backend" font-size="9" text-anchor="middle">write record (pending) + fingerprint</text>
+          <rect x="-1.7999999999999972" y="192" width="235.6" height="16" rx="3" class="c-mask"/>
+          <text x="116" y="202" class="t-messagebus" font-size="9" text-anchor="middle">valid = false → rejected, no human troubled</text>
+        </g>
+        <text data-detail="fine" x="81" y="230" class="t-dim" font-size="7">alt: fails any check</text>
+        </g>
+
+        <g data-edge-from="v" data-edge-to="d" data-edge-label="write record (pending) + fingerprint" data-edge-key="2">
+          <path data-composition-edge-from="v" data-composition-edge-to="d" data-composition-points="177,240;271,240" d="M 177 240 L 271 240" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-detail="context">
+          <rect x="124.39999999999999" y="220" width="199.20000000000002" height="16" rx="3" class="c-mask"/>
+          <text x="224" y="230" class="t-backend" font-size="9" text-anchor="middle">write record (pending) + fingerprint</text>
         </g>
         </g>
 
-        <g data-edge-from="v" data-edge-to="s" data-edge-label="publish approval request" data-edge-key="2">
-          <path data-composition-edge-from="v" data-composition-edge-to="s" data-composition-points="177,264;379,264" d="M 177 264 L 379 264" class="a-default" data-animate="edge" style="--step:2" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-edge-from="v" data-edge-to="s" data-edge-label="publish approval request" data-edge-key="3">
+          <path data-composition-edge-from="v" data-composition-edge-to="s" data-composition-points="177,282;379,282" d="M 177 282 L 379 282" class="a-default" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="209.6" y="244" width="136.8" height="16" rx="3" class="c-mask"/>
-          <text x="278" y="254" class="t-backend" font-size="9" text-anchor="middle">publish approval request</text>
+          <rect x="209.6" y="262" width="136.8" height="16" rx="3" class="c-mask"/>
+          <text x="278" y="272" class="t-backend" font-size="9" text-anchor="middle">publish approval request</text>
         </g>
         </g>
 
-        <g data-edge-from="s" data-edge-to="h" data-edge-label="notify" data-edge-key="3">
-          <path data-composition-edge-from="s" data-composition-edge-to="h" data-composition-points="393,306;487,306" d="M 393 306 L 487 306" class="a-dashed" data-animate="edge" style="--step:3" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
+        <g data-edge-from="s" data-edge-to="h" data-edge-label="notify" data-edge-key="4">
+          <path data-composition-edge-from="s" data-composition-edge-to="h" data-composition-points="393,324;487,324" d="M 393 324 L 487 324" class="a-dashed" data-animate="edge" style="--step:4" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
         <g data-detail="context">
-          <rect x="418.4" y="286" width="43.2" height="16" rx="3" class="c-mask"/>
-          <text x="440" y="296" class="t-messagebus" font-size="9" text-anchor="middle">notify</text>
+          <rect x="418.4" y="304" width="43.2" height="16" rx="3" class="c-mask"/>
+          <text x="440" y="314" class="t-messagebus" font-size="9" text-anchor="middle">notify</text>
         </g>
         </g>
 
-        <g data-edge-from="h" data-edge-to="e" data-edge-label="approve" data-edge-key="4">
-          <path data-composition-edge-from="h" data-composition-edge-to="e" data-composition-points="501,348;595,348" d="M 501 348 L 595 348" class="a-emphasis" data-animate="edge" style="--step:4" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-edge-from="h" data-edge-to="e" data-edge-label="approve" data-edge-key="5">
+          <path data-composition-edge-from="h" data-composition-edge-to="e" data-composition-points="501,366;595,366" d="M 501 366 L 595 366" class="a-emphasis" data-animate="edge" style="--step:5" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="523.8" y="328" width="48.4" height="16" rx="3" class="c-mask"/>
-          <text x="548" y="338" class="t-backend" font-size="9" text-anchor="middle">approve</text>
+          <rect x="523.8" y="346" width="48.4" height="16" rx="3" class="c-mask"/>
+          <text x="548" y="356" class="t-backend" font-size="9" text-anchor="middle">approve</text>
         </g>
         </g>
 
-        <g data-edge-from="e" data-edge-to="d" data-edge-label="claim: pending → executing (If-Match ETag" data-edge-key="5">
-          <path data-composition-edge-from="e" data-composition-edge-to="d" data-composition-points="595,390;285,390" d="M 595 390 L 285 390" class="a-emphasis" data-animate="edge" style="--step:5" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-edge-from="e" data-edge-to="d" data-edge-label="claim: pending → executing (If-Match ETag)" data-edge-key="6">
+          <path data-composition-edge-from="e" data-composition-edge-to="d" data-composition-points="595,408;285,408" d="M 595 408 L 285 408" class="a-emphasis" data-animate="edge" style="--step:6" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="327.4" y="370" width="225.20000000000002" height="16" rx="3" class="c-mask"/>
-          <text x="440" y="380" class="t-backend" font-size="9" text-anchor="middle">claim: pending → executing (If-Match ETag</text>
+          <rect x="324.8" y="388" width="230.4" height="16" rx="3" class="c-mask"/>
+          <text x="440" y="398" class="t-backend" font-size="9" text-anchor="middle">claim: pending → executing (If-Match ETag)</text>
         </g>
         </g>
 
-        <g data-edge-from="e" data-edge-to="w" data-edge-label="invoke with idempotency key" data-edge-key="6">
-          <path data-composition-edge-from="e" data-composition-edge-to="w" data-composition-points="609,432;703,432" d="M 609 432 L 703 432" class="a-emphasis" data-animate="edge" style="--step:6" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <g data-edge-from="e" data-edge-to="w" data-edge-label="invoke with idempotency key" data-edge-key="7">
+          <path data-composition-edge-from="e" data-composition-edge-to="w" data-composition-points="609,460;703,460" d="M 609 460 L 703 460" class="a-emphasis" data-animate="edge" style="--step:7" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="579.8" y="412" width="152.4" height="16" rx="3" class="c-mask"/>
-          <text x="656" y="422" class="t-backend" font-size="9" text-anchor="middle">invoke with idempotency key</text>
+          <rect x="579.8" y="440" width="152.4" height="16" rx="3" class="c-mask"/>
+          <text x="656" y="450" class="t-backend" font-size="9" text-anchor="middle">invoke with idempotency key</text>
         </g>
         </g>
 
-        <g data-edge-from="w" data-edge-to="e" data-edge-label="result" data-edge-key="7">
-          <path data-composition-edge-from="w" data-composition-edge-to="e" data-composition-points="703,474;609,474" d="M 703 474 L 609 474" class="a-default" data-animate="edge" style="--step:7" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+        <g data-edge-from="w" data-edge-to="e" data-edge-label="result" data-edge-key="8">
+          <path data-composition-edge-from="w" data-composition-edge-to="e" data-composition-points="703,492;609,492" d="M 703 492 L 609 492" class="a-default" data-animate="edge" style="--step:8" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="634.4" y="454" width="43.2" height="16" rx="3" class="c-mask"/>
-          <text x="656" y="464" class="t-muted" font-size="9" text-anchor="middle">result</text>
+          <rect x="634.4" y="472" width="43.2" height="16" rx="3" class="c-mask"/>
+          <text x="656" y="482" class="t-muted" font-size="9" text-anchor="middle">result</text>
         </g>
         </g>
 
-        <g data-edge-from="e" data-edge-to="d" data-edge-label="record outcome" data-edge-key="8">
-          <path data-composition-edge-from="e" data-composition-edge-to="d" data-composition-points="595,516;285,516" d="M 595 516 L 285 516" class="a-default" data-animate="edge" style="--step:8" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <g data-edge-from="e" data-edge-to="d" data-edge-label="record outcome" data-edge-key="9">
+          <path data-composition-edge-from="e" data-composition-edge-to="d" data-composition-points="595,534;285,534" d="M 595 534 L 285 534" class="a-default" data-animate="edge" style="--step:9" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="397.6" y="496" width="84.8" height="16" rx="3" class="c-mask"/>
-          <text x="440" y="506" class="t-backend" font-size="9" text-anchor="middle">record outcome</text>
+          <rect x="397.6" y="514" width="84.8" height="16" rx="3" class="c-mask"/>
+          <text x="440" y="524" class="t-backend" font-size="9" text-anchor="middle">record outcome</text>
         </g>
         </g>
 
-        <g data-edge-from="e" data-edge-to="sm" data-edge-label="POST callback URL" data-edge-key="9">
-          <path data-composition-edge-from="e" data-composition-edge-to="sm" data-composition-points="595,558;69,558" d="M 595 558 L 69 558" class="a-default" data-animate="edge" style="--step:9" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+        <g data-edge-from="e" data-edge-to="sm" data-edge-label="POST callback URL" data-edge-key="10">
+          <path data-composition-edge-from="e" data-composition-edge-to="sm" data-composition-points="595,576;69,576" d="M 595 576 L 69 576" class="a-default" data-animate="edge" style="--step:10" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="281.8" y="538" width="100.4" height="16" rx="3" class="c-mask"/>
-          <text x="332" y="548" class="t-muted" font-size="9" text-anchor="middle">POST callback URL</text>
+          <rect x="281.8" y="556" width="100.4" height="16" rx="3" class="c-mask"/>
+          <text x="332" y="566" class="t-muted" font-size="9" text-anchor="middle">POST callback URL</text>
         </g>
         </g>
 

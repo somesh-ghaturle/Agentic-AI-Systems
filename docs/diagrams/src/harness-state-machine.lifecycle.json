@@ -21,7 +21,8 @@
   ],
   "transitions": [
     { "id": "claim", "from": "pending", "to": "claimed", "label": "claim()", "variant": "default", "labelDy": 65 },
-    { "id": "pass", "from": "claimed", "to": "verified", "label": "verify passed", "variant": "emphasis", "labelDy": 65 },
+    { "id": "pass", "from": "claimed", "to": "verified", "label": "verify() passed", "variant": "emphasis", "labelDy": 65 },
+    { "id": "retry", "from": "claimed", "to": "claimed", "label": "verify() failed, retry", "variant": "security", "route": "bottom-channel", "labelDy": 40 },
     { "id": "done", "from": "verified", "to": "complete", "label": "mark_complete()", "variant": "default", "labelDy": 65 }
   ],
   "cards": [
