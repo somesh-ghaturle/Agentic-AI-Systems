@@ -97,7 +97,7 @@ section saying what has to be decided first.
 | 61 | Rewrite `ROADMAP.md` against the current tree | Documentation | Medium | Done | Was 5 weeks stale; named none of the four chapters | 2026-10-06 |
 | 62 | Add `budget-guard` to the root README tree | Documentation | Low | Done | 22 of 23 examples were listed | 2026-12-06 |
 | 63 | Diagram the hybrid Terraform tree | Documentation | Medium | Done | The only architecture document without one | 2026-10-06 |
-| 64 | Check documented counts against the tree | CI/CD | High | Done | Second recurrence of this drift; caught a stale count on its first run | 2026-09-13 |
+| 64 | Check documented counts against the tree | CI/CD | High | Done | 17 claims; found 10 stale numbers and caught 2 of its author's | 2026-09-13 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
 tree, and kept current as tasks have landed since. **All 64 tasks are now `Done`**, the last of
@@ -2983,9 +2983,10 @@ still said "six of twelve examples" carry an empty `requirements.txt`. Hand-fixi
 resets the clock rather than stopping it, which is the argument every other script in
 `.github/scripts/` makes about its own subject.
 
-Ten claims are checked across `README.md`, `CONTRIBUTING.md`, and `ROADMAP.md`. Each is a regex
-with one capture group around the number; digits and number words up to twenty-four are both
-understood, because this repository writes small numbers as words in prose and digits in tables.
+Seventeen claims are checked across `README.md`, `CONTRIBUTING.md`, and `ROADMAP.md`. Each is a
+regex with one capture group around the number; digits, unit words, tens words and hyphenated
+compounds up to ninety-nine are understood, because this repository writes small numbers as words
+in prose and digits in tables.
 A claim whose regex stops matching is a **failure, not a skip** — rewording the sentence is
 exactly the moment the number needs looking at again.
 
@@ -2996,8 +2997,14 @@ than a YAML parse, because PyYAML would be the only dependency in a directory th
 diagrams when the tree had 47 — a number stale by one commit, mine, from adding the hybrid
 diagram in task 63 and not updating the roadmap I had rewritten hours earlier.
 
-**Verify.** `python3 .github/scripts/docs_counts.py .` — ten claims, all matching. Reverting any
-one number reproduces a failure naming the file, line, claimed value, and actual value.
+A second pass extended it over the infrastructure claims, and found three more: the README said
+`terraform validate` ran over **ten** environment roots when the matrix has thirteen, and that
+tflint walked **thirty** modules and **ten** roots when it walks forty-four and fourteen. Those
+three numbers differ on purpose — `validate` skips the hybrid POC, tflint does not — so the
+guard tracks them separately rather than as one "trees" count.
+
+**Verify.** `python3 .github/scripts/docs_counts.py .` — seventeen claims, all matching. Reverting
+any one number reproduces a failure naming the file, line, claimed value, and actual value.
 
 ---
 
