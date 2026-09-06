@@ -62,6 +62,10 @@ recommendations, which depend heavily on your actual scale and access patterns.
 | Graders must not share information | This document's framing | Follows from ordinary experimental design; the failure it prevents is agreement reported as quality |
 | Severity tiers so warnings do not fail runs | Practitioner consensus | The alarm-fatigue argument is well-established in monitoring practice and transfers directly |
 | Mutation-testing the graders | This repository's own | Found by writing twelve deliberate breaks against [trace-eval](../../examples/trace-eval/README.md); it surfaced a check that had never fired alone. Mutation testing itself is established practice |
+| "A control is enforced only where it is enforced" | This repository's own | The AWS identity-policy half of the write boundary, recorded in `infra/terraform-aws/tests/`. Defence in depth is established practice; this instance is the tree's own |
+| Reversibility as a per-resource direction | This document's framing | Follows from the archive modules, which are deliberately irreversible while the state stores are not. WORM storage is established practice |
+| Caps checked before the effect rather than after | Established engineering practice | Admission control predates agents; the step-budget contrast is from [budget-guard](../../examples/budget-guard/README.md) |
+| Sandbox fidelity gaps bound your evidence | Established testing practice | The `validate`-not-`plan` instance is this repository's own, recorded as task 6 |
 | LLM-as-a-judge validated against human labels | Emerging research + practice | Judge calibration is genuinely necessary and often skipped |
 | Irrelevant context degrades reasoning | Emerging research | Direction supported; magnitude varies by model and task |
 | Hybrid search and re-ranking improve retrieval | Established IR practice | Predates LLMs; well-measured in the IR literature |

@@ -27,6 +27,7 @@ That framing is the thesis of this folder.
 | [HARNESS-ENGINEERING.md](HARNESS-ENGINEERING.md) | The scaffolding around the model — continuity across context windows, and who decides the work is done |
 | [CONTEXT-ENGINEERING.md](CONTEXT-ENGINEERING.md) | What the model sees — context rot, compaction, note-taking, sub-agents, just-in-time retrieval |
 | [EVALUATION-ENGINEERING.md](EVALUATION-ENGINEERING.md) | How you know it worked — scoring the path rather than the answer, severity design, and mutation-testing the graders |
+| [ENVIRONMENT-ENGINEERING.md](ENVIRONMENT-ENGINEERING.md) | The world it acts in — blast radius, which direction each store fails in, recovery that exists before you need it |
 | [checklists/design-review.md](checklists/design-review.md) | A design review to run before building, and again before shipping |
 | [REFERENCES.md](REFERENCES.md) | Sourcing and provenance — which claims are measured, which are directional |
 | [infra/](../../infra/) | This architecture as Terraform on four cloud and data-platform trees — [AWS](../../infra/terraform-aws/README.md), [Azure](../../infra/terraform-azure/README.md), [GCP](../../infra/terraform-gcp/README.md), [Snowflake](../../infra/terraform-snowflake/README.md) — each with its own `ARCHITECTURE.md` drawn in that platform's terms, plus an opt-in cross-cloud hybrid POC |
@@ -90,6 +91,11 @@ contract, an unbounded autonomous loop, or no trace-level evaluation.
 **Cannot tell whether it is getting better:** [EVALUATION-ENGINEERING.md](EVALUATION-ENGINEERING.md).
 That is the feedback edge in the diagram above, and a suite that only reads final answers cannot
 close it — whether a human authorised an action is not a property of the text a user reads.
+
+**Worried about what happens when a control does not fire:**
+[ENVIRONMENT-ENGINEERING.md](ENVIRONMENT-ENGINEERING.md). Every other chapter assumes the gate
+holds. This one prices the case where it does not, which is a set of infrastructure decisions
+rather than a prompt or a policy.
 
 **Want to see the patterns in code:** the [examples/](../../examples/) directory has
 runnable implementations. Two implement the building blocks directly —

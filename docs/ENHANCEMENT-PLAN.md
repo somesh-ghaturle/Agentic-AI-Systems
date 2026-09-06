@@ -91,10 +91,11 @@ section saying what has to be decided first.
 | 55 | Pin `hashicorp/setup-terraform` to a commit SHA | Security | High | Done | CodeQL `actions/unpinned-tag`, both call sites | 2026-09-13 |
 | 56 | Harden the docs-preview markdown renderer | Security | High | Done | Attribute injection through a link target, and `javascript:` hrefs | 2026-09-13 |
 | 57 | Add `EVALUATION-ENGINEERING.md` | Documentation | Medium | Done | The feedback edge had two examples and no chapter | 2026-10-06 |
+| 58 | Add `ENVIRONMENT-ENGINEERING.md` | Documentation | Medium | Done | Blast radius, failure direction, and the sandbox fidelity gap | 2026-10-06 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 57 tasks are now `Done`**, the last of
-them — 53 through 57 — on 2026-09-06.
+tree, and kept current as tasks have landed since. **All 58 tasks are now `Done`**, the last of
+them — 53 through 58 — on 2026-09-06.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -2796,6 +2797,50 @@ folder README's contents table and reading order, and cross-linked from both sib
 
 ---
 
+### Task 58 — Add `ENVIRONMENT-ENGINEERING.md`
+
+**Goal.** Give a name and a chapter to the discipline the repository was already practising
+across `infra/`, `budget-guard`, `checkpoint-agent`, and `HOW-TO-RECOVER.md`.
+
+**Status: Done.** [`docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md`](agentic-system-architecture/ENVIRONMENT-ENGINEERING.md).
+
+The other chapters constrain the agent — what it sees, what it may conclude, how it is graded.
+Each is allowed to assume its controls fire. This one starts where that assumption stops: you
+cannot build an agent that never takes a wrong action, so the remaining variable is what a wrong
+action costs, and that is a property of the environment rather than of the model.
+
+The load-bearing claim is deliberately not a restatement of `BUILDING-BLOCKS` §6. Approval gates
+decide *whether* an action happens; this chapter is about the price when one does not fire. Its
+evidence is the tree's own: the comment atop the AWS write-boundary test, which records that the
+"self-enforcing" boundary was true of the resource policy **and only of the resource policy**,
+because Lambda grants same-account invocation if the identity policy allows it *or* the resource
+policy does. Substituting `tool_arns_by_name` for `read_tool_arns` is a one-word edit that reads
+as a simplification and opens the boundary while `terraform validate` still passes. Generalised:
+a control with two enforcement points and one test has one enforcement point.
+
+Section 3 argues that reversibility is a per-resource *direction* rather than a good to maximise,
+and the counterexample is in this repository — every tree's `modules/archive` is deliberately
+irreversible, because "evidence that can be fixed after the fact stops being evidence". Operational
+state should fail toward recoverable and audit evidence toward immutable, and getting the
+direction backwards is the actual failure.
+
+Section 4 follows the shape the two previous chapters set, and takes task 6 as its subject. CI
+runs `terraform validate` and never `plan`, because `plan` needs credentials and the no-secrets
+constraint is worth more. That is the right trade *and* a fidelity gap — and the AWS boundary test
+exists precisely because `validate` passes while the identity policy is wide open. Generalised:
+every sandbox differs from production somewhere, and the difference is where your evidence stops.
+Name the gap and write a separate check for each thing on the list.
+
+Every quotation was verified against its source file rather than recalled — the AWS test comment,
+both `HOW-TO-RECOVER.md` passages, the `budget-guard` step-versus-token contrast, and the
+`checkpoint-agent` replay test's name.
+
+**Verify.** `linkcheck.py` resolves every new relative link; the chapter is reachable from the
+folder README's contents table and reading order, and cross-linked from the harness and
+evaluation chapters. `REFERENCES.md` carries four new rows, two marked as this repository's own.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -2845,6 +2890,7 @@ git status --short
 | 2026-08-22 | Completed task 10: packaging divergence catalogued in `infra/MODULES.md` | somesh-ghaturle |
 | 2026-09-03 | Added Phase 6 (tasks 46-52) from a model-currency review; completed 46 and 47 | somesh-ghaturle |
 | 2026-09-06 | Added tasks 53-57: two red CI jobs, the CodeQL action pin, the docs-preview XSS fix, and the evaluation chapter | somesh-ghaturle |
+| 2026-09-06 | Added task 58: the environment engineering chapter, completing the four-chapter set | somesh-ghaturle |
 
 ---
 
