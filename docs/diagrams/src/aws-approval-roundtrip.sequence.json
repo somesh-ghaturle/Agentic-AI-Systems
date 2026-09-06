@@ -2,51 +2,245 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "AWS — the approval round trip",
+    "title": "AWS - the approval round trip",
     "quality_profile": "showcase",
     "animation": "trace",
     "views": [
-      { "id": "validate", "label": "Validate before asking", "focus": ["sm", "v"], "note": "The validator checks ownership, permissions, and limits; a failure is rejected without a human." },
-      { "id": "suspend", "label": "Suspend on the task token", "focus": ["sm", "d", "s", "h"], "note": "Execution suspends on the task token until the human approves; the record is pending." },
-      { "id": "execute", "label": "Claim and execute", "focus": ["e", "d", "w"], "note": "A conditional write claims the approval; the executor re-checks the fingerprint and invokes the write tool once." }
+      {
+        "id": "validate",
+        "label": "Validate before asking",
+        "focus": [
+          "sm",
+          "v"
+        ],
+        "note": "The validator checks ownership, permissions, and limits; a failure is rejected without a human."
+      },
+      {
+        "id": "suspend",
+        "label": "Suspend on the task token",
+        "focus": [
+          "sm",
+          "d",
+          "s",
+          "h"
+        ],
+        "note": "Execution suspends until the human approves; the record is pending."
+      },
+      {
+        "id": "execute",
+        "label": "Claim and execute",
+        "focus": [
+          "e",
+          "d",
+          "w"
+        ],
+        "note": "A conditional write claims the approval; the executor re-checks the fingerprint and invokes the write tool once."
+      }
     ]
   },
   "participants": [
-    { "id": "sm", "type": "backend", "label": "State machine", "sublabel": "Step Functions" },
-    { "id": "v", "type": "security", "label": "Validator", "sublabel": "Lambda" },
-    { "id": "d", "type": "database", "label": "Approvals", "sublabel": "DynamoDB" },
-    { "id": "s", "type": "messagebus", "label": "SNS + KMS", "sublabel": "notify + encrypt" },
-    { "id": "h", "type": "external", "label": "Human", "sublabel": "approver" },
-    { "id": "e", "type": "backend", "label": "Executor", "sublabel": "Lambda" },
-    { "id": "w", "type": "messagebus", "label": "Write tool", "sublabel": "Lambda" }
+    {
+      "id": "sm",
+      "type": "backend",
+      "label": "State machine",
+      "sublabel": "Step Functions"
+    },
+    {
+      "id": "v",
+      "type": "security",
+      "label": "Validator",
+      "sublabel": "Lambda"
+    },
+    {
+      "id": "d",
+      "type": "database",
+      "label": "Approvals",
+      "sublabel": "DynamoDB"
+    },
+    {
+      "id": "s",
+      "type": "messagebus",
+      "label": "SNS + KMS",
+      "sublabel": "notify + encrypt"
+    },
+    {
+      "id": "h",
+      "type": "external",
+      "label": "Human",
+      "sublabel": "approver"
+    },
+    {
+      "id": "e",
+      "type": "backend",
+      "label": "Executor",
+      "sublabel": "Lambda"
+    },
+    {
+      "id": "w",
+      "type": "messagebus",
+      "label": "Write tool",
+      "sublabel": "Lambda"
+    }
   ],
   "segments": [
-    { "from": 150, "to": 290, "label": "Validate" },
-    { "from": 300, "to": 440, "label": "Suspend" },
-    { "from": 450, "to": 580, "label": "Claim and execute" }
+    {
+      "from": 150,
+      "to": 320,
+      "label": "Validate"
+    },
+    {
+      "from": 336,
+      "to": 420,
+      "label": "Suspend"
+    },
+    {
+      "from": 436,
+      "to": 620,
+      "label": "Claim and execute"
+    }
   ],
   "messages": [
-    { "from": "sm", "to": "v", "y": 180, "label": "proposal + task token · ownership · permission · limits", "variant": "emphasis" },
-    { "from": "v", "to": "sm", "y": 212, "label": "valid = false → rejected, no human troubled", "variant": "dashed", "note": "alt: fails any check" },
-    { "from": "v", "to": "d", "y": 240, "label": "write record (pending) + fingerprint", "variant": "default" },
-    { "from": "v", "to": "s", "y": 282, "label": "publish approval request", "variant": "default" },
-    { "from": "s", "to": "h", "y": 324, "label": "notify", "variant": "dashed" },
-    { "from": "h", "to": "e", "y": 366, "label": "approve", "variant": "emphasis" },
-    { "from": "e", "to": "d", "y": 408, "label": "claim: pending → executing · re-check fingerprint", "variant": "emphasis" },
-    { "from": "e", "to": "w", "y": 460, "label": "invoke with idempotency key", "variant": "emphasis" },
-    { "from": "w", "to": "e", "y": 492, "label": "result", "variant": "return" },
-    { "from": "e", "to": "d", "y": 534, "label": "record outcome", "variant": "default" },
-    { "from": "e", "to": "sm", "y": 576, "label": "SendTaskSuccess", "variant": "return" }
+    {
+      "from": "sm",
+      "to": "v",
+      "y": 180,
+      "label": "proposal + task token",
+      "variant": "emphasis"
+    },
+    {
+      "from": "v",
+      "to": "v",
+      "y": 212,
+      "label": "ownership, permission, limits",
+      "variant": "default"
+    },
+    {
+      "from": "v",
+      "to": "sm",
+      "y": 244,
+      "label": "valid = false - rejected, no human troubled",
+      "variant": "dashed",
+      "note": "alt: fails any check"
+    },
+    {
+      "from": "v",
+      "to": "d",
+      "y": 276,
+      "label": "write record (pending) + fingerprint",
+      "variant": "default"
+    },
+    {
+      "from": "v",
+      "to": "s",
+      "y": 318,
+      "label": "publish approval request",
+      "variant": "default"
+    },
+    {
+      "from": "s",
+      "to": "h",
+      "y": 360,
+      "label": "notify",
+      "variant": "dashed"
+    },
+    {
+      "from": "h",
+      "to": "e",
+      "y": 402,
+      "label": "approve",
+      "variant": "emphasis"
+    },
+    {
+      "from": "e",
+      "to": "d",
+      "y": 434,
+      "label": "claim: pending -> executing",
+      "variant": "emphasis"
+    },
+    {
+      "from": "e",
+      "to": "e",
+      "y": 466,
+      "label": "re-check fingerprint",
+      "variant": "default"
+    },
+    {
+      "from": "e",
+      "to": "w",
+      "y": 498,
+      "label": "invoke with idempotency key",
+      "variant": "emphasis"
+    },
+    {
+      "from": "w",
+      "to": "e",
+      "y": 530,
+      "label": "result",
+      "variant": "return"
+    },
+    {
+      "from": "e",
+      "to": "d",
+      "y": 562,
+      "label": "record outcome",
+      "variant": "default"
+    },
+    {
+      "from": "e",
+      "to": "sm",
+      "y": 594,
+      "label": "SendTaskSuccess",
+      "variant": "return"
+    }
   ],
   "activations": [
-    { "participant": "v", "from": 174, "to": 258, "type": "security" },
-    { "participant": "d", "from": 234, "to": 550, "type": "database" },
-    { "participant": "s", "from": 276, "to": 328, "type": "messagebus" },
-    { "participant": "e", "from": 360, "to": 580, "type": "backend" },
-    { "participant": "w", "from": 444, "to": 496, "type": "messagebus" }
+    {
+      "participant": "v",
+      "from": 174,
+      "to": 300,
+      "type": "security"
+    },
+    {
+      "participant": "d",
+      "from": 270,
+      "to": 578,
+      "type": "database"
+    },
+    {
+      "participant": "s",
+      "from": 312,
+      "to": 364,
+      "type": "messagebus"
+    },
+    {
+      "participant": "e",
+      "from": 396,
+      "to": 598,
+      "type": "backend"
+    },
+    {
+      "participant": "w",
+      "from": 482,
+      "to": 534,
+      "type": "messagebus"
+    }
   ],
   "cards": [
-    { "dot": "cyan", "title": "Rejected without troubling a human", "items": ["An invalid proposal returns valid=false and never publishes an approval request", "Execution suspends on the task token — the state machine does not hold a connection open"] },
-    { "dot": "emerald", "title": "One claim, one invocation", "items": ["A conditional write (pending → executing) collapses a double-click to a single winner", "The executor re-checks the fingerprint and invokes the write tool with an idempotency key"] }
+    {
+      "dot": "cyan",
+      "title": "Rejected without troubling a human",
+      "items": [
+        "An invalid proposal returns valid=false and never publishes an approval request",
+        "Execution suspends on the task token - the state machine does not hold a connection open"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "One claim, one invocation",
+      "items": [
+        "A conditional write (pending to executing) collapses a double-click to a single winner",
+        "The executor re-checks the fingerprint and invokes the write tool with an idempotency key"
+      ]
+    }
   ]
 }
