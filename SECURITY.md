@@ -61,6 +61,11 @@ incident.
 - **`examples/eval-red-teaming/`** — a prompt-injection evaluation harness that exercises override
   attempts against the approval gate itself. The purpose is to test whether a model follows a
   bypass instruction rather than the documented boundary.
+- **`examples/second-path/`** — demonstrates a boundary failure on purpose: the wide
+  `Orchestrator(TOOLS)` configuration is *supposed* to execute a write with no approval, and its
+  tests assert that it does. That path is the subject, not a vulnerability. A route from the
+  read-only orchestrator to a write tool in the **default** configuration is a real bug and is in
+  scope, as is a `reachable_writes()` that fails to name a reachable write tool.
 - **`examples/edge-agent/`, `examples/hermes-dashboard/`, and `examples/memory-agent/`** — these
   are offline proof-of-concept examples. Reports about a claimed security guarantee or an
   approval/state boundary that the implementation fails to enforce are in scope; ordinary

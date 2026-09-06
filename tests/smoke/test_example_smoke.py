@@ -62,6 +62,7 @@ CASES = [
     ("edge-agent", "agent.py", [], 0),
     ("starter-agent", "agent.py", ["what is the refund policy"], 0),
     ("mcp-server", "server.py", ["--demo"], 0),
+    ("second-path", "boundary.py", [], 0),
     ("tool-discovery", "discover.py", [], 0),
     ("trace-eval", "eval.py", [], 0),
 ]

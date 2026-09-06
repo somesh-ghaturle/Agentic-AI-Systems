@@ -206,6 +206,7 @@ you did not write a case for actually live.
 - [trace-eval](../../examples/trace-eval/README.md) — all of the above, running, with the disagreement table
 - [eval-red-teaming](../../examples/eval-red-teaming/README.md) — the adversarial half: probing whether the gate holds under injection
 - [Harness engineering](HARNESS-ENGINEERING.md) — completion; this document is its verdict counterpart
+- [Environment engineering](ENVIRONMENT-ENGINEERING.md) — the cost of the runs these checks catch too late
 - [Building blocks §5](BUILDING-BLOCKS.md) — the evaluation stack and what to evaluate per step
 - [Production principles](PRODUCTION-PRINCIPLES.md) — observability, and evaluation as a production concern
 - [References](REFERENCES.md) — sourcing for the claims above
