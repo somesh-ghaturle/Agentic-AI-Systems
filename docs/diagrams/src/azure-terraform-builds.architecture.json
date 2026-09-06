@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Azure — what Terraform builds",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      { "id": "orchestrate", "label": "Orchestration and tools", "focus": ["sfn", "lr", "val", "exe", "lw"], "note": "A Step Functions orchestrator calls read tool Lambdas and a validator; the executor calls write tool Lambdas." },
+      { "id": "secure", "label": "Security and state", "focus": ["kms", "tbl", "sns", "stt", "aoss", "s3"], "note": "One KMS key encrypts approval, observability, and the archive; state, knowledge, and archive are separate stores." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 4, "cellW": 188, "cellH": 64, "gapX": 24, "gapY": 60, "origin": [80, 110] },
+  "components": [
+    { "id": "sfn", "type": "backend", "label": "Logic App workflow", "sublabel": "orchestration", "row": 0, "col": 1, "size": [188, 64] },
+    { "id": "lr", "type": "messagebus", "label": "Read tool Function Apps", "row": 1, "col": 0, "size": [188, 60] },
+    { "id": "val", "type": "security", "label": "Validator", "row": 1, "col": 1, "size": [168, 60] },
+    { "id": "exe", "type": "security", "label": "Executor", "row": 1, "col": 2, "size": [168, 60] },
+    { "id": "lw", "type": "messagebus", "label": "Write tool Function Apps", "row": 1, "col": 3, "size": [188, 60] },
+    { "id": "tbl", "type": "database", "label": "Cosmos approvals", "row": 2, "col": 1, "size": [168, 60] },
+    { "id": "sns", "type": "messagebus", "label": "Service Bus topic", "row": 2, "col": 2, "size": [168, 60] },
+    { "id": "kms", "type": "security", "label": "Key Vault", "sublabel": "RBAC authorization", "row": 3, "col": 0, "size": [188, 64] },
+    { "id": "te", "type": "backend", "label": "trace_emitter", "row": 3, "col": 1, "size": [168, 60] },
+    { "id": "lg", "type": "database", "label": "Log Analytics workspace", "sublabel": "queries + alerts", "row": 3, "col": 2, "size": [188, 64] },
+    { "id": "stt", "type": "database", "label": "Storage Table", "row": 2, "col": 0, "size": [168, 60] },
+    { "id": "aoss", "type": "database", "label": "Azure AI Search", "sublabel": "knowledge", "row": 2, "col": 3, "size": [188, 60] },
+    { "id": "s3", "type": "database", "label": "Blob + lifecycle", "sublabel": "archive", "row": 3, "col": 3, "size": [188, 60] }
+  ],
+  "connections": [
+    { "from": "sfn", "to": "lr", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "sfn", "to": "val", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "exe", "to": "lw", "variant": "emphasis" },
+    { "from": "lr", "to": "aoss", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "from": "kms", "to": "tbl", "variant": "dashed", "fromSide": "top", "toSide": "bottom" },
+    { "from": "kms", "to": "lg", "variant": "dashed", "fromSide": "top", "toSide": "top" },
+    { "from": "kms", "to": "s3", "variant": "dashed", "fromSide": "top", "toSide": "top" },
+    { "from": "te", "to": "lg", "variant": "default" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "One key, three responsibilities", "items": ["One Key Vault provides secrets; managed identities give each function only the access it needs", "Read tools reach the knowledge store; write tools are reached only by the executor"] }
+  ]
+}

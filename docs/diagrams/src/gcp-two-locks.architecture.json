@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "GCP — why the boundary holds: two independent locks",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "iam", "label": "Lock 1 — Cloud Run IAM, per service", "focus": ["rt", "wt", "orch", "exec"], "note": "The read tool service grants run.invoker to the orchestrator; the write tool service grants it to the executor only." },
+      { "id": "deny", "label": "Lock 2 — IAM Deny policy, per project", "focus": ["deny", "orch"], "note": "A project-level Deny on run.routes.invoke is evaluated first, denying the orchestrator on write tool services." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 4, "cellW": 190, "cellH": 70, "gapX": 24, "gapY": 72, "origin": [80, 110] },
+  "components": [
+    { "id": "orch", "type": "security", "label": "Orchestrator SA", "row": 0, "col": 0, "size": [190, 66] },
+    { "id": "exec", "type": "security", "label": "Executor SA", "row": 2, "col": 0, "size": [190, 66] },
+    { "id": "rt", "type": "backend", "label": "Read tool service", "sublabel": "run.invoker → orchestrator", "row": 1, "col": 2, "size": [190, 66] },
+    { "id": "wt", "type": "security", "label": "Write tool service", "sublabel": "run.invoker → executor only", "row": 2, "col": 2, "size": [190, 66] },
+    { "id": "deny", "type": "security", "label": "Deny run.routes.invoke", "sublabel": "principal: orchestrator · write tool services", "row": 0, "col": 2, "size": [190, 66] }
+  ],
+  "connections": [
+    { "from": "orch", "to": "rt", "variant": "emphasis" },
+    { "from": "orch", "to": "wt", "variant": "security" },
+    { "from": "orch", "to": "deny", "variant": "security" },
+    { "from": "exec", "to": "wt", "label": "allowed", "variant": "emphasis", "labelDy": 40 }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Allow list plus a deny", "items": ["Cloud Run IAM grants run.invoker per service — the write tool grants only the executor", "A project Deny policy is evaluated before any allow, so the orchestrator cannot invoke a write tool even if mis-granted"] }
+  ]
+}

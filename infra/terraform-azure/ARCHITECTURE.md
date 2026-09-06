@@ -103,6 +103,11 @@ Azure has no resource policy for Functions. What it has is one lock and two miti
 and conflating them would be the kind of comfortable mistake this document exists to
 prevent.
 
+![Azure — why the boundary holds, and where it is thinner](../../docs/diagrams/gif/azure-boundary.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     subgraph lock["Lock — Entra token issuance"]
@@ -129,6 +134,8 @@ flowchart LR
     class ok ok
     class no warn
 ```
+
+</details>
 
 | Layer | Where | What it actually does | Independent? |
 |---|---|---|---|
@@ -188,6 +195,11 @@ written as `jsonencode` blocks in Terraform rather than a separate JSON template
 deliberate: tool URLs are interpolated from module outputs, so a wrong name fails at plan
 time instead of becoming a 404 at run time.
 
+![Azure — request lifecycle](../../docs/diagrams/gif/azure-request-lifecycle.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TD
     init["InitializeTrace"] --> retrieve["Retrieve"]
@@ -223,6 +235,8 @@ flowchart TD
     class failx,fail bad
 ```
 
+</details>
+
 Three routing decisions carry the weight, and each was easy to lose in translation to a
 Logic App. How they landed:
 
@@ -250,6 +264,11 @@ has to be right.
 
 The webhook action is what makes the pause real. The run is genuinely suspended — not
 polling, not sleeping — and resumes only when someone calls the callback URL.
+
+![Azure — the approval round trip](../../docs/diagrams/gif/azure-approval-roundtrip.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
 
 ```mermaid
 sequenceDiagram
@@ -281,6 +300,8 @@ sequenceDiagram
         E-->>LA: POST callback URL
     end
 ```
+
+</details>
 
 **Why Cosmos DB and not Table Storage.** The claim is the whole gate. It must be a
 conditional write, or two executors racing on a double-clicked approve button both see
@@ -321,6 +342,11 @@ why.
 `modules/observability` routes every emitter into one workspace and hangs five alert rules
 off it — four KQL query rules over the trace records, and one platform metric alert.
 
+![Azure — observability](../../docs/diagrams/gif/azure-observability.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     subgraph emitters["Emitters"]
@@ -354,6 +380,8 @@ flowchart LR
     class q5,a5 metric
 ```
 
+</details>
+
 The fifth alert is a different kind of thing and that is the point. The four query rules
 read trace records, which only exist if the workflow got far enough to write one. A Logic
 App that fails outright writes nothing, so the condition that most needs an alert is
@@ -386,6 +414,11 @@ step multiply-counts spend.
 ---
 
 ## 6 · What Terraform builds
+
+![Azure — what Terraform builds](../../docs/diagrams/gif/azure-terraform-builds.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
 
 ```mermaid
 flowchart TB
@@ -432,6 +465,8 @@ flowchart TB
     app -.->|"gates"| lw
     lr --> srch
 ```
+
+</details>
 
 Note the direction of the arrows out of `identity`. That module depends on nothing and
 everything with a principal depends on it — which is the only reason it exists.

@@ -241,6 +241,11 @@ and GCP, and the environment keeps all resources disabled unless explicitly enab
 
 ## Dependency Graph
 
+![Cross-cloud module dependency graph](../docs/diagrams/gif/modules-dependency-graph.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 graph TD
     subgraph AWS
@@ -288,6 +293,8 @@ graph TD
         C10[model-integration] --> C6
     end
 ```
+
+</details>
 
 ---
 

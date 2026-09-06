@@ -13,6 +13,11 @@ on AWS. Every module maps to a building block from that document, and the commen
 
 ## What this builds
 
+![AWS — what this builds](../../docs/diagrams/gif/aws-what-this-builds.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     R["Request"] --> ORCH["Step Functions<br/>orchestrator"]
@@ -33,6 +38,8 @@ flowchart TB
     ORCH --> OBS["CloudWatch<br/>traces · metrics · alarms"]
     EXEC --> AUDIT[("DynamoDB<br/>approval audit")]
 ```
+
+</details>
 
 **The load-bearing property:** the orchestrator can reach read tools directly and cannot
 reach write tools at all. Only the approval executor can invoke a write, and only after a

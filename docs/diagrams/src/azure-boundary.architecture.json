@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Azure — why the boundary holds, and where it is thinner",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "lock", "label": "Lock — Entra token issuance", "focus": ["sp", "ra"], "note": "A tool service principal requires app role assignments; the token it gets carries only its assigned roles." },
+      { "id": "check", "label": "Check — Easy Auth on the Function App", "focus": ["ea", "ok", "no"], "note": "Easy Auth returns 401 unless the token's audience matches; the orchestrator never holds a write role." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 4, "cellW": 190, "cellH": 70, "gapX": 24, "gapY": 72, "origin": [80, 110] },
+  "components": [
+    { "id": "sp", "type": "security", "label": "Tool service principal", "sublabel": "app_role_assignment_required = true", "row": 0, "col": 0, "size": [190, 66] },
+    { "id": "ra", "type": "backend", "label": "App role assignments", "sublabel": "read → orchestrator · write → executor", "row": 1, "col": 0, "size": [190, 66] },
+    { "id": "ea", "type": "security", "label": "Easy Auth", "sublabel": "auth_settings_v2 · Return401 · audience-scoped", "row": 1, "col": 2, "size": [190, 66] },
+    { "id": "ok", "type": "backend", "label": "Invocation proceeds", "sublabel": "audience matches", "row": 0, "col": 3, "size": [180, 60] },
+    { "id": "no", "type": "security", "label": "401", "sublabel": "no token, or wrong audience", "row": 2, "col": 3, "size": [180, 60] }
+  ],
+  "connections": [
+    { "from": "sp", "to": "ra", "variant": "default" },
+    { "from": "ra", "to": "ea", "label": "token issued", "variant": "default" },
+    { "from": "ea", "to": "ok", "label": "audience matches", "variant": "emphasis" },
+    { "from": "ea", "to": "no", "label": "no / wrong audience", "variant": "security", "labelDy": 40 }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "Thinner than AWS, by design", "items": ["Azure has no resource-policy principal check; the boundary is the Entra app role the token carries", "Easy Auth enforces the audience so a token minted for one app cannot be replayed against another"] }
+  ]
+}

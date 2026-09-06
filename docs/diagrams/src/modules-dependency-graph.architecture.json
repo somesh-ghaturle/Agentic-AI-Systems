@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Cross-cloud module dependency graph",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      { "id": "orchestrate", "label": "Orchestration and the gates", "focus": ["orchestration", "approval", "tools"], "note": "Orchestration drives tools and the approval gate; observability feeds back to it." },
+      { "id": "state", "label": "Three stores, one each", "focus": ["state", "knowledge", "archive"], "note": "Execution state, knowledge, and archive are separate stores with separate access patterns." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 4, "cellW": 188, "cellH": 64, "gapX": 24, "gapY": 60, "origin": [80, 110] },
+  "components": [
+    { "id": "orchestration", "type": "backend", "label": "orchestration", "sublabel": "pipeline · state machine · graph", "row": 0, "col": 1, "size": [188, 64] },
+    { "id": "approval", "type": "security", "label": "approval", "sublabel": "human in the loop", "row": 0, "col": 2, "size": [168, 60] },
+    { "id": "tools", "type": "messagebus", "label": "tools", "sublabel": "read / write split", "row": 1, "col": 1, "size": [188, 60] },
+    { "id": "identity", "type": "security", "label": "identity", "sublabel": "per-cloud IAM", "row": 1, "col": 2, "size": [168, 60] },
+    { "id": "security", "type": "security", "label": "security", "sublabel": "encryption · secrets", "row": 1, "col": 0, "size": [168, 60] },
+    { "id": "state", "type": "database", "label": "state", "sublabel": "execution state", "row": 2, "col": 1, "size": [168, 60] },
+    { "id": "knowledge", "type": "database", "label": "knowledge", "sublabel": "retrieval index", "row": 2, "col": 0, "size": [168, 60] },
+    { "id": "archive", "type": "database", "label": "archive", "sublabel": "immutable traces", "row": 2, "col": 2, "size": [168, 60] },
+    { "id": "observability", "type": "database", "label": "observability", "sublabel": "traces · metrics · alerts", "row": 3, "col": 1, "size": [188, 60] }
+  ],
+  "connections": [
+    { "from": "orchestration", "to": "approval", "variant": "default" },
+    { "from": "orchestration", "to": "tools", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "approval", "to": "state", "variant": "default", "fromSide": "right", "toSide": "top", "via": [[720, 140], [720, 340], [376, 340]] },
+    { "from": "tools", "to": "state", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "tools", "to": "security", "variant": "default" },
+    { "from": "tools", "to": "identity", "variant": "dashed" },
+    { "from": "knowledge", "to": "state", "variant": "default" },
+    { "from": "archive", "to": "state", "variant": "dashed" },
+    { "from": "observability", "to": "orchestration", "variant": "dashed", "fromSide": "right", "toSide": "top", "via": [[720, 512], [720, 80], [386, 80]] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Same modules, three clouds", "items": ["AWS, Azure, and GCP each implement these nine modules; the dependency shape is identical across them", "The differences are the managed services that back each module — see each platform's ARCHITECTURE.md"] },
+    { "dot": "amber", "title": "Three stores, not one", "items": ["Execution state, knowledge, and archive are separate stores with different access and retention", "Observability feeds back to orchestration — the edge that lets the system improve"] }
+  ]
+}

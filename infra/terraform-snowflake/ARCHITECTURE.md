@@ -122,6 +122,11 @@ property of a container this tree controls.
 
 ## 3 · The approval flow, and where it differs
 
+![Snowflake — the approval flow, and where it differs](../../docs/diagrams/gif/snowflake-approval-flow.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 sequenceDiagram
     participant O as Orchestrator
@@ -142,6 +147,8 @@ sequenceDiagram
     E->>W: invoke, idempotent on approval_id
     E->>A: RESOLVE_APPROVAL(id, 'SUCCEEDED')
 ```
+
+</details>
 
 **The poll is the divergence.** The other three trees suspend an execution and resume it on
 a callback carrying a task token. Snowflake Tasks cannot do that, so an approved proposal

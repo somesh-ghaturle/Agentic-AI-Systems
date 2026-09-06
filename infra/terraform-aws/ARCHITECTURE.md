@@ -85,6 +85,11 @@ state machine to a write tool.** Not a discouraged one — an absent one.
 An architecture that depends on one check is one misconfiguration from being open. This
 one requires both sides to agree, and neither side names the other's tools.
 
+![AWS — why the boundary holds: two independent locks](../../docs/diagrams/gif/aws-two-locks.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     subgraph identity["Lock 1 — identity policy<br/>(what the caller may invoke)"]
@@ -109,6 +114,8 @@ flowchart LR
     class wt no
 ```
 
+</details>
+
 | Lock | Where | What it does |
 |---|---|---|
 | Identity policy | `modules/orchestration` | Grants `lambda:InvokeFunction` on an explicit ARN list — `read_tool_arns + validator + trace_emitter`. Write tool ARNs are never added, so there is nothing to accidentally over-grant. |
@@ -123,6 +130,11 @@ the one that turns a confused agent into lateral movement.
 ## 3 · Request lifecycle
 
 The state machine as actually defined in `envs/*/state-machine.json.tftpl`.
+
+![AWS — request lifecycle](../../docs/diagrams/gif/aws-request-lifecycle.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
 
 ```mermaid
 flowchart TD
@@ -159,6 +171,8 @@ flowchart TD
     class failx,fail bad
 ```
 
+</details>
+
 Three routing decisions carry weight:
 
 - **`CheckLoopBound` before anything else.** An agent that loops is an agent spending
@@ -177,6 +191,11 @@ Three routing decisions carry weight:
 
 `waitForTaskToken` is what makes the pause real. The execution is genuinely suspended —
 not polling, not sleeping — and resumes only when someone resolves the token.
+
+![AWS — the approval round trip](../../docs/diagrams/gif/aws-approval-roundtrip.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
 
 ```mermaid
 sequenceDiagram
@@ -209,6 +228,8 @@ sequenceDiagram
     end
 ```
 
+</details>
+
 Two failure modes this shape defends against:
 
 **Replay and double-click.** The claim is a DynamoDB conditional write, so a redelivered
@@ -230,6 +251,11 @@ idempotent on the approval ID, which is what that key is for.
 Metric filters attach to **one** log group, `/agentic/PREFIX/traces` — not to each
 function's own group. A handler that only prints to stdout looks healthy in the console
 and is invisible to every alarm.
+
+![AWS — observability](../../docs/diagrams/gif/aws-observability.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
 
 ```mermaid
 flowchart LR
@@ -257,6 +283,8 @@ flowchart LR
     tg --> archive[("S3 archive<br/>Object Lock")]
 ```
 
+</details>
+
 A state machine writes to its *execution* log group, not the trace group, so the
 orchestrator's own records — the terminal outcome, the loop bound firing — reach the
 filters only through `trace_emitter`. Omit that function and the loop-bound and cost
@@ -268,6 +296,11 @@ step multiply-counts spend.
 ---
 
 ## 6 · What Terraform builds
+
+![AWS — what Terraform builds](../../docs/diagrams/gif/aws-terraform-builds.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
 
 ```mermaid
 flowchart TB
@@ -310,6 +343,8 @@ flowchart TB
     exe --> lw
     lr --> aoss
 ```
+
+</details>
 
 | Module | Creates | The load-bearing part |
 |---|---|---|

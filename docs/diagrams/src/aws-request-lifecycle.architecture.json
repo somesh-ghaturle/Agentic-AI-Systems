@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AWS — request lifecycle",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      { "id": "loop", "label": "The retrieve-reason loop", "focus": ["retrieve", "reason", "incr", "bound"], "note": "Retrieve (degraded on failure), reason, increment, then check the loop bound." },
+      { "id": "gate", "label": "The approval gate", "focus": ["validate", "await", "success", "reject"], "note": "A write proposal is validated, then suspended on a task token until a human decides." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 3, "cellW": 188, "cellH": 64, "gapX": 24, "gapY": 56, "origin": [80, 110] },
+  "components": [
+    { "id": "init", "type": "external", "label": "InitializeTrace", "row": 0, "col": 1, "size": [188, 56] },
+    { "id": "retrieve", "type": "backend", "label": "Retrieve", "sublabel": "degraded, not fatal", "row": 1, "col": 1, "size": [188, 60] },
+    { "id": "reason", "type": "backend", "label": "Reason", "row": 2, "col": 1, "size": [168, 56] },
+    { "id": "incr", "type": "backend", "label": "IncrementStep", "row": 3, "col": 1, "size": [168, 56] },
+    { "id": "bound", "type": "security", "label": "CheckLoopBound", "row": 4, "col": 1, "size": [188, 60] },
+    { "id": "validate", "type": "security", "label": "ValidateProposal", "row": 5, "col": 1, "size": [188, 60] },
+    { "id": "await", "type": "security", "label": "AwaitHumanApproval", "sublabel": "waitForTaskToken · 24h dev / 4h prod", "row": 6, "col": 1, "size": [188, 64] },
+    { "id": "success", "type": "backend", "label": "RecordSuccess", "row": 7, "col": 2, "size": [168, 56] },
+    { "id": "reject", "type": "backend", "label": "RecordRejection", "sublabel": "no human troubled", "row": 7, "col": 0, "size": [168, 56] },
+    { "id": "complete", "type": "external", "label": "Complete", "row": 5, "col": 2, "size": [168, 56] },
+    { "id": "fail", "type": "external", "label": "FailExecution", "row": 5, "col": 0, "size": [168, 56] }
+  ],
+  "connections": [
+    { "from": "init", "to": "retrieve", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "retrieve", "to": "reason", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "reason", "to": "incr", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "incr", "to": "bound", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "bound", "to": "validate", "label": "action_type = write", "variant": "default", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "from": "bound", "to": "retrieve", "label": "continue", "variant": "dashed", "fromSide": "left", "toSide": "left" },
+    { "from": "bound", "to": "complete", "label": "default", "variant": "default" },
+    { "from": "validate", "to": "await", "label": "valid", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelDy": 24 },
+    { "from": "validate", "to": "reject", "label": "invalid", "variant": "security" },
+    { "from": "validate", "to": "fail", "label": "failure", "variant": "security", "fromSide": "left", "toSide": "left" },
+    { "from": "await", "to": "success", "label": "approved", "variant": "emphasis" },
+    { "from": "await", "to": "reject", "label": "rejected / timeout", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "Degraded, not fatal", "items": ["A retrieval failure continues with empty context rather than ending the run", "Only a valid write proposal suspends on a task token — rejections never trouble a human"] }
+  ]
+}

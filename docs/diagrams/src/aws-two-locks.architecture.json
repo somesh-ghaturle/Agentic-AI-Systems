@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AWS — why the boundary holds: two independent locks",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "identity", "label": "Lock 1 — identity policy", "focus": ["orole", "olist"], "note": "The orchestrator role may invoke only the read tool ARNs, the validator, and the trace emitter." },
+      { "id": "resource", "label": "Lock 2 — resource policy", "focus": ["rt", "wt", "exec"], "note": "Read tools accept only the state machine; write tools accept only the approval executor." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 4, "cellW": 190, "cellH": 70, "gapX": 24, "gapY": 72, "origin": [80, 110] },
+  "components": [
+    { "id": "orole", "type": "security", "label": "Orchestrator role", "row": 0, "col": 0, "size": [190, 66] },
+    { "id": "olist", "type": "backend", "label": "read_tool_arns", "sublabel": "+ validator + trace_emitter", "row": 1, "col": 0, "size": [190, 66] },
+    { "id": "rt", "type": "backend", "label": "Read tools", "sublabel": "principal: states.amazonaws.com", "row": 1, "col": 2, "size": [190, 66] },
+    { "id": "wt", "type": "security", "label": "Write tools", "sublabel": "principal: approval_executor ONLY", "row": 2, "col": 2, "size": [190, 66] },
+    { "id": "exec", "type": "security", "label": "approval_executor role", "row": 2, "col": 0, "size": [190, 66] }
+  ],
+  "connections": [
+    { "from": "orole", "to": "olist", "variant": "default" },
+    { "from": "olist", "to": "rt", "label": "allowed", "variant": "emphasis" },
+    { "from": "olist", "to": "wt", "label": "write ARNs never listed", "variant": "security" },
+    { "from": "exec", "to": "wt", "label": "allowed", "variant": "emphasis", "labelDy": 40 }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Two locks, neither sufficient alone", "items": ["The orchestrator's identity lists read ARNs only — it cannot even name a write tool", "The write tool's resource policy admits only the executor — the orchestrator has no binding"] }
+  ]
+}

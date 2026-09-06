@@ -100,6 +100,11 @@ parks it, and the executor resuming it is what moves it forward.
 
 ## 2 · Why the boundary holds — two independent locks
 
+![GCP — why the boundary holds: two independent locks](../../docs/diagrams/gif/gcp-two-locks.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     subgraph lock1["Lock 1 — Cloud Run IAM, per service"]
@@ -126,6 +131,8 @@ flowchart LR
     class rt,exec ok
     class wt,deny warn
 ```
+
+</details>
 
 **Lock 1** is the direct AWS analogue. Each write tool's Cloud Run service policy grants
 `roles/run.invoker` to the approval executor and to nobody else. This is enforced by the
@@ -193,6 +200,11 @@ no credentials and runs in CI.
 
 ## 3 · Request lifecycle
 
+![GCP — request lifecycle](../../docs/diagrams/gif/gcp-request-lifecycle.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 sequenceDiagram
     participant C as Caller
@@ -230,6 +242,8 @@ sequenceDiagram
     end
 ```
 
+</details>
+
 Three decisions in this diagram are load-bearing and easy to reverse by accident:
 
 **Retrieval failure is degraded, not fatal.** Reasoning without context produces a worse
@@ -247,6 +261,11 @@ daily budget alert fires on arithmetic rather than on money.
 ---
 
 ## 4 · The approval round trip
+
+![GCP — the approval round trip](../../docs/diagrams/gif/gcp-approval-roundtrip.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
 
 ```mermaid
 sequenceDiagram
@@ -281,6 +300,8 @@ sequenceDiagram
         W->>W: resume
     end
 ```
+
+</details>
 
 **Validation happens before notification, and the ordering is the point.** Invalid
 proposals never reach a person. From the AWS tree, and it is worth repeating verbatim:
@@ -321,6 +342,11 @@ but it lands in the function's own `cloudfunctions.googleapis.com/cloud-function
 no structured payload. Every filter in `modules/observability` misses it and every alert
 sits at zero. The logs are right there in the console, which is what makes it convincing.
 
+![GCP — observability](../../docs/diagrams/gif/gcp-observability.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     subgraph handlers["Handlers"]
@@ -352,6 +378,8 @@ flowchart LR
     classDef warn fill:#fdecea,stroke:#c0392b
     class te warn
 ```
+
+</details>
 
 **The trace emitter is why this works at all**, and it is highlighted in the diagram
 because omitting it is the quiet catastrophe. A workflow cannot write to the shared trace

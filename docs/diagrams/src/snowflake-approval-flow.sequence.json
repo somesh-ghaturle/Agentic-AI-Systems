@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Snowflake — the approval flow, and where it differs",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "submit", "label": "Submit and approve", "focus": ["o", "a", "h"], "note": "The orchestrator submits; a human approves, and the approver is recorded server-side." },
+      { "id": "claim", "label": "The sweeper claims", "focus": ["s", "a", "e", "w"], "note": "A periodic sweeper claims the approval with a fingerprint; SQLROWCOUNT = 1 picks the winner of a double-click." }
+    ]
+  },
+  "participants": [
+    { "id": "o", "type": "backend", "label": "Orchestrator", "sublabel": "task" },
+    { "id": "a", "type": "database", "label": "APPROVALS", "sublabel": "state + fingerprint" },
+    { "id": "h", "type": "external", "label": "Human", "sublabel": "approver" },
+    { "id": "s", "type": "messagebus", "label": "Sweeper task", "sublabel": "every sweep_interval" },
+    { "id": "e", "type": "security", "label": "Executor", "sublabel": "task" },
+    { "id": "w", "type": "messagebus", "label": "Write tool", "sublabel": "SQL action" }
+  ],
+  "segments": [
+    { "from": 150, "to": 240, "label": "Submit and approve" },
+    { "from": 256, "to": 380, "label": "Claim and execute" }
+  ],
+  "messages": [
+    { "from": "o", "to": "a", "y": 180, "label": "SUBMIT_PROPOSAL(...) · PENDING · fingerprint server-side", "variant": "emphasis" },
+    { "from": "h", "to": "a", "y": 222, "label": "APPROVE(id, comment) · approver = CURRENT_USER()", "variant": "default" },
+    { "from": "s", "to": "a", "y": 264, "label": "CLAIM_APPROVAL(id, fingerprint) · SQLROWCOUNT = 1 wins", "variant": "emphasis" },
+    { "from": "e", "to": "w", "y": 306, "label": "invoke, idempotent on approval_id", "variant": "default" },
+    { "from": "e", "to": "a", "y": 348, "label": "RESOLVE_APPROVAL(id, 'SUCCEEDED')", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "a", "from": 174, "to": 352, "type": "database" },
+    { "participant": "s", "from": 258, "to": 276, "type": "messagebus" },
+    { "participant": "e", "from": 300, "to": 352, "type": "security" },
+    { "participant": "w", "from": 300, "to": 318, "type": "messagebus" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "The database is the boundary", "items": ["There is no separate executor role; the conditional UPDATE (claim) is the gate", "SQLROWCOUNT = 1 decides the winner of a double-click — the second claim updates zero rows"] },
+    { "dot": "amber", "title": "Where it differs", "items": ["The fingerprint is computed server-side on submit, so the client cannot tamper with it", "A periodic sweeper, not a callback, picks up approved work — latency trades for simplicity"] }
+  ]
+}

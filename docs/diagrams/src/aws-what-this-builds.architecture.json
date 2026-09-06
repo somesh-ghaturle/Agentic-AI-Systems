@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AWS — what this builds",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      { "id": "request", "label": "The request path", "focus": ["request", "orch", "read", "know"], "note": "A request hits Step Functions; it calls read tools, which read knowledge." },
+      { "id": "gate", "label": "The approval gate", "focus": ["orch", "val", "sns", "human", "exec", "write"], "note": "A write proposal is validated, published to SNS, and only an approved human triggers the executor." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 4, "cellW": 188, "cellH": 64, "gapX": 24, "gapY": 60, "origin": [80, 110] },
+  "components": [
+    { "id": "request", "type": "external", "label": "Request", "row": 0, "col": 0, "size": [168, 56] },
+    { "id": "orch", "type": "backend", "label": "Step Functions", "sublabel": "orchestrator", "row": 0, "col": 1, "size": [188, 64] },
+    { "id": "val", "type": "security", "label": "Validator", "sublabel": "Lambda", "row": 0, "col": 2, "size": [168, 60] },
+    { "id": "sns", "type": "messagebus", "label": "SNS", "sublabel": "approval request", "row": 0, "col": 3, "size": [168, 60] },
+    { "id": "read", "type": "messagebus", "label": "Read tools", "sublabel": "Lambda", "row": 1, "col": 0, "size": [168, 60] },
+    { "id": "human", "type": "external", "label": "Human approves?", "row": 1, "col": 2, "size": [168, 60] },
+    { "id": "exec", "type": "security", "label": "Approval executor", "sublabel": "Lambda", "row": 1, "col": 3, "size": [188, 60] },
+    { "id": "know", "type": "database", "label": "OpenSearch Serverless", "sublabel": "knowledge", "row": 2, "col": 0, "size": [188, 60] },
+    { "id": "write", "type": "messagebus", "label": "Write tools", "sublabel": "Lambda", "row": 2, "col": 2, "size": [168, 60] },
+    { "id": "state", "type": "database", "label": "DynamoDB", "sublabel": "execution state", "row": 3, "col": 0, "size": [168, 60] },
+    { "id": "arch", "type": "database", "label": "S3", "sublabel": "trace archive", "row": 3, "col": 1, "size": [168, 60] },
+    { "id": "obs", "type": "database", "label": "CloudWatch", "sublabel": "traces · metrics · alarms", "row": 3, "col": 2, "size": [188, 60] }
+  ],
+  "connections": [
+    { "from": "request", "to": "orch", "variant": "default" },
+    { "from": "orch", "to": "read", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "read", "to": "know", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "orch", "to": "val", "variant": "default", "label": "proposes write", "labelDy": 70 },
+    { "from": "val", "to": "sns", "variant": "emphasis", "label": "valid" },
+    { "from": "sns", "to": "human", "variant": "default" },
+    { "from": "human", "to": "exec", "variant": "emphasis", "label": "yes" },
+    { "from": "exec", "to": "write", "variant": "emphasis", "fromSide": "bottom", "toSide": "top" },
+    { "from": "orch", "to": "state", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "orch", "to": "arch", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "from": "orch", "to": "obs", "variant": "dashed", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Reads run, writes are gated", "items": ["Read tools run from the orchestrator; writes only run from the approval executor after a human says yes", "An invalid proposal is rejected at the validator — it never reaches SNS or a human"] }
+  ]
+}

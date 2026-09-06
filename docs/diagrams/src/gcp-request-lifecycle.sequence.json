@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "GCP — request lifecycle",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      { "id": "retrieve", "label": "Retrieve (degraded, not fatal)", "focus": ["caller", "wf", "ret", "te"], "note": "A retrieval failure is logged and the run continues with empty context." },
+      { "id": "reason", "label": "Reason and route", "focus": ["wf", "rea", "val"], "note": "Reason returns an action_type; a write routes to the validator, a continue loops back to retrieve." }
+    ]
+  },
+  "participants": [
+    { "id": "caller", "type": "external", "label": "Caller", "sublabel": "request" },
+    { "id": "wf", "type": "backend", "label": "Workflow", "sublabel": "Workflows" },
+    { "id": "ret", "type": "backend", "label": "retrieve", "sublabel": "Cloud Run" },
+    { "id": "rea", "type": "backend", "label": "reason", "sublabel": "Cloud Run" },
+    { "id": "te", "type": "messagebus", "label": "trace-emitter", "sublabel": "Cloud Run" },
+    { "id": "val", "type": "security", "label": "validator", "sublabel": "Cloud Run" }
+  ],
+  "segments": [
+    { "from": 150, "to": 320, "label": "Retrieve" },
+    { "from": 336, "to": 420, "label": "Reason" },
+    { "from": 436, "to": 600, "label": "Decide" }
+  ],
+  "messages": [
+    { "from": "caller", "to": "wf", "y": 180, "label": "start execution", "variant": "emphasis" },
+    { "from": "wf", "to": "te", "y": 222, "label": "execution_started", "variant": "default" },
+    { "from": "wf", "to": "ret", "y": 264, "label": "http.post (OIDC)", "variant": "default" },
+    { "from": "ret", "to": "wf", "y": 306, "label": "context (or retrieval_failed)", "variant": "return" },
+    { "from": "wf", "to": "rea", "y": 348, "label": "http.post (OIDC)", "variant": "default" },
+    { "from": "rea", "to": "wf", "y": 390, "label": "action_type, proposal, cost_usd", "variant": "return" },
+    { "from": "wf", "to": "val", "y": 432, "label": "validate proposal (action_type = write)", "variant": "emphasis" },
+    { "from": "val", "to": "wf", "y": 474, "label": "valid = true → section 4", "variant": "return" },
+    { "from": "wf", "to": "te", "y": 516, "label": "execution_completed (terminal, cost_usd)", "variant": "default" },
+    { "from": "wf", "to": "caller", "y": 558, "label": "result", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "wf", "from": 174, "to": 562, "type": "backend" },
+    { "participant": "ret", "from": 258, "to": 310, "type": "backend" },
+    { "participant": "rea", "from": 342, "to": 394, "type": "backend" },
+    { "participant": "te", "from": 216, "to": 520, "type": "messagebus" },
+    { "participant": "val", "from": 426, "to": 478, "type": "security" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "Degraded, not fatal", "items": ["A retrieval failure logs retrieval_failed and continues with empty context — the run does not end", "action_type routes the next step: write goes to the validator, continue loops back to retrieve"] }
+  ]
+}

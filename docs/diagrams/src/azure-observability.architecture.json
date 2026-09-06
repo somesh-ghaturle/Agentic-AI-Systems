@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Azure — observability",
+    "quality_profile": "standard",
+    "animation": "trace",
+    "views": [
+      { "id": "emit", "label": "Emitters to the trace log", "focus": ["h", "smx", "tg"], "note": "Handlers emit directly; the state machine emits via the trace_emitter, all to one log group." },
+      { "id": "alerts", "label": "Metric filters to alerts", "focus": ["tg", "f1", "f2", "f3", "f4"], "note": "Each failure mode is a metric filter with a matching alert; orchestrator failures is a platform metric." }
+    ]
+  },
+  "layout": { "mode": "grid", "cols": 4, "cellW": 190, "cellH": 64, "gapX": 24, "gapY": 60, "origin": [80, 110] },
+  "components": [
+    { "id": "h", "type": "backend", "label": "Handlers + approval", "sublabel": "Function Apps", "row": 0, "col": 0, "size": [190, 64] },
+    { "id": "smx", "type": "backend", "label": "Logic App run history", "sublabel": "via trace_emitter", "row": 0, "col": 1, "size": [190, 64] },
+    { "id": "tg", "type": "database", "label": "Log Analytics workspace", "row": 0, "col": 2, "size": [190, 64] },
+    { "id": "f1", "type": "security", "label": "schema_validation_failed", "row": 1, "col": 0, "size": [190, 60] },
+    { "id": "f2", "type": "security", "label": "loop_bound_exceeded", "row": 1, "col": 1, "size": [190, 60] },
+    { "id": "f3", "type": "security", "label": "approval_abandoned", "row": 1, "col": 2, "size": [190, 60] },
+    { "id": "f4", "type": "security", "label": "cost_usd on terminal", "row": 1, "col": 3, "size": [190, 60] },
+    { "id": "aws", "type": "cloud", "label": "Logic App RunsFailed", "row": 2, "col": 0, "size": [190, 60] },
+    { "id": "archive", "type": "database", "label": "Blob archive", "sublabel": "immutable lifecycle", "row": 0, "col": 3, "size": [190, 64] }
+  ],
+  "connections": [
+    { "from": "h", "to": "tg", "variant": "default", "fromSide": "top", "toSide": "top" },
+    { "from": "smx", "to": "tg", "variant": "default" },
+    { "from": "tg", "to": "f1", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "tg", "to": "f2", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "tg", "to": "f3", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "tg", "to": "f4", "variant": "default", "fromSide": "bottom", "toSide": "top" },
+    { "from": "aws", "to": "f1", "label": "orchestrator failures", "variant": "dashed" },
+    { "from": "tg", "to": "archive", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "One log, four failure modes", "items": ["Schema failures, runaway loops, gate fatigue, and daily spend are each a metric filter on the same trace log", "Budget overrun is a platform metric, not a custom one — it survives a broken emitter"] }
+  ]
+}
