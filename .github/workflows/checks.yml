@@ -34,7 +34,13 @@ on:
       - "docs/**"
       - "*.md"
       - ".github/scripts/**"
-      - ".github/workflows/checks.yml"
+      # Every workflow, not just this one. Naming checks.yml alone left a gap with teeth: a
+      # change to example-deps.yml, docs-preview.yml, or codeql.yml reached main with no run
+      # at all, and a workflow edit is exactly the change most able to disable a check while
+      # looking like it tightened one. The same reasoning covers .pre-commit-config.yaml,
+      # whose hooks are the only gate on a commit made with --no-verify off.
+      - ".github/workflows/**"
+      - ".pre-commit-config.yaml"
       - ".gitleaks.toml"
       - "pyproject.toml"
       - ".tflint.hcl"
@@ -48,7 +54,13 @@ on:
       - "docs/**"
       - "*.md"
       - ".github/scripts/**"
-      - ".github/workflows/checks.yml"
+      # Every workflow, not just this one. Naming checks.yml alone left a gap with teeth: a
+      # change to example-deps.yml, docs-preview.yml, or codeql.yml reached main with no run
+      # at all, and a workflow edit is exactly the change most able to disable a check while
+      # looking like it tightened one. The same reasoning covers .pre-commit-config.yaml,
+      # whose hooks are the only gate on a commit made with --no-verify off.
+      - ".github/workflows/**"
+      - ".pre-commit-config.yaml"
       - ".gitleaks.toml"
       - "pyproject.toml"
       - ".tflint.hcl"
