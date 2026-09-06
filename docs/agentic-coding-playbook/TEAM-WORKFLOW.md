@@ -17,6 +17,11 @@ This document resolves that.
 Every file this kit produces falls into exactly one of three categories. Get this split
 right and the rest is ordinary git.
 
+![Shared, personal, or team knowledge: what to commit and what to gitignore](../diagrams/gif/team-workflow-what-to-commit.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     subgraph S["SHARED · commit · PR-reviewed"]
@@ -36,6 +41,8 @@ flowchart LR
     P -. "promote what generalizes" .-> T
     T -. "promote what recurs" .-> S
 ```
+
+</details>
 
 ### Shared — commit these, review them like code
 

@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "The shape of an agentic system \u2014 and the edge that lets you improve it",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "hub",
+        "label": "Orchestration owns the sequence",
+        "focus": [
+          "orchestration",
+          "model",
+          "tools",
+          "memory"
+        ],
+        "note": "The control layer is the one component that knows the sequence. Everything else is called by it."
+      },
+      {
+        "id": "write",
+        "label": "The write path",
+        "focus": [
+          "tools",
+          "writecheck",
+          "approval",
+          "execute"
+        ],
+        "note": "Only high-impact writes pay for a human. Gating everything trains people to approve without reading."
+      },
+      {
+        "id": "feedback",
+        "label": "The feedback edge",
+        "focus": [
+          "observability",
+          "evals",
+          "orchestration"
+        ],
+        "note": "Without trace-level evaluation you cannot improve the system deliberately \u2014 only change it and hope."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 5,
+    "cellW": 190,
+    "cellH": 76,
+    "gapX": 24,
+    "gapY": 72,
+    "origin": [
+      80,
+      110
+    ]
+  },
+  "components": [
+    {
+      "id": "request",
+      "type": "external",
+      "label": "Request",
+      "row": 0,
+      "col": 1,
+      "size": [
+        168,
+        58
+      ]
+    },
+    {
+      "id": "observability",
+      "type": "database",
+      "label": "Observability",
+      "sublabel": "full-trace logging",
+      "row": 1,
+      "col": 1,
+      "size": [
+        186,
+        70
+      ]
+    },
+    {
+      "id": "orchestration",
+      "type": "backend",
+      "label": "Orchestration control layer",
+      "sublabel": "pipeline \u00b7 state machine \u00b7 graph",
+      "row": 1,
+      "col": 2,
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "tools",
+      "type": "messagebus",
+      "label": "Tool layer",
+      "sublabel": "schemas \u00b7 permissions \u00b7 read/write split",
+      "row": 1,
+      "col": 3,
+      "size": [
+        190,
+        72
+      ]
+    },
+    {
+      "id": "approval",
+      "type": "security",
+      "label": "Approval gate",
+      "sublabel": "human in the loop",
+      "tag": "irreversible actions",
+      "row": 1,
+      "col": 4,
+      "size": [
+        186,
+        70
+      ]
+    },
+    {
+      "id": "memory",
+      "type": "database",
+      "label": "Memory & state",
+      "sublabel": "execution \u00b7 knowledge \u00b7 archive",
+      "row": 2,
+      "col": 0,
+      "size": [
+        186,
+        70
+      ]
+    },
+    {
+      "id": "evals",
+      "type": "frontend",
+      "label": "Trace-level evals",
+      "sublabel": "every step, not just output",
+      "row": 2,
+      "col": 1,
+      "size": [
+        186,
+        70
+      ]
+    },
+    {
+      "id": "model",
+      "type": "cloud",
+      "label": "Model layer",
+      "sublabel": "routing \u00b7 structured outputs",
+      "row": 2,
+      "col": 2,
+      "size": [
+        186,
+        70
+      ]
+    },
+    {
+      "id": "writecheck",
+      "type": "security",
+      "label": "High-impact write?",
+      "sublabel": "decided in code, not the prompt",
+      "row": 2,
+      "col": 3,
+      "size": [
+        186,
+        70
+      ]
+    },
+    {
+      "id": "execute",
+      "type": "backend",
+      "label": "Execute",
+      "row": 2,
+      "col": 4,
+      "size": [
+        168,
+        58
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "request",
+      "to": "orchestration",
+      "variant": "default"
+    },
+    {
+      "from": "orchestration",
+      "to": "observability",
+      "variant": "default"
+    },
+    {
+      "from": "observability",
+      "to": "evals",
+      "variant": "default"
+    },
+    {
+      "from": "evals",
+      "to": "orchestration",
+      "label": "findings feed design",
+      "variant": "dashed"
+    },
+    {
+      "from": "orchestration",
+      "to": "model",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "orchestration",
+      "to": "memory",
+      "variant": "default",
+      "fromSide": "top",
+      "toSide": "top"
+    },
+    {
+      "from": "orchestration",
+      "to": "tools",
+      "variant": "default"
+    },
+    {
+      "from": "tools",
+      "to": "writecheck",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "writecheck",
+      "to": "approval",
+      "label": "yes",
+      "variant": "security"
+    },
+    {
+      "from": "writecheck",
+      "to": "execute",
+      "label": "no",
+      "variant": "dashed",
+      "labelDy": 20
+    },
+    {
+      "from": "approval",
+      "to": "execute",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "It is a distributed system first",
+      "items": [
+        "A probabilistic component in the middle does not make the rest of it a prompting problem",
+        "Tools that act, dynamic context, explicit state, autonomy inside guardrails \u2014 all systems concerns"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "The feedback edge matters as much as the boxes",
+      "items": [
+        "Output-only evaluation cannot see whether a human authorised an action",
+        "Trace-level evals read every step, which is the only way findings can feed design"
+      ]
+    }
+  ]
+}

@@ -222,6 +222,11 @@ Practical consequences:
 
 ## The loop, drawn
 
+![Eight practices, and the one that folds back into the rules](../diagrams/gif/playbook-eight-practices.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TD
     A["1 · Agentic surface<br/>filesystem + shell + loop"] --> B["2 · Thin context<br/>CLAUDE.md ≤200 lines + scoped rules"]
@@ -233,6 +238,8 @@ flowchart TD
     G --> H["8 · Human judgment<br/>review diffs, hunt conceptual bugs"]
     H -- "learnings.md folds back into the rules" --> B
 ```
+
+</details>
 
 The feedback edge is the point. Without it you have a checklist; with it you have a system
 that gets better every week without you thinking about it.

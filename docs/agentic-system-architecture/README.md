@@ -34,6 +34,11 @@ That framing is the thesis of this folder.
 
 ## The shape of the system
 
+![The shape of an agentic system — and the edge that lets you improve it](../diagrams/gif/agentic-architecture-overview.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart TB
     A["Request"] --> B["Orchestration control layer<br/>pipeline · state machine · graph"]
@@ -48,6 +53,8 @@ flowchart TB
     I --> J["Trace-level evals<br/>every step, not just output"]
     J -. "findings feed design" .-> B
 ```
+
+</details>
 
 The feedback edge matters as much as the boxes. A system without trace-level evaluation is
 one you cannot improve deliberately — you can only change it and hope.
