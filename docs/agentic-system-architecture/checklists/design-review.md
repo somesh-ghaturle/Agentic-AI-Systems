@@ -56,6 +56,21 @@ Items marked **⚠** are the ones that cause incidents when skipped.
 - [ ] Failure paths are designed for each step, not discovered in production
 - [ ] Framework choice is justified — plain code is a legitimate answer
 
+## Harness and continuity
+
+From [HARNESS-ENGINEERING.md](../HARNESS-ENGINEERING.md). Skip this section only if the agent's
+work always fits one context window — and check that claim rather than assuming it.
+
+- [ ] There is an explicit list of units of work, written before the agent starts
+- [ ] **⚠** Completion is **computed from recorded state**, not asserted by the model
+- [ ] **⚠** Evidence is produced by something the model cannot edit — an exit code, a checker
+- [ ] A unit with no verification defined **fails** rather than passes
+- [ ] One unit of work per context window, enforced in code rather than requested in a prompt
+- [ ] The continuity file is written atomically, and a corrupt one raises rather than restarting
+- [ ] The continuity file does not duplicate what the environment already records
+- [ ] **⚠** Every bound is exercised by a test, **including no-progress**
+- [ ] Failures name the check that failed, not the budget that ran out
+
 ## Evaluation
 
 - [ ] **⚠** There is an eval set built from **real traffic**, not only synthetic cases
@@ -67,6 +82,17 @@ Items marked **⚠** are the ones that cause incidents when skipped.
 - [ ] Regression tests run on every prompt, model, or index change
 - [ ] Cost and latency are tracked alongside quality
 
+From [EVALUATION-ENGINEERING.md](../EVALUATION-ENGINEERING.md):
+
+- [ ] **⚠** At least one check reads **events**, not the answer — authorisation is an ordering
+      property and no output grader can see it
+- [ ] The eval harness imports nothing from the system under evaluation
+- [ ] Graders are not given each other's information
+- [ ] Severity is assigned deliberately, and warnings do not fail runs
+- [ ] **⚠** Every check has a case where it fires **alone** — the graders are mutation-tested
+- [ ] Every result records the prompt, model, and index versions that produced it
+- [ ] Boundary and integrity checks also run against unlabelled production traces
+
 ## Approval gates
 
 - [ ] The list of gated actions is explicit and agreed
@@ -74,6 +100,23 @@ Items marked **⚠** are the ones that cause incidents when skipped.
 - [ ] Approval prompts show what, to whom, why, and the effect
 - [ ] Gates are not so frequent that approval becomes reflexive
 - [ ] Full approval records are logged: proposal, validation, approver, outcome
+
+## Environment and blast radius
+
+From [ENVIRONMENT-ENGINEERING.md](../ENVIRONMENT-ENGINEERING.md). Every section above assumes
+its controls fire. This one prices the case where one does not.
+
+- [ ] **⚠** Every path that can reach a write effect is **enumerated** — not just the intended
+      one. A control with two enforcement points and one test has one enforcement point
+- [ ] Each boundary has a test that runs **without credentials**, so it runs everywhere
+- [ ] Each store has a documented direction it fails in — recoverable, or immutable
+- [ ] Credentials are scoped to the tools actually called, not the tools that exist
+- [ ] **⚠** Every cap states whether it is checked **before or after** the effect. A cap checked
+      after is an alarm; only a cap checked before bounds anything
+- [ ] Actions that can be retried are idempotent, and a test asserts it
+- [ ] **⚠** The recovery path exists **now**, and someone has run it end to end
+- [ ] What the sandbox does not model is written down, and each unmodelled thing has its own
+      check outside the sandbox
 
 ## Reliability
 
@@ -131,23 +174,34 @@ Items marked **⚠** are the ones that cause incidents when skipped.
 
 ---
 
-## The ten that matter most
+## The twelve that matter most
 
 If a review has time for only a subset:
 
 1. Every autonomous loop is bounded
 2. Every intermediate step returns a structured contract
 3. Read and write tools are separated; the model proposes, code decides
-4. Execution state is persisted and resumable
-5. Every external call has a timeout and a defined failure path
-6. Full traces are logged with prompt and model versions
-7. There is an eval set from real traffic that runs on every change
-8. Retrieved and user content cannot instruct or trigger writes
-9. PII is masked before leaving your boundary
-10. Tools hold least-privilege credentials enforced in infrastructure
+4. **Every path that can reach a write effect is enumerated, not just the intended one**
+5. Execution state is persisted and resumable
+6. **Completion is computed from recorded state, not asserted by the model**
+7. Every external call has a timeout and a defined failure path
+8. Full traces are logged with prompt and model versions
+9. There is an eval set from real traffic that runs on every change, and at least one check
+   reads events rather than the answer
+10. Retrieved and user content cannot instruct or trigger writes
+11. PII is masked before leaving your boundary
+12. Tools hold least-privilege credentials enforced in infrastructure
+
+**This was ten.** It became twelve when harness engineering and environment engineering got
+their own chapters, and items 4 and 6 are their load-bearing claims — the paths to an effect
+that nobody enumerated, and the completion nobody verified. Both were absent from this list
+while the folder documented them at length, which is the failure this list exists to prevent.
+Item 9 absorbed the trace-level requirement rather than becoming a thirteenth, because an eval
+suite that never reads a trace is not a second problem from having no eval suite.
 
 ---
 
 ## Related
 
 - [ARCHITECTURE-PATTERNS.md](../ARCHITECTURE-PATTERNS.md) · [BUILDING-BLOCKS.md](../BUILDING-BLOCKS.md) · [PRODUCTION-PRINCIPLES.md](../PRODUCTION-PRINCIPLES.md)
+- [CONTEXT-ENGINEERING.md](../CONTEXT-ENGINEERING.md) · [HARNESS-ENGINEERING.md](../HARNESS-ENGINEERING.md) · [EVALUATION-ENGINEERING.md](../EVALUATION-ENGINEERING.md) · [ENVIRONMENT-ENGINEERING.md](../ENVIRONMENT-ENGINEERING.md)

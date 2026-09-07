@@ -93,10 +93,15 @@ section saying what has to be decided first.
 | 57 | Add `EVALUATION-ENGINEERING.md` | Documentation | Medium | Done | The feedback edge had two examples and no chapter | 2026-10-06 |
 | 58 | Add `ENVIRONMENT-ENGINEERING.md` | Documentation | Medium | Done | Blast radius, failure direction, and the sandbox fidelity gap | 2026-10-06 |
 | 59 | Add the `second-path` example | Examples | Medium | Done | 16 tests, four mutations; the gate suite passes while the boundary is open | 2026-10-06 |
+| 60 | Cover harness and environment in the design review | Documentation | High | Done | The checklist ran for two chapters without covering either | 2026-09-13 |
+| 61 | Rewrite `ROADMAP.md` against the current tree | Documentation | Medium | Done | Was 5 weeks stale; named none of the four chapters | 2026-10-06 |
+| 62 | Add `budget-guard` to the root README tree | Documentation | Low | Done | 22 of 23 examples were listed | 2026-12-06 |
+| 63 | Diagram the hybrid Terraform tree | Documentation | Medium | Done | The only architecture document without one | 2026-10-06 |
+| 64 | Check documented counts against the tree | CI/CD | High | Done | 17 claims; found 10 stale numbers and caught 2 of its author's | 2026-09-13 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 59 tasks are now `Done`**, the last of
-them — 53 through 59 — on 2026-09-06.
+tree, and kept current as tasks have landed since. **All 64 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -2885,6 +2890,124 @@ the three-stage demonstration, ending with `reachable_writes` naming the tool th
 
 ---
 
+### Task 60 — Cover harness and environment in the design review
+
+**Goal.** Make [`checklists/design-review.md`](agentic-system-architecture/checklists/design-review.md)
+cover the folder it reviews.
+
+**Status: Done.** Two new sections, a strengthened evaluation section, and a reconciled priority
+list.
+
+The checklist had thirteen sections mapped to `BUILDING-BLOCKS` and `PRODUCTION-PRINCIPLES`, and
+**no section for harness engineering or environment engineering** — zero mentions of harness,
+environment, blast radius, or reversibility. Both chapters had existed for several tasks. So the
+document that says "run this before you build, and again before you ship" silently skipped half
+the disciplines the folder documents, which is precisely the failure this plan keeps naming: a
+check that looks authoritative and verifies nothing.
+
+Each chapter already ended in a checklist, so the material was written; it needed folding in. The
+evaluation section also predated `EVALUATION-ENGINEERING.md` and covered only the
+`BUILDING-BLOCKS` §5 material, so it gained the newer items — a check that reads events, graders
+not sharing information, severity design, every check firing alone, version provenance.
+
+**"The ten that matter most" became twelve**, and says so in the document rather than quietly
+renumbering. The two additions are the load-bearing claims of the two missing chapters: paths to
+a write effect that nobody enumerated, and completion nobody verified. Item 9 absorbed the
+trace-level requirement instead of becoming a thirteenth, because an eval suite that never reads
+a trace is not a separate problem from having no eval suite.
+
+**Verify.** All four chapters are now referenced from the checklist; 103 checkbox items across 15
+sections.
+
+---
+
+### Task 61 — Rewrite `ROADMAP.md` against the current tree
+
+**Goal.** Make the file a newcomer reads for direction describe the repository that exists.
+
+**Status: Done.** Last substantive touch was 2026-09-01, before the diagram work, the four
+architecture chapters, and tasks 46-59. It named none of the four chapters, described the main
+remaining work as "mostly documentation, governance, and community-facing improvements", and its
+status snapshot listed AWS, Azure and GCP while omitting Snowflake and the hybrid tree.
+
+The rewrite states the organising property first, carries a status table with counts taken from
+the tree rather than remembered, and pairs each chapter with its runnable counterpart — the thing
+worth protecting, since a chapter with no example drifts into assertion and an example with no
+chapter is a trick nobody can generalise from.
+
+It also adds **"What is deliberately not here"**, so three absences read as decisions rather than
+oversights: no IaC scanner, no `terraform plan` in CI, and no benchmark numbers.
+
+**Verify.** Every count in the status table matches the tree; `linkcheck.py` resolves every link.
+
+---
+
+### Task 63 — Diagram the hybrid Terraform tree
+
+**Goal.** Close the last diagram gap.
+
+**Status: Done.** [`docs/diagrams/terraform-hybrid-architecture.html`](diagrams/terraform-hybrid-architecture.html),
+its GIF, and the archify source beside the other 46.
+
+`infra/terraform-hybrid/ARCHITECTURE.md` was the only architecture document in the repository
+without a diagram, and unlike the others it had no mermaid block to convert — so the source was
+authored directly as archify JSON rather than ported, and `embed.py` did not apply.
+
+The diagram carries the document's actual claim rather than decorating it: one job per cloud, and
+the dashed lower half is the write path this POC deliberately does not deploy. Showing the absent
+path is the point — the document's own warning is that a production deployment must put writes
+behind the same approval executor as `hermes-agent`, and a diagram showing only what is deployed
+would quietly drop that.
+
+Validation needed two repairs: `variant` is not a component property at `schema_version: 1`, and
+the label on the write-path edge landed inside the orchestrator node until it was given explicit
+coordinates in the gap below it.
+
+**Verify.** 47 diagrams, 47 GIFs, 47 sources. No `ARCHITECTURE.md` or `architecture.md` in the
+tree lacks an embedded diagram.
+
+---
+
+### Task 64 — Check documented counts against the tree
+
+**Goal.** Stop the counts stated in prose from drifting away from the repository they describe.
+
+**Status: Done.** [`.github/scripts/docs_counts.py`](../.github/scripts/docs_counts.py), wired
+into the `docs` job beside `linkcheck.py`.
+
+This is the second recurrence. Commit `a2faa35` was titled "Fix eight stale claims found in
+full-repo sweep", and by this audit the README had drifted again: it described **twelve jobs**
+when `checks.yml` had fourteen, and **twelve examples** when there were twenty-three — including
+"nine of the twelve examples" have suites, when twenty of the twenty-three do. `CONTRIBUTING.md`
+still said "six of twelve examples" carry an empty `requirements.txt`. Hand-fixing a number
+resets the clock rather than stopping it, which is the argument every other script in
+`.github/scripts/` makes about its own subject.
+
+Seventeen claims are checked across `README.md`, `CONTRIBUTING.md`, and `ROADMAP.md`. Each is a
+regex with one capture group around the number; digits, unit words, tens words and hyphenated
+compounds up to ninety-nine are understood, because this repository writes small numbers as words
+in prose and digits in tables.
+A claim whose regex stops matching is a **failure, not a skip** — rewording the sentence is
+exactly the moment the number needs looking at again.
+
+Reading `checks.yml` is a narrow scan for keys at two spaces of indentation under `jobs:` rather
+than a YAML parse, because PyYAML would be the only dependency in a directory that has none.
+
+**It earned its place on the first run.** It failed immediately on `ROADMAP.md` claiming 46
+diagrams when the tree had 47 — a number stale by one commit, mine, from adding the hybrid
+diagram in task 63 and not updating the roadmap I had rewritten hours earlier.
+
+A second pass extended it over the infrastructure claims, and found three more: the README said
+`terraform validate` ran over **ten** environment roots when the matrix has thirteen, and that
+tflint walked **thirty** modules and **ten** roots when it walks forty-four and fourteen. Those
+three numbers differ on purpose — `validate` skips the hybrid POC, tflint does not — so the
+guard tracks them separately rather than as one "trees" count.
+
+**Verify.** `python3 .github/scripts/docs_counts.py .` — seventeen claims, all matching. Reverting
+any one number reproduces a failure naming the file, line, claimed value, and actual value.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -2936,6 +3059,8 @@ git status --short
 | 2026-09-06 | Added tasks 53-57: two red CI jobs, the CodeQL action pin, the docs-preview XSS fix, and the evaluation chapter | somesh-ghaturle |
 | 2026-09-06 | Added task 58: the environment engineering chapter, completing the four-chapter set | somesh-ghaturle |
 | 2026-09-06 | Added task 59: `second-path`, the runnable counterpart to the environment chapter | somesh-ghaturle |
+| 2026-09-06 | Added tasks 60-63: closed four gaps between what the docs claim and what the tree does | somesh-ghaturle |
+| 2026-09-06 | Added task 64: a CI check for documented counts, after the second recurrence of the same drift | somesh-ghaturle |
 
 ---
 

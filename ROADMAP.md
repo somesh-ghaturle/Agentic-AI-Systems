@@ -1,81 +1,113 @@
 # Roadmap
 
-This roadmap is intentionally practical: it describes where the repository is today, what it is optimized to teach, and what the next milestones look like without promising production-grade deployment work that the examples do not contain.
+Where the repository is, what it is optimised to teach, and what is worth doing next. It
+deliberately does not promise production deployment work the examples do not contain.
 
-## Current focus
+## What this repository is for
 
-The repository is centered on a small set of recurring ideas:
+One property organises everything here: **a state-changing action cannot reach production
+without a human approving that specific action.** The examples, the Terraform trees, the
+threat model, and the CI checks are all arguments for that property or tests of it.
 
-- A production agent must not reach a state-changing action without an explicit approval step tied to that action.
-- Small examples are the primary teaching mechanism; they are easier to copy, reason about, and test than large demo apps.
-- Infrastructure and policy examples should stay offline and deterministic where possible, especially in CI.
-- Security hardening is approached as a design problem: guardrails, approval boundaries, traceability, and evals matter more than a large external dependency graph.
+Two supporting commitments follow from it:
 
-## Near-term milestones
-
-### 1. Security and approval boundary examples
-
-Keep expanding the examples that demonstrate the write boundary, prompt-injection resistance, and approval review flow.
-
-Planned directions:
-- More red-team and bypass-phrase variants across examples
-- Clearer comparisons between naive models and guarded models
-- More examples of trace review and approval evidence extraction
-
-### 2. Governance and evidence quality
-
-Continue tightening the quality bar for docs, security notes, and infrastructure assumptions.
-
-Planned directions:
-- Keep every example and security policy claim cross-linked to test coverage
-- Improve the docs that explain how the repo draws the line between in-scope and out-of-scope issues
-- Keep operational assumptions explicit when credentials and cloud access are intentionally absent from CI
-
-### 3. Infrastructure clarity
-
-The Terraform trees remain the deployment counterpart to the architecture examples. They should stay understandable, deterministic, and easy to compare across clouds.
-
-Planned directions:
-- Document the differences between the three cloud trees without overclaiming parity
-- Keep policy-as-code and approval logic aligned with the repository's security model
-- Show where the repo is intentionally not a full production cloud deployment guide
-
-## Longer-term themes
-
-### Architecture learning
-
-The core teaching goal is to help readers build agentic systems that behave more like production software and less like chat wrappers.
-
-Likely work:
-- More explicit design patterns for tool contracts and memory boundaries
-- Better examples of evaluation as a service and agent tracing
-- More examples that make the approval boundary obvious in code and in event logs
-
-### Adoption and reuse
-
-The repo is designed to be copied into other projects. That means the most valuable future work is the work that makes it easier to adapt the patterns without losing the safety guarantees.
-
-Likely work:
-- clearer migration guidance for existing projects
-- more structured example summaries and “what this teaches” notes
-- better documentation for how to adopt only part of the architecture instead of the whole repo
+- **Small examples over demo applications.** Something you can read in one sitting, run with
+  no key, and copy into your own tree teaches more than a large app that only runs on a
+  machine configured like the author's.
+- **Offline and deterministic in CI.** No cloud credentials, no model calls, no network in the
+  default jobs. This constrains what CI can prove, and the gaps are named rather than papered
+  over — see [`ENVIRONMENT-ENGINEERING.md`](docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md) §4.
 
 ## Status snapshot
 
-The repository already includes:
+| Area | Where it stands |
+| --- | --- |
+| Examples | 23, stdlib-first, each with tests in `tests/` |
+| Tests | 367, running on both the 3.9 floor and current Python |
+| Architecture chapters | 4 disciplines — context, harness, evaluation, environment — plus patterns, building blocks, production principles |
+| Diagrams | 47 interactive HTML viewers, each embedded in its document as a GIF |
+| Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
+| CI | 14 jobs; CodeQL over Python and workflows on a schedule |
+| Decision logs | 5 ADRs |
+| Enhancement plan | 64 tasks, all `Done` |
 
-- the core approval-boundary architecture examples
-- the infrastructure trees for AWS, Azure, and GCP
-- security and governance documents
-- a CI posture built around offline validation and deterministic checks
+The enhancement plan is the detailed record; this file is the direction.
 
-The main remaining roadmap items are mostly documentation, governance, and community-facing improvements rather than large new architecture rewrites.
+## Where the work actually is now
 
-## Suggested next steps
+The four architecture chapters are the spine, and each one has runnable code behind it. That
+pairing is the thing to protect: a chapter with no example drifts into assertion, and an
+example with no chapter is a trick nobody can generalise from.
 
-1. Continue the queue of low-priority docs and community tasks in the enhancement plan.
+| Chapter | Runnable counterpart |
+|---|---|
+| [Context](docs/agentic-system-architecture/CONTEXT-ENGINEERING.md) | `context-compaction`, `context-overflow` |
+| [Harness](docs/agentic-system-architecture/HARNESS-ENGINEERING.md) | `harness-agent` |
+| [Evaluation](docs/agentic-system-architecture/EVALUATION-ENGINEERING.md) | `trace-eval`, `eval-red-teaming` |
+| [Environment](docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md) | `second-path`, `budget-guard`, `checkpoint-agent` |
+
+## Near-term
+
+### 1. Keep the chapters and the code in step
+
+The highest-value maintenance in this repository is not new material. It is noticing when a
+chapter and its example stop agreeing, or when a checklist stops covering a chapter — which
+already happened once: the design review ran for two chapters without covering either, while
+both were documented at length.
+
+- Every new claim in a chapter should be traceable to a test, or marked as directional
+- Every example should name the chapter it belongs to, and vice versa
+- `REFERENCES.md` should keep separating measured from directional, including for claims that
+  are this repository's own
+
+### 2. Security and approval boundary examples
+
+The area with the most room left, and the one most on-theme.
+
+- More red-team and bypass-phrase variants, and more comparisons between naive and guarded
+  paths that are honest about the naive one being reasonable-looking
+- More ways the boundary is lost that are *not* the gate being wrong — `second-path` covers a
+  second route to the effect, and `tool-discovery` covers a filter instead of a structure;
+  there are others
+- More trace review and approval-evidence extraction
+
+### 3. Infrastructure honesty
+
+The Terraform trees are the deployment counterpart to the architecture. They should stay
+comparable across clouds without overclaiming parity.
+
+- Document where the trees genuinely differ rather than smoothing it over
+- Keep policy-as-code aligned with the security model
+- Close the diagram gap: the hybrid tree is the only architecture document without one
+- Keep saying plainly where this stops being a production deployment guide
+
+## Longer-term
+
+### Adoption without losing the guarantees
+
+The repository is designed to be copied. The most valuable future work makes it easier to
+adopt *part* of it without silently dropping the property that makes it worth adopting.
+
+- Clearer guidance for taking one boundary into an existing codebase
+- Per-example "what this teaches, and what it does not" notes, which several examples have and
+  the rest should
+- Migration guidance that survives someone skipping a step
+
+### What is deliberately not here
+
+Recorded so the absence reads as a decision rather than an oversight:
+
+- **No IaC security scanner.** CodeQL has no Terraform analyser, and roughly half this
+  repository is `infra/`. Closing that needs Checkov, tfsec, or trivy, and is its own decision.
+- **No `terraform plan` in CI.** It needs cloud credentials, and the no-secrets constraint is
+  worth more than the extra coverage. The write-boundary suites read source instead.
+- **No benchmark numbers.** `trace-eval` shows a method over seven hand-written cases. It is
+  not a score worth quoting, and saying so is part of the point.
+
+## How to pick the next thing
+
+1. Prefer closing a gap between what a document claims and what the tree does over adding new
+   material. Those gaps are the failure this repository keeps naming.
 2. Extend the example set only when it teaches a distinct security or architecture property.
-3. Keep the examples small, standard-library-first, and test-backed so they remain easy to audit.
-4. Prefer explicit approval traces and safety checks over hidden runtime assumptions.
-
-This roadmap is designed to stay honest: it captures the trajectory of the repo without claiming that the examples are a fully managed production platform.
+3. Keep examples small, standard-library-first, and test-backed, so they stay auditable.
+4. Prefer explicit approval traces and boundary tests over runtime assumptions.

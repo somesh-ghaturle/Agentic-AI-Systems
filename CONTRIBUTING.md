@@ -32,8 +32,8 @@ tier sets the bar.
 
 ### Dependencies
 
-Six of twelve examples have an empty `requirements.txt` carrying only a comment explaining
-why. Match that. The question is not "would a framework be convenient here" but "is the
+Nine of the sixteen examples that ship a `requirements.txt` have an empty one, carrying only
+a comment explaining why. Match that. The question is not "would a framework be convenient here" but "is the
 framework the thing being demonstrated":
 
 - [graph-agent](examples/graph-agent/README.md) depends on LangGraph, because a graph example

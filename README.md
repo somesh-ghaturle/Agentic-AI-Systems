@@ -69,6 +69,7 @@ Agentic-AI-Systems/
 │   ├── eval-red-teaming/         prompt-injection probes against an approval gate
 │   ├── approval-gate-fuzzing/    prompt variants that try to bypass approval
 │   ├── harness-agent/            continuity across context windows
+│   ├── budget-guard/             a token budget checked before the spend, not after
 │   ├── multi-agent-debate/       several agents argue; none of them approves
 │   ├── checkpoint-agent/         resuming work after a crash, idempotently
 │   ├── e2e-agent/                tracing, audit, provenance over HTTP
@@ -228,25 +229,26 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 
 ## CI
 
-[`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, `tests/`, `docs/`, the root markdown files, `pyproject.toml`, or the workflow's own scripts — twelve jobs, checking:
+[`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, `tests/`, `docs/`, the root markdown files, `pyproject.toml`, or the workflow's own scripts — fourteen jobs, checking:
 
 - `terraform fmt -check` across all four trees, plus a provider-pin check that `terraform validate` cannot see
 - `ruff check` over all Python files, against the rules in `pyproject.toml` — the same command and the same verdict a contributor gets locally
-- `terraform validate` on each of the ten environment roots, as a matrix so one broken root does not hide the others
-- `tflint` over all thirty modules and ten roots — `validate` only ever sees a module through a root that calls it, which is why nothing reported that twelve Azure modules pinned no provider version
+- `terraform validate` on each of the thirteen environment roots, as a matrix so one broken root does not hide the others
+- `tflint` over all forty-four modules and fourteen roots — `validate` only ever sees a module through a root that calls it, which is why nothing reported that twelve Azure modules pinned no provider version
 - `checkov` over the trees, failing on any finding not skipped by name and with a reason in [`.checkov.yaml`](.checkov.yaml)
 - `conftest` over all four trees against the OPA policies in [`infra/policies/`](infra/policies/README.md), which check whether resources agree with each other — a content filter that nothing references is the case they exist for — plus the policies' own unit tests
 - Write-boundary tests for all four trees — stdlib `unittest` reading `.tf` files as text
 - Handler logic tests for the three trees that have handlers
 - Deployment package builds for the three trees that have packages
-- The example suites under `tests/` — nine of the twelve examples, via `unittest discover`; `langchain-agent`, `rag-langchain`, and `ray-orchestrator` have none
-- A syntax check over all twelve examples, including those three
+- The example suites under `tests/` — twenty of the twenty-three examples, via `unittest discover`; `langchain-agent`, `rag-langchain`, and `ray-orchestrator` have none
+- A syntax check over all twenty-three examples, including those three
 - A relative-link check over every markdown file, external URLs deliberately excluded
+- A check that the counts the documentation states match the counts the tree has, because a stale number in prose is invisible until someone acts on it
 - A gitleaks scan over the full git history rather than the tip commit, because a credential committed and later deleted is the case history scanning exists to catch
 
 Documentation used to run no checks at all. This repository is mostly markdown by volume and by purpose, and a documentation-only commit merged green until the path filters were widened to cover it — the miss that found was two links to a workflow that had been renamed.
 
-[`.github/workflows/example-deps.yml`](.github/workflows/example-deps.yml) runs only on changes under `examples/` or `tests/`. It installs each example's pinned `requirements.txt` and imports its entry modules — the six examples that carry dependencies, one matrix leg each. It has its own file because it has its own trigger: it downloads Torch, Ray, and FAISS, and has no business running when someone edits a Terraform module.
+[`.github/workflows/example-deps.yml`](.github/workflows/example-deps.yml) runs only on changes under `examples/` or `tests/`. It installs each example's pinned `requirements.txt` and imports its entry modules — the eight that carry dependencies, one matrix leg each. It has its own file because it has its own trigger: it downloads Torch, Ray, and FAISS, and has no business running when someone edits a Terraform module.
 
 That job exists because of a failure this repository actually had. Two LangChain examples imported an API the pinned version had already deleted, and CI stayed green — the suites did not cover those examples, and a syntax check parses rather than imports, so it happily accepts a module naming a package that no longer exists. A stale pin is invisible to every check that does not install the pin. [`.github/dependabot.yml`](.github/dependabot.yml) covers the other half: the syntax and import checks catch a pin that is *broken*, Dependabot catches one that is merely *old*.
 
