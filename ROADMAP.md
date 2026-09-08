@@ -22,14 +22,14 @@ Two supporting commitments follow from it:
 
 | Area | Where it stands |
 | --- | --- |
-| Examples | 23, stdlib-first, each with tests in `tests/` |
+| Examples | 24, stdlib-first, each with tests in `tests/` |
 | Tests | 367, running on both the 3.9 floor and current Python |
 | Architecture chapters | 4 disciplines — context, harness, evaluation, environment — plus patterns, building blocks, production principles |
 | Diagrams | 47 interactive HTML viewers, each embedded in its document as a GIF |
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
-| Enhancement plan | 70 tasks, all `Done` |
+| Enhancement plan | 71 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction.
 
@@ -44,7 +44,7 @@ example with no chapter is a trick nobody can generalise from.
 | [Context](docs/agentic-system-architecture/CONTEXT-ENGINEERING.md) | `context-compaction`, `context-overflow` |
 | [Harness](docs/agentic-system-architecture/HARNESS-ENGINEERING.md) | `harness-agent` |
 | [Evaluation](docs/agentic-system-architecture/EVALUATION-ENGINEERING.md) | `trace-eval`, `eval-red-teaming` |
-| [Environment](docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md) | `second-path`, `budget-guard`, `checkpoint-agent` |
+| [Environment](docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md) | `second-path`, `stale-referent`, `budget-guard`, `checkpoint-agent` |
 
 ## Near-term
 

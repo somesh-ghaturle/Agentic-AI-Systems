@@ -66,6 +66,11 @@ incident.
   tests assert that it does. That path is the subject, not a vulnerability. A route from the
   read-only orchestrator to a write tool in the **default** configuration is a real bug and is in
   scope, as is a `reachable_writes()` that fails to name a reachable write tool.
+- **`examples/stale-referent/`** — like `second-path`, it demonstrates a failure on purpose: the
+  unbound path is *supposed* to refund an amount the reviewer never approved, and its tests assert
+  that it does. That path is the subject, not a vulnerability. A `drift()` that fails to report a
+  fact the reviewer was shown, or an `execute_bound()` that runs while drift is non-empty, is a
+  real bug and is in scope.
 - **`examples/edge-agent/`, `examples/hermes-dashboard/`, and `examples/memory-agent/`** — these
   are offline proof-of-concept examples. Reports about a claimed security guarantee or an
   approval/state boundary that the implementation fails to enforce are in scope; ordinary
