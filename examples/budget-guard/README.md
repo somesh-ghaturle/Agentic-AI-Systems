@@ -33,3 +33,4 @@ This example makes no security claim. It reads from a simulated knowledge base, 
 - [PRODUCTION-PRINCIPLES.md](../../docs/agentic-system-architecture/PRODUCTION-PRINCIPLES.md) -- "Enforce strict token limits"
 - [ARCHITECTURE-PATTERNS.md](../../docs/agentic-system-architecture/ARCHITECTURE-PATTERNS.md) -- the autonomous loop pattern
 - [HARNESS-ENGINEERING.md](../../docs/agentic-system-architecture/HARNESS-ENGINEERING.md) -- "bounds you have not exercised are bounds you have not got"
+- [ENVIRONMENT-ENGINEERING.md](../../docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md) -- the chapter that names this a runnable counterpart: a cap checked before the spend rather than after

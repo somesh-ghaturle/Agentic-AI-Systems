@@ -86,6 +86,7 @@ Agentic-AI-Systems/
 │   ├── tool-discovery/           discovering and cataloging available tools
 │   ├── mcp-server/               an MCP tool server whose writes need an approval
 │   ├── second-path/              a correct gate, and the route that never reaches it
+│   ├── stale-referent/           the approved call, run against a world that moved
 │   └── hermes-dashboard/         FastAPI/WebSocket approval UX with React
 ├── docs/
 │   ├── agentic-system-architecture/   the six building blocks, as prose
@@ -240,8 +241,8 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 - Write-boundary tests for all four trees — stdlib `unittest` reading `.tf` files as text
 - Handler logic tests for the three trees that have handlers
 - Deployment package builds for the three trees that have packages
-- The example suites under `tests/` — twenty of the twenty-three examples, via `unittest discover`; `langchain-agent`, `rag-langchain`, and `ray-orchestrator` have none
-- A syntax check over all twenty-three examples, including those three
+- The example suites under `tests/` — twenty-one of the twenty-four examples, via `unittest discover`; `langchain-agent`, `rag-langchain`, and `ray-orchestrator` have none
+- A syntax check over all twenty-four examples, including those three
 - A relative-link check over every markdown file, external URLs deliberately excluded
 - A check that the counts the documentation states match the counts the tree has, because a stale number in prose is invisible until someone acts on it
 - A gitleaks scan over the full git history rather than the tip commit, because a credential committed and later deleted is the case history scanning exists to catch

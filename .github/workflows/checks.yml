@@ -573,6 +573,12 @@ jobs:
       - name: Documented counts match the tree
         run: python3 .github/scripts/docs_counts.py .
 
+      # The chapter/example pairing ROADMAP.md calls "the thing to protect", checked rather
+      # than asserted. It found seven drifts on its first run, five of them one-directional:
+      # a chapter naming a counterpart whose README had never pointed back.
+      - name: Chapters and their runnable counterparts agree
+        run: python3 .github/scripts/pairing.py .
+
   secret-scan:
     name: Secret scanning
     runs-on: ubuntu-latest

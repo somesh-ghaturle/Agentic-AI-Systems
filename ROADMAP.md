@@ -22,14 +22,14 @@ Two supporting commitments follow from it:
 
 | Area | Where it stands |
 | --- | --- |
-| Examples | 23, stdlib-first, each with tests in `tests/` |
+| Examples | 24, stdlib-first, each with tests in `tests/` |
 | Tests | 367, running on both the 3.9 floor and current Python |
 | Architecture chapters | 4 disciplines — context, harness, evaluation, environment — plus patterns, building blocks, production principles |
 | Diagrams | 47 interactive HTML viewers, each embedded in its document as a GIF |
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
-| Enhancement plan | 70 tasks, all `Done` |
+| Enhancement plan | 72 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction.
 
@@ -44,7 +44,7 @@ example with no chapter is a trick nobody can generalise from.
 | [Context](docs/agentic-system-architecture/CONTEXT-ENGINEERING.md) | `context-compaction`, `context-overflow` |
 | [Harness](docs/agentic-system-architecture/HARNESS-ENGINEERING.md) | `harness-agent` |
 | [Evaluation](docs/agentic-system-architecture/EVALUATION-ENGINEERING.md) | `trace-eval`, `eval-red-teaming` |
-| [Environment](docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md) | `second-path`, `budget-guard`, `checkpoint-agent` |
+| [Environment](docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md) | `second-path`, `stale-referent`, `budget-guard`, `checkpoint-agent`, `approval-gate-fuzzing` |
 
 ## Near-term
 
@@ -56,7 +56,8 @@ already happened once: the design review ran for two chapters without covering e
 both were documented at length.
 
 - Every new claim in a chapter should be traceable to a test, or marked as directional
-- Every example should name the chapter it belongs to, and vice versa
+- Every example a chapter names should name it back — checked by
+  [`pairing.py`](.github/scripts/pairing.py) since task 72, not asked for in prose
 - `REFERENCES.md` should keep separating measured from directional, including for claims that
   are this repository's own
 
@@ -78,7 +79,6 @@ comparable across clouds without overclaiming parity.
 
 - Document where the trees genuinely differ rather than smoothing it over
 - Keep policy-as-code aligned with the security model
-- Close the diagram gap: the hybrid tree is the only architecture document without one
 - Keep saying plainly where this stops being a production deployment guide
 
 ## Longer-term

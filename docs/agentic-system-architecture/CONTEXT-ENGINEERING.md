@@ -9,7 +9,8 @@ The reframing is the useful part: the question stops being *what wording works* 
 *what configuration of context makes the desired behaviour likely*.
 
 Primary source: [Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents).
-Runnable counterpart: [context-compaction](../../examples/context-compaction/README.md).
+Runnable counterparts: [context-compaction](../../examples/context-compaction/README.md),
+[context-overflow](../../examples/context-overflow/README.md).
 
 ---
 
