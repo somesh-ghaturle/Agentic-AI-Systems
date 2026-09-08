@@ -168,7 +168,10 @@ resource "azurerm_service_plan" "tools" {
 }
 
 resource "azurerm_linux_function_app" "tool" {
-  for_each = var.tools
+  # The route into the VNet. Null on Y1 and in dev; on EP1 this is what makes the private
+  # endpoint on AI Search reachable rather than merely present.
+  virtual_network_subnet_id = var.virtual_network_subnet_id
+  for_each                  = var.tools
 
   name                = "${var.name_prefix}-tool-${each.key}"
   resource_group_name = var.resource_group_name

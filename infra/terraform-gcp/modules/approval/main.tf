@@ -200,11 +200,25 @@ resource "google_cloudfunctions2_function" "validator" {
       var.trace_log_name == null ? {} : { TRACE_LOG_NAME = var.trace_log_name },
     )
 
+    # The route into a VPC. Null leaves the function on the Google-managed egress path, and
+    # the ingress precondition below is what stops the half-configured combination that
+    # the ingress_settings description has warned about all along: internal-only ingress
+    # with no connector is a function nothing can call.
+    vpc_connector                 = var.vpc_connector
+    vpc_connector_egress_settings = var.vpc_connector == null ? null : var.vpc_connector_egress_settings
+
     ingress_settings               = var.ingress_settings
     all_traffic_on_latest_revision = true
   }
 
   labels = merge(var.labels, { component = "approval-validator", layer = "approval" })
+
+  lifecycle {
+    precondition {
+      condition     = var.ingress_settings != "ALLOW_INTERNAL_ONLY" || var.vpc_connector != null
+      error_message = "ingress_settings = ALLOW_INTERNAL_ONLY requires vpc_connector. Without one, Workflows cannot reach the function and the orchestrator stops at the first tool call — a failure that looks like a broken agent rather than a network setting."
+    }
+  }
 }
 
 # The orchestrator asks for validation. That is the whole of its involvement in the write
@@ -268,11 +282,25 @@ resource "google_cloudfunctions2_function" "executor" {
       var.trace_log_name == null ? {} : { TRACE_LOG_NAME = var.trace_log_name },
     )
 
+    # The route into a VPC. Null leaves the function on the Google-managed egress path, and
+    # the ingress precondition below is what stops the half-configured combination that
+    # the ingress_settings description has warned about all along: internal-only ingress
+    # with no connector is a function nothing can call.
+    vpc_connector                 = var.vpc_connector
+    vpc_connector_egress_settings = var.vpc_connector == null ? null : var.vpc_connector_egress_settings
+
     ingress_settings               = var.ingress_settings
     all_traffic_on_latest_revision = true
   }
 
   labels = merge(var.labels, { component = "approval-executor", layer = "approval" })
+
+  lifecycle {
+    precondition {
+      condition     = var.ingress_settings != "ALLOW_INTERNAL_ONLY" || var.vpc_connector != null
+      error_message = "ingress_settings = ALLOW_INTERNAL_ONLY requires vpc_connector. Without one, Workflows cannot reach the function and the orchestrator stops at the first tool call — a failure that looks like a broken agent rather than a network setting."
+    }
+  }
 }
 
 # Approvers resolve approvals. Nobody else can reach the executor — notably not the

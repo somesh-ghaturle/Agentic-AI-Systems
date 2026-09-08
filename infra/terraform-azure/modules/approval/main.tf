@@ -306,7 +306,10 @@ locals {
 }
 
 resource "azurerm_linux_function_app" "approval" {
-  for_each = local.functions
+  # The route into the VNet. Null on Y1 and in dev; on EP1 this is what makes the private
+  # endpoint on AI Search reachable rather than merely present.
+  virtual_network_subnet_id = var.virtual_network_subnet_id
+  for_each                  = local.functions
 
   name                = "${var.name_prefix}-approval-${each.key}"
   resource_group_name = var.resource_group_name

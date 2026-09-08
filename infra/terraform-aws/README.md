@@ -73,15 +73,19 @@ knowledge collection and logs execution data; prod does neither. Staging turns t
 leaves Object Lock, 7-year retention and the 30-day KMS window to prod, so it stays
 destroyable. See the header of `envs/staging/main.tf`.
 
-**The VPC-only collection is declared, not exercised.** Staging and prod set
+**The VPC-only collection is now exercised.** Staging and prod set
 `allow_public_access = false`, which admits traffic to the knowledge collection only through
-its VPC endpoint — but no Lambda in this tree has a `vpc_config`, so the retrieve tool has no
-route to that endpoint and a query fails at the network layer before the data policy is read.
-The absence is deliberate and tree-wide: [CHOOSING-A-TREE.md](../CHOOSING-A-TREE.md) section 4
-records it for AWS, GCP and Azure alike, and [.checkov.yaml](../../.checkov.yaml) skips
-`CKV_AWS_117` with the reasoning. Putting the handlers in the VPC is the first change a real
-deployment makes, and it arrives with its own egress bill — NAT or interface endpoints for
-Bedrock, DynamoDB, S3 and CloudWatch Logs.
+its VPC endpoint, and [modules/networking/](modules/networking/) supplies what makes that
+reachable: the handler and endpoint security groups, a gateway endpoint for DynamoDB, and
+interface endpoints for `bedrock-runtime`, `logs`, `lambda` and `states`. The three
+Lambda-bearing modules attach to the subnets through a `dynamic "vpc_config"`, and each grants
+`AWSLambdaVPCAccessExecutionRole` alongside — Lambda builds the ENI with the function's own
+role, so without it the function stalls in `Pending` and fails with an error naming the subnet.
+
+**There is no NAT gateway, deliberately.** A handler that calls a service missing from
+`interface_services` fails as a timeout rather than reaching the internet, which is the point:
+one list, in one place, of everything these functions may talk to. Dev supplies no subnets and
+stays on the Lambda-managed network, so it remains deployable with no VPC at all.
 
 **Where the model layer lives.** AWS has no `model-integration/` module, unlike the Azure
 and GCP trees. Bedrock model access and the guardrail are declared in `modules/security/`,

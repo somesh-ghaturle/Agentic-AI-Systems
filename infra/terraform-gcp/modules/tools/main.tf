@@ -149,6 +149,13 @@ resource "google_cloudfunctions2_function" "tool" {
     # Workflows unless the call is routed through a VPC connector, and a network control
     # that forces a VPC into an otherwise serverless tree is a poor trade for defence in
     # depth that IAM already provides.
+    # The route into a VPC. Null leaves the function on the Google-managed egress path, and
+    # the ingress precondition below is what stops the half-configured combination that
+    # the ingress_settings description has warned about all along: internal-only ingress
+    # with no connector is a function nothing can call.
+    vpc_connector                 = var.vpc_connector
+    vpc_connector_egress_settings = var.vpc_connector == null ? null : var.vpc_connector_egress_settings
+
     ingress_settings               = var.ingress_settings
     all_traffic_on_latest_revision = true
   }
@@ -158,6 +165,13 @@ resource "google_cloudfunctions2_function" "tool" {
     layer       = "tool"
     tool-access = each.value.access
   })
+
+  lifecycle {
+    precondition {
+      condition     = var.ingress_settings != "ALLOW_INTERNAL_ONLY" || var.vpc_connector != null
+      error_message = "ingress_settings = ALLOW_INTERNAL_ONLY requires vpc_connector. Without one, Workflows cannot reach the function and the orchestrator stops at the first tool call — a failure that looks like a broken agent rather than a network setting."
+    }
+  }
 }
 
 # ---------------------------------------------------------------------------

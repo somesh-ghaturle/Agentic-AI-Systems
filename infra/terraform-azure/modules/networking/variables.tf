@@ -36,3 +36,9 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "integration_subnet_prefix" {
+  description = "Address prefix for the delegated subnet the Function Apps integrate into. Separate from subnet_prefix because a subnet delegated to Microsoft.Web/serverFarms can hold nothing else, private endpoints included."
+  type        = string
+  default     = "10.0.2.0/24"
+}

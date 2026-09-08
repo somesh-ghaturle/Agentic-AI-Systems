@@ -25,6 +25,11 @@ terraform {
   }
 }
 
+locals {
+  # Subnets are the switch: supplying them is what moves the handlers onto the VPC.
+  vpc_attached = length(var.subnet_ids) > 0
+}
+
 
 # ---------------------------------------------------------------------------
 # Audit record — "Log the full record: proposal, validation result, who approved,
@@ -147,6 +152,26 @@ resource "aws_lambda_function" "validator" {
     )
   }
 
+  # Attaching a function to a VPC is not a flag, it is a different network: the handler
+  # loses the Lambda-managed route to public AWS endpoints and can reach only what the
+  # subnets route to. `modules/networking` is what makes that a working set rather than a
+  # dead end, and the precondition below refuses the half-configured case where subnets
+  # were supplied and security groups were not.
+  dynamic "vpc_config" {
+    for_each = local.vpc_attached ? [1] : []
+    content {
+      subnet_ids         = var.subnet_ids
+      security_group_ids = var.security_group_ids
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(var.subnet_ids) == 0 || length(var.security_group_ids) > 0
+      error_message = "security_group_ids is required when subnet_ids is set. A VPC-attached function with no security group gets the VPC default group, which permits all egress — the opposite of why it was put in the VPC."
+    }
+  }
+
   tracing_config {
     mode = "Active"
   }
@@ -195,6 +220,26 @@ resource "aws_lambda_function" "executor" {
       },
       var.trace_log_group_name == null ? {} : { TRACE_LOG_GROUP = var.trace_log_group_name },
     )
+  }
+
+  # Attaching a function to a VPC is not a flag, it is a different network: the handler
+  # loses the Lambda-managed route to public AWS endpoints and can reach only what the
+  # subnets route to. `modules/networking` is what makes that a working set rather than a
+  # dead end, and the precondition below refuses the half-configured case where subnets
+  # were supplied and security groups were not.
+  dynamic "vpc_config" {
+    for_each = local.vpc_attached ? [1] : []
+    content {
+      subnet_ids         = var.subnet_ids
+      security_group_ids = var.security_group_ids
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(var.subnet_ids) == 0 || length(var.security_group_ids) > 0
+      error_message = "security_group_ids is required when subnet_ids is set. A VPC-attached function with no security group gets the VPC default group, which permits all egress — the opposite of why it was put in the VPC."
+    }
   }
 
   tracing_config {

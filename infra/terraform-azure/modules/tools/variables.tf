@@ -154,3 +154,9 @@ variable "soft_delete_retention_days" {
     error_message = "soft_delete_retention_days must be between 1 and 365."
   }
 }
+
+variable "virtual_network_subnet_id" {
+  description = "Delegated subnet for VNet integration, from modules/networking. Null leaves the app on the public network, which is the dev posture and the only option on a Y1 plan. Setting it is what gives the handlers a route to the private endpoints."
+  type        = string
+  default     = null
+}

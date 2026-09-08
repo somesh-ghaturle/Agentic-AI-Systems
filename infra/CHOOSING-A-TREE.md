@@ -143,9 +143,9 @@ unfinished. `MODULES.md` catalogues all of them; this is only what is *absent* a
 | `approval`, `archive`, `knowledge`, `observability`, `orchestration`, `security`, `state`, `tools` | ✅ | ✅ | ✅ | The eight every tree has |
 | `identity` | — | ✅ | ✅ | AWS distributes it: each module declares the roles it needs, and the env roots consume them as outputs — `module.tools.tool_role_arns_by_name`. (The AWS `locals` do construct two ARNs, but those are a state machine and the approval executor, breaking a dependency cycle, not identities.) GCP service account emails are deterministic and could be constructed the same way, but GCP accepts IAM bindings to service accounts that do not exist, so a constructed email would be correct and unverified |
 | `model-integration` | — | ✅ | ✅ | AWS has none — its Bedrock guardrail is a security control and lives in `modules/security` |
-| `networking` | — | ✅ | — | Azure only, and load-bearing for the whole tree: it declares the **resource group** every other module takes as `module.networking.resource_group_name`, plus a VNet and subnet used by exactly one thing — an optional private endpoint on AI Search in prod and staging |
+| `networking` | ✅ | ✅ | — | Two modules with the same name and different jobs. Azure's is load-bearing for the whole tree: it declares the **resource group** every other module takes as `module.networking.resource_group_name`, plus the VNet, the private-endpoint subnet and the delegated integration subnet. AWS's creates no network at all — it takes `vpc_id` and `subnet_ids` and declares only the endpoints and security groups the handlers need. GCP has none: its connector is supplied, not built |
 | `entra-audit` | — | ✅ | — | Azure only, and it exists *because* the boundary there is one lock |
-| **Total** | **8** | **12** | **10** | Thirty of the repository's forty-four modules. Snowflake's ten are §0's subject, and the hybrid tree's four are below |
+| **Total** | **9** | **12** | **10** | Thirty-one of the repository's forty-five modules. Snowflake's ten are §0's subject, and the hybrid tree's four are below |
 
 Environment roots: AWS `dev`/`staging`/`prod`, GCP `dev`/`staging`/`prod`, Azure the same plus
 `envs/tenant` — a fourth root because the Entra audit alert it applies is tenant-scoped, and two
@@ -160,18 +160,26 @@ without making a cloud call, and it is deliberately not comparable to the four t
 there is no staging, no prod, and no write boundary suite. Read it as a sketch of what
 splitting an agent across clouds costs, not as a fourth option in this table.
 
-**None of the three ships private networking for the handlers.** No AWS Lambda has a
-`vpc_config`, no GCP function has a VPC connector, and Azure's Function Apps are not
-VNet-integrated even on EP1. Every handler is reached over a public endpoint and authorized by
-identity. That is a deliberate choice for a reference deployment, recorded with its reasoning in
-[`.checkov.yaml`](../.checkov.yaml), and it is the first thing to change for production.
+**All three now ship private networking for the handlers, and they ship it differently.** This
+used to read "none of the three", and the difference between the three shapes is worth more than
+the fact that the gap is closed.
 
-**That transition is not documented in this repository.** It is a different deployment — private
-endpoints, private DNS zones, NAT or interface endpoints for every service the handlers call —
-and none of the three trees ships it. The nearest thing here is the note above the network policy
-in [`terraform-aws/modules/knowledge/main.tf`](terraform-aws/modules/knowledge/main.tf), which
-works through one concrete consequence: prod locks the knowledge collection to a VPC endpoint
-that no handler can reach, so the strict setting is declared rather than exercised.
+| | How a handler joins the network | What it costs to leave on |
+|---|---|---|
+| **AWS** | `vpc_config` on every Lambda, fed by [`modules/networking`](terraform-aws/modules/networking/) — two security groups, a free gateway endpoint for DynamoDB, interface endpoints for the four services the handlers call | About $7 per endpoint per AZ per month. No NAT gateway, so a service missing from `interface_services` fails as a timeout rather than escaping to the internet |
+| **Azure** | `virtual_network_subnet_id` on every Function App, into a subnet delegated to `Microsoft.Web/serverFarms` — a second subnet, because a delegated one holds nothing else | The EP1 plan. **Y1 has no VNet integration at any price**, which is why dev does not wire it and staging follows its own SKU |
+| **GCP** | `vpc_connector` on every function, with a precondition making `ALLOW_INTERNAL_ONLY` require one — the trap the `ingress_settings` description has always named | Nothing, until you supply a connector. GCP stays VPC-free by default, and the Vertex index endpoint stays public |
+
+None of the three **creates** a VPC. All three take the network as an input, the way
+`modules/knowledge` always took `vpc_id`, because an organisation running this already has one
+with routing, flow logs and an address plan. Dev in every tree stays on the managed network and
+deployable with no VPC at all.
+
+What remains a deliberate absence is everything past the handlers: no private DNS zones are
+created, Azure leaves Cosmos DB, Key Vault and Service Bus on public endpoints with identity as
+the boundary, and GCP's Vertex index endpoint is still `public_endpoint_enabled = true` with the
+reason next to it. [`.checkov.yaml`](../.checkov.yaml) records which of those are skipped and
+why.
 
 ---
 
@@ -237,10 +245,19 @@ done
 # §4 — environment roots, including Azure's fourth
 ls -d infra/terraform-*/envs/*/
 
-# §4 — no handler in any tree has private networking
-grep -rn "vpc_config" infra/terraform-aws/modules/                       # no matches
-grep -rn "vpc_connector\|vpc_access" infra/terraform-gcp/modules/        # no matches
-grep -rn "virtual_network_subnet_id" infra/terraform-azure/modules/      # knowledge only
+# §4 — every tree can put its handlers on the network, by three different mechanisms
+# knowledge appears in the AWS and Azure lists because its header explains the pairing,
+# not because it declares a handler. The guards below read past comments; grep does not.
+grep -rln "vpc_config" infra/terraform-aws/modules/          # tools, approval, observability, knowledge
+grep -rln "vpc_connector" infra/terraform-gcp/modules/       # tools, approval
+grep -rln "virtual_network_subnet_id" infra/terraform-azure/modules/  # those three, plus networking and knowledge
+
+# §4 — and none of the three creates the network it joins
+grep -rn "resource \"aws_vpc\"\|resource \"google_compute_network\"" infra/  # no matches
+
+# §4 — the guards that keep each pair together
+python3 -m unittest discover -s infra/terraform-aws/tests
+python3 -m unittest discover -s infra/terraform-azure/tests
 
 # §5 — the GCP index endpoint floor, and the Azure plan SKUs
 grep -rn "min_replica_count" infra/terraform-gcp/envs/*/main.tf

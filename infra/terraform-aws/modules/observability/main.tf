@@ -18,6 +18,11 @@ terraform {
   }
 }
 
+locals {
+  # Subnets are the switch: supplying them is what moves the handlers onto the VPC.
+  vpc_attached = length(var.subnet_ids) > 0
+}
+
 resource "aws_cloudwatch_log_group" "traces" {
   name              = "/agentic/${var.name_prefix}/traces"
   retention_in_days = var.log_retention_days
@@ -168,6 +173,26 @@ resource "aws_lambda_function" "trace_emitter" {
   # Active, matching the tool and approval Lambdas. This one was the exception, and being
   # the exception matters here more than elsewhere: a trace emitter that is itself absent
   # from the trace is the one gap you notice last, because everything it writes looks fine.
+  # Attaching a function to a VPC is not a flag, it is a different network: the handler
+  # loses the Lambda-managed route to public AWS endpoints and can reach only what the
+  # subnets route to. `modules/networking` is what makes that a working set rather than a
+  # dead end, and the precondition below refuses the half-configured case where subnets
+  # were supplied and security groups were not.
+  dynamic "vpc_config" {
+    for_each = local.vpc_attached ? [1] : []
+    content {
+      subnet_ids         = var.subnet_ids
+      security_group_ids = var.security_group_ids
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(var.subnet_ids) == 0 || length(var.security_group_ids) > 0
+      error_message = "security_group_ids is required when subnet_ids is set. A VPC-attached function with no security group gets the VPC default group, which permits all egress — the opposite of why it was put in the VPC."
+    }
+  }
+
   tracing_config {
     mode = "Active"
   }
@@ -384,4 +409,17 @@ resource "aws_cloudwatch_metric_alarm" "executions_timing_out" {
   treat_missing_data = "notBreaching"
 
   tags = var.tags
+}
+
+# Lambda creates an ENI per function per subnet, and it does that with the *function's*
+# execution role rather than a service role of its own. Without these permissions the
+# attachment stalls the function in `Pending` and then fails invocations with a subnet or
+# ENI-limit error that names nothing about IAM. It is the most common way a first VPC
+# attachment goes wrong, so it is attached from the same `local.vpc_attached` switch that
+# does the attaching.
+resource "aws_iam_role_policy_attachment" "trace_emitter_vpc_access" {
+  count = local.vpc_attached && var.trace_emitter != null ? 1 : 0
+
+  role       = aws_iam_role.trace_emitter[0].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }

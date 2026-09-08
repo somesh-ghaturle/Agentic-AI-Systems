@@ -195,7 +195,10 @@ resource "azurerm_service_plan" "observability" {
 }
 
 resource "azurerm_linux_function_app" "trace_emitter" {
-  count = var.trace_emitter == null ? 0 : 1
+  # The route into the VNet. Null on Y1 and in dev; on EP1 this is what makes the private
+  # endpoint on AI Search reachable rather than merely present.
+  virtual_network_subnet_id = var.virtual_network_subnet_id
+  count                     = var.trace_emitter == null ? 0 : 1
 
   name                = "${var.name_prefix}-trace-emitter"
   resource_group_name = var.resource_group_name

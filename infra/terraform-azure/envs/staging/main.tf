@@ -309,6 +309,12 @@ module "tools" {
   storage_shared_access_key_enabled = false
 
   tags = local.tags
+  # Y1 has no VNet integration at any price, so staging follows its own SKU rather than
+  # assuming EP1. When it is Y1 this is null and the apps stay on the public network — the
+  # same posture as dev, and the reason staging cannot rehearse the private path on the
+  # cheap plan.
+  virtual_network_subnet_id = var.function_service_plan_sku == "Y1" ? null : module.networking.integration_subnet_id
+
 }
 
 module "approval" {
@@ -363,6 +369,12 @@ module "approval" {
   storage_shared_access_key_enabled = false
 
   tags = local.tags
+  # Y1 has no VNet integration at any price, so staging follows its own SKU rather than
+  # assuming EP1. When it is Y1 this is null and the apps stay on the public network — the
+  # same posture as dev, and the reason staging cannot rehearse the private path on the
+  # cheap plan.
+  virtual_network_subnet_id = var.function_service_plan_sku == "Y1" ? null : module.networking.integration_subnet_id
+
 }
 
 module "observability" {
@@ -405,6 +417,12 @@ module "observability" {
   alert_webhook_receivers = var.alert_webhook_receivers
 
   tags = local.tags
+  # Y1 has no VNet integration at any price, so staging follows its own SKU rather than
+  # assuming EP1. When it is Y1 this is null and the apps stay on the public network — the
+  # same posture as dev, and the reason staging cannot rehearse the private path on the
+  # cheap plan.
+  virtual_network_subnet_id = var.function_service_plan_sku == "Y1" ? null : module.networking.integration_subnet_id
+
 }
 
 module "orchestration" {

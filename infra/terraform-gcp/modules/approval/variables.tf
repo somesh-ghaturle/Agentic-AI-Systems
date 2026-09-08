@@ -194,3 +194,20 @@ variable "labels" {
   type        = map(string)
   default     = {}
 }
+
+variable "vpc_connector" {
+  description = "Serverless VPC Access connector, by name or self-link, from a network you already run. Null keeps the functions on the Google-managed egress path, which is the default posture here. Setting it is what makes ALLOW_INTERNAL_ONLY usable and what gives the handlers a route to private addresses."
+  type        = string
+  default     = null
+}
+
+variable "vpc_connector_egress_settings" {
+  description = "Which traffic takes the connector. PRIVATE_RANGES_ONLY sends only RFC1918 traffic through it and leaves Google APIs on the managed path, which is the cheaper default; ALL_TRAFFIC routes everything and is what a deployment with egress controls at the VPC edge wants. Ignored when vpc_connector is null."
+  type        = string
+  default     = "PRIVATE_RANGES_ONLY"
+
+  validation {
+    condition     = contains(["PRIVATE_RANGES_ONLY", "ALL_TRAFFIC"], var.vpc_connector_egress_settings)
+    error_message = "vpc_connector_egress_settings must be PRIVATE_RANGES_ONLY or ALL_TRAFFIC."
+  }
+}
