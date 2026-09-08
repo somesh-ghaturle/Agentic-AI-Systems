@@ -106,10 +106,11 @@ section saying what has to be decided first.
 | 70 | Say that the IaC scanner exists, and re-measure it | Documentation | High | Done | Four documents called it absent or open while it had run on every PR since 2026-08-23 | 2026-09-08 |
 | 71 | Add the `stale-referent` example | Examples | Medium | Done | The approved call and the executed call are identical; the world they name is not | 2026-09-08 |
 | 72 | Check the chapter/example pairing instead of asking for it | CI/CD | High | Done | Seven drifts on the first run, five of them a chapter naming an example that never pointed back | 2026-09-08 |
+| 73 | Complete the example index, and guard it | Documentation | High | Done | The README listed 17 of 24; every boundary example added recently was missing | 2026-09-08 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 72 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 72 on 2026-09-08.
+tree, and kept current as tasks have landed since. **All 73 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 73 on 2026-09-08.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3380,6 +3381,34 @@ linking back, and matching the ROADMAP table.
 
 ---
 
+### Task 73 — Complete the example index, and guard it
+
+**Goal.** Task 72 deliberately did not require every example to belong to a chapter, because half
+of them should not. That left the other half with nothing said about them at all. This is the
+complement: an example no chapter claims must still be findable, with a line saying what it shows.
+
+**Status: Done.** Seven examples added to README.md's "Runnable examples" index, and a second
+check in [`pairing.py`](../.github/scripts/pairing.py).
+
+**The index had drifted to seventeen of twenty-four.** The missing seven were `second-path`,
+`stale-referent`, `budget-guard`, `checkpoint-agent`, `approval-gate-fuzzing`, `eval-red-teaming`
+and `context-overflow` — which is to say every boundary example added in the recent stretch, plus
+one context example. The examples arguing this repository's central claim were the ones a reader
+browsing the README could not find. Nothing caught it because the counts guard checks how many
+examples exist, not whether the prose names them.
+
+**Six of them are now a group rather than a list.** "Boundary and bounds — each takes one control
+that is correct and shows what it does not cover" is the honest description of what
+`second-path`, `stale-referent`, `budget-guard`, `checkpoint-agent`, `approval-gate-fuzzing` and
+`eval-red-teaming` have in common, and it is the same sentence the architecture chapters make.
+
+**Mutation tested, two breaks, both caught.** A new example directory nobody indexed fails, and
+an index entry that stops pointing at a real example fails.
+
+**Verify.** `python3 .github/scripts/pairing.py .` — 4 chapters, 10 pairings, 24 examples indexed.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -3441,6 +3470,7 @@ git status --short
 | 2026-09-08 | Added task 70: the IaC scanner was documented as absent for two weeks while running on every PR | somesh-ghaturle |
 | 2026-09-08 | Added task 71: `stale-referent`, the third way a correct gate stops mattering | somesh-ghaturle |
 | 2026-09-08 | Added task 72: the chapter/example pairing is checked in CI; seven drifts fixed | somesh-ghaturle |
+| 2026-09-08 | Added task 73: the README indexed 17 of 24 examples; completed and guarded | somesh-ghaturle |
 
 ---
 
