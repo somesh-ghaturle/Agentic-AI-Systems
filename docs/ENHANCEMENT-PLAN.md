@@ -100,10 +100,11 @@ section saying what has to be decided first.
 | 64 | Check documented counts against the tree | CI/CD | High | Done | 17 claims; found 10 stale numbers and caught 2 of its author's | 2026-09-13 |
 | 65 | State the VPC-only collection's reachability gap | Documentation | Medium | Done | Prod locks the collection to an endpoint no handler can reach | 2026-09-07 |
 | 66 | Correct the module chart and carry the reachability guard to Azure | Documentation | Medium | Done | Two wrong notes, a missing fifth tree, and the same gap one variable away in Azure | 2026-09-07 |
+| 67 | Fix the red `lint` job on `main` | CI/CD | High | Done | Four ruff findings in the two guard suites tasks 65 and 66 added | 2026-09-08 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 66 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, and 65 and 66 on 2026-09-07.
+tree, and kept current as tasks have landed since. **All 67 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 on 2026-09-08.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3098,6 +3099,37 @@ new. `grep -rn "virtual_network_subnet_id" infra/terraform-azure/` returns nothi
 
 ---
 
+### Task 67 — Fix the red `lint` job on `main`
+
+**Goal.** Get `checks` green again after tasks 65 and 66 turned it red.
+
+**Status: Done.** Four ruff findings in
+[`infra/terraform-aws/tests/test_knowledge_reachability.py`](../infra/terraform-aws/tests/test_knowledge_reachability.py)
+and [`infra/terraform-azure/tests/test_knowledge_reachability.py`](../infra/terraform-azure/tests/test_knowledge_reachability.py):
+two `UP032` (`.format` calls that should be f-strings) and two `SIM115` (`open()` outside a
+context manager).
+
+This is the same failure as task 53 and it happened the same way. Both suites were run before
+committing — `python3 -m unittest discover` on all four trees, twice, plus mutation tests — and
+`ruff` was not, because the change read as documentation with two test files attached. The `lint`
+job lints everything, `tests/` and `.github/scripts/` included, so "mostly docs" is not a category
+CI recognises.
+
+The `SIM115` fix is the more useful of the two. The Azure suite was calling
+`strip_comments_preserving_lines(open(path).read())` inside a comprehension, leaking a file handle
+per `.tf` file in the tree; it now has a small `read()` helper with a `with` block, which is what
+the AWS suite already borrowed from its neighbour. The tree's own helper module does not export
+one, and that asymmetry is why it was written inline the first time.
+
+Both suites still pass and both mutation checks still fail as designed — the f-string arguments
+are evaluated when the assertion runs, so a broken interpolation would fail every run rather than
+only the failing one.
+
+**Verify.** `ruff check .` — all checks passed, on the pinned `ruff==0.16.4` the workflow installs.
+`python3 -m unittest discover -s infra/terraform-aws/tests` and the Azure equivalent — 13 and 5.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -3153,6 +3185,7 @@ git status --short
 | 2026-09-06 | Added task 64: a CI check for documented counts, after the second recurrence of the same drift | somesh-ghaturle |
 | 2026-09-07 | Added task 65: named the VPC-only collection's reachability gap and guarded it | somesh-ghaturle |
 | 2026-09-07 | Added task 66: fixed two false notes in the module chart, added the missing fifth tree, guarded the Azure sibling | somesh-ghaturle |
+| 2026-09-08 | Added task 67: fixed the red `lint` job the two guard suites introduced | somesh-ghaturle |
 
 ---
 

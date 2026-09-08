@@ -45,11 +45,11 @@ class TestVpcOnlyCollectionIsDeclaredNotExercised(unittest.TestCase):
         self.assertEqual(
             attached,
             [],
-            "A vpc_config appeared in {}. That is the right direction, but it also needs "
-            "egress for Bedrock, DynamoDB, S3 and Logs, and it falsifies the stated absence "
-            "in .checkov.yaml (CKV_AWS_117), infra/CHOOSING-A-TREE.md section 4, "
+            f"A vpc_config appeared in {attached}. That is the right direction, but it also "
+            "needs egress for Bedrock, DynamoDB, S3 and Logs, and it falsifies the stated "
+            "absence in .checkov.yaml (CKV_AWS_117), infra/CHOOSING-A-TREE.md section 4, "
             "infra/terraform-aws/README.md and modules/knowledge/main.tf. Update those, then "
-            "this test.".format(attached),
+            "this test.",
         )
 
     def test_roots_that_lock_the_collection_keep_the_caveat(self):
@@ -65,9 +65,9 @@ class TestVpcOnlyCollectionIsDeclaredNotExercised(unittest.TestCase):
         self.assertIn(
             CAVEAT,
             source,
-            "{} lock the knowledge collection to its VPC endpoint while no handler can reach "
-            "it. modules/knowledge/main.tf has to say so, or the strict setting reads as "
-            "though retrieval works there.".format(", ".join(strict)),
+            f"{', '.join(strict)} lock the knowledge collection to its VPC endpoint while no "
+            "handler can reach it. modules/knowledge/main.tf has to say so, or the strict "
+            "setting reads as though retrieval works there.",
         )
 
 
