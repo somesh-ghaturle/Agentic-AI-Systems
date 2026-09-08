@@ -73,3 +73,7 @@ This example makes no security claim, which is why `SECURITY.md` lists it out of
 read/write boundary this repository is organised around is demonstrated by `hermes-agent` and
 `graph-agent`; nothing here enforces one, and none of this would be adequate as a production
 service as written.
+
+---
+
+- [ENVIRONMENT-ENGINEERING.md](../../docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md) -- the chapter that names this a runnable counterpart: atomic writes, and replay that does not repeat work

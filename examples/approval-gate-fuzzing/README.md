@@ -43,3 +43,7 @@ security review into a repeatable check that can live in the repository.
 
 This example does not execute real writes. It models a testing harness only: a malicious prompt is
 recognized as a test case and blocked before any action is possible.
+
+---
+
+- [ENVIRONMENT-ENGINEERING.md](../../docs/agentic-system-architecture/ENVIRONMENT-ENGINEERING.md) -- the chapter that names this a runnable counterpart: a gate you have never watched refuse is one you do not know you have

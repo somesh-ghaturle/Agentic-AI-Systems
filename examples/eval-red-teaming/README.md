@@ -44,3 +44,7 @@ that question at scale.
 
 This example does not execute real writes. It demonstrates the evaluation pattern only: a prompt
 that tries to bypass the approval gate is treated as a test case, not as a production action.
+
+---
+
+- [EVALUATION-ENGINEERING.md](../../docs/agentic-system-architecture/EVALUATION-ENGINEERING.md) -- the chapter that names this a runnable counterpart: adversarial cases as evaluation rather than as incidents

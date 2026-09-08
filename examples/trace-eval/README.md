@@ -244,3 +244,7 @@ This example makes no security claim, which is why `SECURITY.md` lists it out of
 read/write boundary this repository is organised around is demonstrated by `hermes-agent` and
 `graph-agent`; nothing here enforces one, and none of this would be adequate as a production
 service as written.
+
+---
+
+- [EVALUATION-ENGINEERING.md](../../docs/agentic-system-architecture/EVALUATION-ENGINEERING.md) -- the chapter that names this a runnable counterpart: scoring the path rather than the answer

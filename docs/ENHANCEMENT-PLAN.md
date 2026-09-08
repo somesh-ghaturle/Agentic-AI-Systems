@@ -105,10 +105,11 @@ section saying what has to be decided first.
 | 69 | Close the six candidates the architecture review raised | Repository | High | Done | Duplication that had drifted, including a fingerprint that left the action unverified | 2026-09-08 |
 | 70 | Say that the IaC scanner exists, and re-measure it | Documentation | High | Done | Four documents called it absent or open while it had run on every PR since 2026-08-23 | 2026-09-08 |
 | 71 | Add the `stale-referent` example | Examples | Medium | Done | The approved call and the executed call are identical; the world they name is not | 2026-09-08 |
+| 72 | Check the chapter/example pairing instead of asking for it | CI/CD | High | Done | Seven drifts on the first run, five of them a chapter naming an example that never pointed back | 2026-09-08 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 71 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 71 on 2026-09-08.
+tree, and kept current as tasks have landed since. **All 72 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 72 on 2026-09-08.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3344,6 +3345,41 @@ the field that moved.
 
 ---
 
+### Task 72 — Check the chapter/example pairing instead of asking for it
+
+**Goal.** ROADMAP.md calls the chapter/example pairing "the thing to protect" and names keeping
+them in step as the highest-value maintenance in the repository. It was prose, and prose is not a
+mechanism.
+
+**Status: Done.** [`.github/scripts/pairing.py`](../.github/scripts/pairing.py), a step in the
+`docs` job, and seven drifts fixed.
+
+**Seven drifts on the first run, in the file that asked for the check.** Two were the ROADMAP's
+own table disagreeing with the chapters it summarises — the Context row named `context-overflow`
+where the chapter named only `context-compaction`, and the Environment row omitted
+`approval-gate-fuzzing` where the chapter named it. The other five were one-directional pairings:
+`budget-guard`, `checkpoint-agent`, `trace-eval`, `eval-red-teaming` and `approval-gate-fuzzing`
+were each claimed by a chapter whose filename appeared nowhere in their README. `budget-guard`
+linked to three other chapters and not to the one that claims it.
+
+**What it deliberately does not check.** That every example belongs to a chapter. Half do not and
+should not: `rag-faiss` and `langchain-agent` demonstrate a framework, `e2e-agent` exists as a
+counter-example, `hermes-dashboard` is an approval UX. The strict reading of the ROADMAP sentence
+would force a link that means nothing, which is the failure being prevented rather than a fix for
+it. The direction checked is the one that rots silently: a chapter naming a counterpart that was
+renamed, deleted, or has quietly stopped pointing back.
+
+**Mutation tested, four breaks, all caught — after the second was not.** Renaming an example in a
+chapter, dropping a backlink, drifting the ROADMAP table, and removing a counterpart line all
+fail. The backlink mutation initially passed, because the check looked for the chapter's filename
+anywhere in the README and several READMEs use that filename as a link *label*. It now matches the
+link target, which is the thing that means "points at".
+
+**Verify.** `python3 .github/scripts/pairing.py .` — 4 chapters, 10 pairings, each existing,
+linking back, and matching the ROADMAP table.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -3404,6 +3440,7 @@ git status --short
 | 2026-09-08 | Added task 69: closed six architecture-review candidates; the fingerprint now binds the action | somesh-ghaturle |
 | 2026-09-08 | Added task 70: the IaC scanner was documented as absent for two weeks while running on every PR | somesh-ghaturle |
 | 2026-09-08 | Added task 71: `stale-referent`, the third way a correct gate stops mattering | somesh-ghaturle |
+| 2026-09-08 | Added task 72: the chapter/example pairing is checked in CI; seven drifts fixed | somesh-ghaturle |
 
 ---
 
