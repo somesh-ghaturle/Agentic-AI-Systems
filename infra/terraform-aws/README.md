@@ -69,10 +69,19 @@ All three environments use the **same modules and the same wiring**. Only variab
 approval gate exercised only in prod is a gate nobody has tested.
 
 Staging exists because the dev/prod gap here is posture, not scale. Dev runs a public
-knowledge collection and logs execution data; prod does neither, and the first apply is a
-bad place to find out that a VPC-only collection is unreachable from the retrieve tool.
-Staging turns those on and leaves Object Lock, 7-year retention and the 30-day KMS window
-to prod, so it stays destroyable. See the header of `envs/staging/main.tf`.
+knowledge collection and logs execution data; prod does neither. Staging turns those on and
+leaves Object Lock, 7-year retention and the 30-day KMS window to prod, so it stays
+destroyable. See the header of `envs/staging/main.tf`.
+
+**The VPC-only collection is declared, not exercised.** Staging and prod set
+`allow_public_access = false`, which admits traffic to the knowledge collection only through
+its VPC endpoint — but no Lambda in this tree has a `vpc_config`, so the retrieve tool has no
+route to that endpoint and a query fails at the network layer before the data policy is read.
+The absence is deliberate and tree-wide: [CHOOSING-A-TREE.md](../CHOOSING-A-TREE.md) section 4
+records it for AWS, GCP and Azure alike, and [.checkov.yaml](../../.checkov.yaml) skips
+`CKV_AWS_117` with the reasoning. Putting the handlers in the VPC is the first change a real
+deployment makes, and it arrives with its own egress bill — NAT or interface endpoints for
+Bedrock, DynamoDB, S3 and CloudWatch Logs.
 
 **Where the model layer lives.** AWS has no `model-integration/` module, unlike the Azure
 and GCP trees. Bedrock model access and the guardrail are declared in `modules/security/`,

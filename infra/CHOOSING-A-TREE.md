@@ -141,23 +141,37 @@ unfinished. `MODULES.md` catalogues all of them; this is only what is *absent* a
 | Module | AWS | Azure | GCP | Note |
 |---|---|---|---|---|
 | `approval`, `archive`, `knowledge`, `observability`, `orchestration`, `security`, `state`, `tools` | ✅ | ✅ | ✅ | The eight every tree has |
-| `identity` | — | ✅ | ✅ | AWS computes role ARNs in `locals` because they are deterministic. GCP service account emails are deterministic too, but GCP accepts IAM bindings to service accounts that do not exist, so a constructed email would be correct and unverified |
+| `identity` | — | ✅ | ✅ | AWS distributes it: each module declares the roles it needs, and the env roots consume them as outputs — `module.tools.tool_role_arns_by_name`. (The AWS `locals` do construct two ARNs, but those are a state machine and the approval executor, breaking a dependency cycle, not identities.) GCP service account emails are deterministic and could be constructed the same way, but GCP accepts IAM bindings to service accounts that do not exist, so a constructed email would be correct and unverified |
 | `model-integration` | — | ✅ | ✅ | AWS has none — its Bedrock guardrail is a security control and lives in `modules/security` |
-| `networking` | — | ✅ | — | Azure only. A VNet and subnet, wired to exactly one thing: an optional private endpoint on AI Search in prod |
+| `networking` | — | ✅ | — | Azure only, and load-bearing for the whole tree: it declares the **resource group** every other module takes as `module.networking.resource_group_name`, plus a VNet and subnet used by exactly one thing — an optional private endpoint on AI Search in prod and staging |
 | `entra-audit` | — | ✅ | — | Azure only, and it exists *because* the boundary there is one lock |
-| **Total** | **8** | **12** | **10** | |
+| **Total** | **8** | **12** | **10** | Thirty of the repository's forty-four modules. Snowflake's ten are §0's subject, and the hybrid tree's four are below |
 
 Environment roots: AWS `dev`/`staging`/`prod`, GCP `dev`/`staging`/`prod`, Azure the same plus
 `envs/tenant` — a fourth root because the Entra audit alert it applies is tenant-scoped, and two
 roots managing it would revert each other.
 
+**There is a fifth tree, and it is not a choice.**
+[`terraform-hybrid/`](terraform-hybrid/README.md) is a proof of concept — four modules
+(`aws-orchestrator`, `azure-state`, `gcp-knowledge`, `gcp-tools`), one `envs/dev` root, and
+`enable_resources` defaulting to `false`, so a plan against it creates nothing until someone
+opts in. It exists to show provider boundaries and least-privilege inputs across three clouds
+without making a cloud call, and it is deliberately not comparable to the four trees above:
+there is no staging, no prod, and no write boundary suite. Read it as a sketch of what
+splitting an agent across clouds costs, not as a fourth option in this table.
+
 **None of the three ships private networking for the handlers.** No AWS Lambda has a
 `vpc_config`, no GCP function has a VPC connector, and Azure's Function Apps are not
 VNet-integrated even on EP1. Every handler is reached over a public endpoint and authorized by
 identity. That is a deliberate choice for a reference deployment, recorded with its reasoning in
-[`.checkov.yaml`](../.checkov.yaml), and it is the first thing to change for production —
-[ENTERPRISE-ADAPTATION.md](../docs/agentic-coding-playbook/ENTERPRISE-ADAPTATION.md) describes
-that transition.
+[`.checkov.yaml`](../.checkov.yaml), and it is the first thing to change for production.
+
+**That transition is not documented in this repository.** It is a different deployment — private
+endpoints, private DNS zones, NAT or interface endpoints for every service the handlers call —
+and none of the three trees ships it. The nearest thing here is the note above the network policy
+in [`terraform-aws/modules/knowledge/main.tf`](terraform-aws/modules/knowledge/main.tf), which
+works through one concrete consequence: prod locks the knowledge collection to a VPC endpoint
+that no handler can reach, so the strict setting is declared rather than exercised.
 
 ---
 

@@ -55,6 +55,17 @@ resource "aws_opensearchserverless_security_policy" "encryption" {
 # Public access is the default in many examples and is wrong for a corpus that may hold
 # customer documents. VPC-only is the sane posture; the variable exists so a sandbox can
 # opt out deliberately rather than by omission.
+#
+# REACHABILITY STOPS AT THIS ENDPOINT. Locking the collection to the VPC endpoint does not put
+# the retrieve tool inside the VPC, and nothing else in this tree does either — no Lambda here
+# declares a `vpc_config` (.checkov.yaml skips CKV_AWS_117 with the reasoning, and
+# CHOOSING-A-TREE.md section 4 records the same absence for all three trees). So with
+# allow_public_access = false the retrieve tool has no route to this endpoint, and a query
+# fails at the network layer before the data policy below is read. Closing that is not a
+# variable here: it is a vpc_config on the tools module plus egress for Bedrock, DynamoDB, S3
+# and Logs, through NAT or interface endpoints. The strict setting still ships in staging and
+# prod — a corpus reachable from the internet is the worse default — but treat the VPC-only
+# path as declared rather than exercised.
 resource "aws_opensearchserverless_security_policy" "network" {
   name = "${var.name_prefix}-knowledge-net"
   type = "network"

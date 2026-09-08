@@ -180,6 +180,18 @@ resource "azurerm_role_assignment" "service_contributor" {
 # When enabled, the service is reachable over the VNet. Note what this does and does not
 # buy: it removes the public route, and it changes nothing about authorization. Anything
 # inside the VNet still needs a role assignment above.
+#
+# WHAT IT REMOVES IS NOT REPLACED. In prod and staging, supplying
+# `knowledge_private_dns_zone_ids` both creates this endpoint and flips
+# `public_network_access_enabled` to false at the env root. No Function App in this tree is
+# VNet-integrated — `virtual_network_subnet_id` appears nowhere in it — so the public route
+# closes and no handler has a private one. Retrieval then fails at the network layer while
+# the role assignments above still read as correct.
+#
+# This is the Azure shape of the gap recorded for AWS in
+# `terraform-aws/modules/knowledge/main.tf`, with one difference that makes it sharper:
+# there the strict setting is hardcoded in prod, here it is triggered by an operator
+# supplying a DNS zone id, which reads like a hardening step rather than a cutover.
 # ---------------------------------------------------------------------------
 
 resource "azurerm_private_endpoint" "knowledge" {
