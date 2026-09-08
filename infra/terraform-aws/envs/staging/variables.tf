@@ -42,12 +42,6 @@ variable "subnet_ids" {
   }
 }
 
-variable "security_group_ids" {
-  description = "Security groups for the collection endpoint."
-  type        = list(string)
-  default     = []
-}
-
 # ---------------------------------------------------------------------------
 # Tools and approval gate
 # ---------------------------------------------------------------------------
