@@ -35,8 +35,11 @@ skip-check:
   # a Lambda resource policy, an Entra app role, a GCP deny policy. Private
   # networking is the correct production answer and it is a different deployment:
   # VPCs and subnets, private endpoints and private DNS zones, NAT for egress, and
-  # a bill that starts before the first request. docs/agentic-coding-playbook/
-  # ENTERPRISE-ADAPTATION.md is where that transition is described.
+  # a bill that starts before the first request. No document here describes that
+  # transition. infra/CHOOSING-A-TREE.md section 4 records the absence across all
+  # three trees, and infra/terraform-aws/modules/knowledge/main.tf names what it
+  # costs there: the collection's VPC-only setting has no handler inside the VPC
+  # to serve.
   #
   # What must NOT be skipped alongside these, and is not: the authorization checks.
   # The write boundary is enforced by identity, and infra/*/tests/ asserts it holds.

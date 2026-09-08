@@ -29,7 +29,7 @@ Two supporting commitments follow from it:
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
-| Enhancement plan | 64 tasks, all `Done` |
+| Enhancement plan | 65 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction.
 

@@ -155,9 +155,14 @@ roots managing it would revert each other.
 `vpc_config`, no GCP function has a VPC connector, and Azure's Function Apps are not
 VNet-integrated even on EP1. Every handler is reached over a public endpoint and authorized by
 identity. That is a deliberate choice for a reference deployment, recorded with its reasoning in
-[`.checkov.yaml`](../.checkov.yaml), and it is the first thing to change for production —
-[ENTERPRISE-ADAPTATION.md](../docs/agentic-coding-playbook/ENTERPRISE-ADAPTATION.md) describes
-that transition.
+[`.checkov.yaml`](../.checkov.yaml), and it is the first thing to change for production.
+
+**That transition is not documented in this repository.** It is a different deployment — private
+endpoints, private DNS zones, NAT or interface endpoints for every service the handlers call —
+and none of the three trees ships it. The nearest thing here is the note above the network policy
+in [`terraform-aws/modules/knowledge/main.tf`](terraform-aws/modules/knowledge/main.tf), which
+works through one concrete consequence: prod locks the knowledge collection to a VPC endpoint
+that no handler can reach, so the strict setting is declared rather than exercised.
 
 ---
 
