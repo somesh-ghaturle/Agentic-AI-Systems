@@ -55,6 +55,10 @@ data "aws_route_table" "handler_subnet" {
 # ---------------------------------------------------------------------------
 
 resource "aws_security_group" "handlers" {
+  # checkov:skip=CKV2_AWS_5:Attached by the handler modules' `dynamic "vpc_config"`, which is a
+  # module boundary and a conditional block away — checkov's graph resolves neither, so it reads
+  # a group that four Lambdas use as unattached. tests/test_knowledge_reachability.py asserts the
+  # attachment instead, and asserts it per environment, which the rule cannot express.
   name        = "${var.name_prefix}-handlers"
   description = "Lambda handlers. Egress to the VPC endpoints only."
   vpc_id      = var.vpc_id
