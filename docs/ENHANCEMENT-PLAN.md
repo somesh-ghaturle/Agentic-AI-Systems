@@ -103,10 +103,11 @@ section saying what has to be decided first.
 | 67 | Fix the red `lint` job on `main` | CI/CD | High | Done | Four ruff findings in the two guard suites tasks 65 and 66 added | 2026-09-08 |
 | 68 | Put the handlers on the network, in all three trees | Infrastructure | High | Done | The strict settings had no reachable path behind them; now they do, three different ways | 2026-09-08 |
 | 69 | Close the six candidates the architecture review raised | Repository | High | Done | Duplication that had drifted, including a fingerprint that left the action unverified | 2026-09-08 |
+| 70 | Say that the IaC scanner exists, and re-measure it | Documentation | High | Done | Four documents called it absent or open while it had run on every PR since 2026-08-23 | 2026-09-08 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 69 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 69 on 2026-09-08.
+tree, and kept current as tasks have landed since. **All 70 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 70 on 2026-09-08.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3178,6 +3179,12 @@ VPC-free, and the Vertex index endpoint stays public with its reasoning next to 
 `dynamic "vpc_config"` that is empty in dev, because checkov reads the HCL statically. The rule
 cannot express "attached wherever the store is private", which is what the two suites now assert.
 
+> **Corrected by task 70 (2026-09-08).** It does not fire. That paragraph was reasoning about a
+> static scanner rather than running it: removing the entry moves four checks from skipped to
+> `PASSED` and the job stays green. The skip is gone. Left visible because a plausible untested
+> claim is exactly what this file keeps catching, and this one was written by the same task that
+> added the tests underneath it.
+
 **Mutation tested, five breaks, five caught — after the fourth was not.** Detaching prod's
 handlers, dropping the ENI policy, narrowing the endpoint list and un-integrating the Azure apps
 all fail. Changing the subnet delegation did *not*, because the same string appears in a variable
@@ -3246,6 +3253,47 @@ Python 3.10 for `sys.stdlib_module_names` and was compile-checked only.
 
 ---
 
+### Task 70 — Say that the IaC scanner exists, and re-measure it
+
+**Goal.** ROADMAP.md listed "**No IaC security scanner**" under deliberate absences. Checkov has
+run on every pull request since 2026-08-23, pinned at 3.3.13, with no `--soft-fail`.
+
+**Status: Done.** [`ROADMAP.md`](../ROADMAP.md), [`.checkov.yaml`](../.checkov.yaml),
+[`checks.yml`](../.github/workflows/checks.yml), [`codeql.yml`](../.github/workflows/codeql.yml),
+and a correction against task 68 above.
+
+**The dates are the finding.** The scanner landed 2026-08-23. The ROADMAP paragraph calling it
+absent was written 2026-09-06 — by task 61, whose own title is *"Rewrite ROADMAP.md against the
+current tree"*, and which sits in a commit titled *"Close four gaps between what the docs claim
+and what the tree does."* It opened a fifth. `codeql.yml` has a matching note calling the tool
+"its own decision", written 2026-08-22: true for one day.
+
+**Every number attached to the scanner was also wrong.** `.checkov.yaml`'s header and the job
+comment in `checks.yml` both said 101 skips out of 110 findings. The list has 45 entries. Measured
+today with the pinned version: **99 findings across 44 rules**. The header now carries the command
+that re-measures it, including the part that makes the measurement valid — run it from outside the
+repository root, or checkov auto-loads this config and reports the suppressed result as if it were
+the raw one. That is how the first measurement in this task came back as zero findings.
+
+**One skip was inert and is gone.** `CKV_AWS_117` — Lambda not inside a VPC — was kept by task 68
+on the reasoning that dev's empty `dynamic "vpc_config"` still reads as unattached to a static
+scanner. Removing it moves four checks from skipped to `PASSED` and the job stays green: the rule
+holds on all four handlers. The Azure and GCP network entries were re-measured at the same time
+and do still fire, because those resources take `public_network_access_enabled` from variables
+that default to `true`.
+
+**What replaced the false absence.** Not a claim of coverage. The scanner runs and declines 99 of
+its own findings by policy, which is worth stating plainly next to the fact that it runs at all —
+along with the two things still genuinely absent: a second opinion (tfsec, trivy), and any goal of
+emptying the skip list.
+
+**Verify.** `checkov --config-file .checkov.yaml` — 325 passed, 0 failed, 10 skipped (up from 321
+passed, because the four VPC checks now evaluate instead of being skipped). From outside the repo,
+`checkov -d infra --framework terraform -o json` — 99 failed across 44 rules, every one of them
+named in the skip list.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -3304,6 +3352,7 @@ git status --short
 | 2026-09-08 | Added task 67: fixed the red `lint` job the two guard suites introduced | somesh-ghaturle |
 | 2026-09-08 | Added task 68: handlers join the network in all three trees, no NAT, no invented VPC | somesh-ghaturle |
 | 2026-09-08 | Added task 69: closed six architecture-review candidates; the fingerprint now binds the action | somesh-ghaturle |
+| 2026-09-08 | Added task 70: the IaC scanner was documented as absent for two weeks while running on every PR | somesh-ghaturle |
 
 ---
 

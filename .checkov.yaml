@@ -16,7 +16,18 @@
 #
 # Adding a skip here is a decision about the reference architecture, not a way to get CI
 # green. If a finding is right, fix it — nine were fixed rather than skipped when this
-# file was written, and they are the reason the list below is 101 and not 110.
+# file was written, out of 110 findings then.
+#
+# Those are historical numbers and they are not the length of this list. Measured today:
+# 99 findings across 44 rules, which is what the entries below suppress. Re-measure with
+#
+#     checkov -d infra --framework terraform -o json   # run from OUTSIDE the repo root,
+#                                                      # or this config is auto-loaded and
+#                                                      # you measure nothing
+#
+# and compare the failing check IDs against the entries here. An entry that no longer
+# appears is a decision the tree has outgrown: delete it, and let the check run. That is
+# how CKV_AWS_117 left this file.
 
 directory:
   - infra
@@ -33,15 +44,19 @@ skip-check:
   #
   # These skips outlived the absence they were written for. Every tree can now put
   # its handlers on a network — `vpc_config` on AWS, `virtual_network_subnet_id` on
-  # Azure, `vpc_connector` on GCP — and prod and staging in the first two do. What
-  # they have in common is that the attachment is CONDITIONAL: an empty subnet list
-  # leaves dev on the managed network, which is what keeps it deployable with no VPC.
-  # Checkov reads the HCL statically, so a `dynamic "vpc_config"` that is empty in
-  # one environment still reads as a Lambda outside a VPC, and CKV_AWS_117 fires on
-  # a tree that satisfies it wherever it matters.
+  # Azure, `vpc_connector` on GCP — and prod and staging in the first two do.
   #
-  # The skips stay for that reason and no longer for the original one. What actually
-  # guards the pairing is infra/terraform-aws/tests/test_knowledge_reachability.py
+  # CKV_AWS_117 was kept here on the theory that a `dynamic "vpc_config"` empty in dev
+  # still reads to a static scanner as a Lambda outside a VPC. It does not: removing
+  # the entry moves four checks from skipped to PASSED and leaves the job green. The
+  # theory was plausible and untested, which is the only kind of skip this file is not
+  # supposed to hold, so the entry is gone.
+  #
+  # The Azure and GCP entries below are a different case and were re-measured too:
+  # they still fire. Those trees disable public network access through inputs that the
+  # reference deployment leaves unset, so the resources genuinely are public here.
+  #
+  # What actually guards the pairing is infra/terraform-aws/tests/test_knowledge_reachability.py
   # and its Azure counterpart: a root that locks its knowledge store to a private
   # path while leaving a handler module off the network fails there, which is a
   # check on the combination rather than on a single resource.
@@ -53,7 +68,6 @@ skip-check:
   # What must NOT be skipped alongside these, and is not: the authorization checks.
   # The write boundary is enforced by identity, and infra/*/tests/ asserts it holds.
   # -------------------------------------------------------------------------
-  - CKV_AWS_117    # Lambda not configured inside a VPC
   - CKV_AZURE_59   # Storage account does not disallow public access
   - CKV_AZURE_221  # Function App public network access not disabled
   - CKV_AZURE_124  # Cognitive Search does not disable public network access

@@ -29,7 +29,7 @@ Two supporting commitments follow from it:
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
-| Enhancement plan | 69 tasks, all `Done` |
+| Enhancement plan | 70 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction.
 
@@ -97,8 +97,12 @@ adopt *part* of it without silently dropping the property that makes it worth ad
 
 Recorded so the absence reads as a decision rather than an oversight:
 
-- **No IaC security scanner.** CodeQL has no Terraform analyser, and roughly half this
-  repository is `infra/`. Closing that needs Checkov, tfsec, or trivy, and is its own decision.
+- **No second IaC scanner, and no attempt at zero skips.** `checkov` has run on every PR
+  since 2026-08-23, pinned and hard-failing, and this list claimed the opposite until
+  2026-09-08. What is genuinely absent is a second opinion — tfsec, trivy — and any goal of
+  emptying the skip list: 99 findings across 44 rules are declined by policy, each named with
+  its reason in [`.checkov.yaml`](.checkov.yaml). CodeQL still has no HCL analyser, which is a
+  fact about CodeQL rather than a gap in coverage.
 - **No `terraform plan` in CI.** It needs cloud credentials, and the no-secrets constraint is
   worth more than the extra coverage. The write-boundary suites read source instead.
 - **No benchmark numbers.** `trace-eval` shows a method over seven hand-written cases. It is
