@@ -33,27 +33,33 @@ COUPLED = re.compile(
 KNOWLEDGE = os.path.join(TREE, "modules", "knowledge", "main.tf")
 
 
+def read(path):
+    """The tree's own helper lives in the write-boundary module and takes no path."""
+    with open(path, encoding="utf-8") as handle:
+        return strip_comments_preserving_lines(handle.read())
+
+
 class TestPrivateEndpointLeavesHandlersOutside(unittest.TestCase):
     def test_no_function_app_is_vnet_integrated(self):
         integrated = [
             os.path.relpath(path, TREE)
             for path in tf_files()
-            if VNET_INTEGRATION.search(strip_comments_preserving_lines(open(path).read()))
+            if VNET_INTEGRATION.search(read(path))
         ]
         self.assertEqual(
             integrated,
             [],
-            "VNet integration appeared in {}. That closes the gap this file guards, and it "
-            "falsifies the note in modules/knowledge/main.tf, infra/CHOOSING-A-TREE.md "
-            "section 4, and .checkov.yaml (CKV_AZURE_221). Update those, then this "
-            "test.".format(integrated),
+            f"VNet integration appeared in {integrated}. That closes the gap this file "
+            "guards, and it falsifies the note in modules/knowledge/main.tf, "
+            "infra/CHOOSING-A-TREE.md section 4, and .checkov.yaml (CKV_AZURE_221). Update "
+            "those, then this test.",
         )
 
     def test_roots_that_close_the_public_route_keep_the_caveat(self):
         coupled = sorted(
             os.path.relpath(os.path.dirname(path), TREE)
             for path in tf_files()
-            if COUPLED.search(strip_comments_preserving_lines(open(path).read()))
+            if COUPLED.search(read(path))
         )
         self.assertEqual(coupled, ["envs/prod", "envs/staging"])
 
@@ -62,9 +68,9 @@ class TestPrivateEndpointLeavesHandlersOutside(unittest.TestCase):
         self.assertIn(
             CAVEAT,
             source,
-            "{} close the public route to AI Search the moment a DNS zone id is supplied, "
-            "while no handler is inside the VNet. modules/knowledge/main.tf has to say so."
-            .format(", ".join(coupled)),
+            f"{', '.join(coupled)} close the public route to AI Search the moment a DNS zone "
+            "id is supplied, while no handler is inside the VNet. modules/knowledge/main.tf "
+            "has to say so.",
         )
 
 
