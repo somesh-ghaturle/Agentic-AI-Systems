@@ -99,10 +99,11 @@ section saying what has to be decided first.
 | 63 | Diagram the hybrid Terraform tree | Documentation | Medium | Done | The only architecture document without one | 2026-10-06 |
 | 64 | Check documented counts against the tree | CI/CD | High | Done | 17 claims; found 10 stale numbers and caught 2 of its author's | 2026-09-13 |
 | 65 | State the VPC-only collection's reachability gap | Documentation | Medium | Done | Prod locks the collection to an endpoint no handler can reach | 2026-09-07 |
+| 66 | Correct the module chart and carry the reachability guard to Azure | Documentation | Medium | Done | Two wrong notes, a missing fifth tree, and the same gap one variable away in Azure | 2026-09-07 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 65 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, and 65 on 2026-09-07.
+tree, and kept current as tasks have landed since. **All 66 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, and 65 and 66 on 2026-09-07.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3051,6 +3052,52 @@ test names all four.
 
 ---
 
+### Task 66 — Correct the module chart and carry the reachability guard to Azure
+
+**Goal.** Make section 4 of [`CHOOSING-A-TREE.md`](../infra/CHOOSING-A-TREE.md) describe the
+trees that exist, and check whether task 65's gap has siblings.
+
+**Status: Done.** Three corrections to that page, a caveat in
+[`infra/terraform-azure/modules/knowledge/main.tf`](../infra/terraform-azure/modules/knowledge/main.tf),
+and [`infra/terraform-azure/tests/test_knowledge_reachability.py`](../infra/terraform-azure/tests/test_knowledge_reachability.py)
+— 2 tests.
+
+**The chart said two things that were not true.** The `identity` row explained AWS's absence as
+"computes role ARNs in `locals` because they are deterministic". What the AWS `locals` compute is
+a state machine ARN and the approval executor's, labelled *cycle-breakers*; role ARNs come from
+module outputs, which is the distributed-identity design the AWS README already describes. The
+`networking` row called the Azure module "wired to exactly one thing". It also declares the
+resource group every other Azure module consumes as `module.networking.resource_group_name` —
+delete it and the tree goes with it.
+
+**A page called "Choosing a tree" did not mention one of the trees.** `grep -ci hybrid` returned
+zero. [`terraform-hybrid/`](../infra/terraform-hybrid/README.md) is four modules and one `envs/dev`
+root with `enable_resources = false`, so it is correctly not a fifth option — but silence made it
+invisible rather than out of scope. It now has a paragraph saying which it is. The totals row
+likewise read as an inventory while covering thirty of forty-four modules, and now says so.
+
+**The gap in task 65 has one sibling, not two.** Azure reaches it through a variable rather than
+a hardcoded value: supplying `knowledge_private_dns_zone_ids` in prod or staging creates the
+private endpoint *and* sets `public_network_access_enabled = false`, while no Function App in the
+tree is VNet-integrated. The public route closes, no handler has a private one, and the trigger is
+a step that reads like hardening — which is why this one is worse than the AWS shape it mirrors.
+
+GCP needed nothing. It ships no private path and claims none: `public_endpoint_enabled = true` is
+hardcoded in the index endpoint with the reason next to it, `ingress_settings` defaults to
+`ALLOW_ALL` and its description already names the trap in changing it. Snowflake is the only tree
+that ships an ingress control it actually uses — an IP allow-list on the service users, empty in
+dev. Nothing to correct in either, so nothing was written to them.
+
+**Mutation tested, both directions.** Adding `virtual_network_subnet_id` to a Function App fails
+the first test; removing the caveat fails the second; decoupling the env root from the DNS zone
+variable fails both.
+
+**Verify.** `python3 -m unittest discover -s infra/terraform-azure/tests` — 5 tests, 2 of them
+new. `grep -rn "virtual_network_subnet_id" infra/terraform-azure/` returns nothing, and
+`grep -ci hybrid infra/CHOOSING-A-TREE.md` no longer returns zero.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -3105,6 +3152,7 @@ git status --short
 | 2026-09-06 | Added tasks 60-63: closed four gaps between what the docs claim and what the tree does | somesh-ghaturle |
 | 2026-09-06 | Added task 64: a CI check for documented counts, after the second recurrence of the same drift | somesh-ghaturle |
 | 2026-09-07 | Added task 65: named the VPC-only collection's reachability gap and guarded it | somesh-ghaturle |
+| 2026-09-07 | Added task 66: fixed two false notes in the module chart, added the missing fifth tree, guarded the Azure sibling | somesh-ghaturle |
 
 ---
 
