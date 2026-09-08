@@ -304,8 +304,9 @@ jobs:
       # No `--soft-fail`. This job fails the build on any finding that is not skipped by
       # name in .checkov.yaml, which is what makes the skip list readable as a statement
       # about the architecture rather than as a way to get green. There were 110 findings
-      # when this job was written; 9 were fixed and 101 are skipped with a stated reason,
-      # grouped by what the reason is.
+      # when this job was written and 9 were fixed rather than skipped; today the list
+      # suppresses 99 findings across 44 rules, grouped by what the reason is. The header
+      # of .checkov.yaml carries the command that re-measures both numbers.
       #
       # LOG_LEVEL=ERROR because checkov logs a WARNING for every HCL interpolation its
       # Python evaluator cannot parse — several dozen here, all benign, all in front of

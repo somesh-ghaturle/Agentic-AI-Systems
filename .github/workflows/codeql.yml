@@ -22,9 +22,10 @@
 # data-platform trees plus the opt-in hybrid POC. None
 # of that is scanned here. What guards those trees is the write-boundary suite in checks.yml,
 # and it guards exactly three properties by reading .tf files as text — it is not a general
-# IaC scan and does not become one because this file exists. Closing that gap needs a
-# different tool (Checkov, tfsec, or trivy config) and is its own decision, not something to
-# smuggle in under a task titled "add SAST scanning".
+# IaC scan and does not become one because this file exists. Closing that gap needed a
+# different tool, and the `checkov` job in checks.yml is that tool — added the day after this
+# paragraph was written, which is how this paragraph spent two weeks describing it as an open
+# decision. Terraform coverage is that job's, not this one's.
 
 name: codeql
 
