@@ -177,6 +177,15 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 
 - [e2e-agent](examples/e2e-agent/README.md)
 
+**Boundary and bounds** — each takes one control that is correct and shows what it does not cover:
+
+- [second-path](examples/second-path/README.md) — a gate that is right and simply not on the path taken; the whole gate suite passes while the boundary is open
+- [stale-referent](examples/stale-referent/README.md) — approval binds the request, not the world the request named; the fingerprint matches and a different amount leaves the account
+- [budget-guard](examples/budget-guard/README.md) — the fourth bound the harness-agent leaves out: a per-request token cap checked before the spend rather than after
+- [checkpoint-agent](examples/checkpoint-agent/README.md) — crash recovery that resumes without repeating the work it already paid for
+- [approval-gate-fuzzing](examples/approval-gate-fuzzing/README.md) — bypass phrasing run at the gate, so "it refuses" is a test result rather than a belief
+- [eval-red-teaming](examples/eval-red-teaming/README.md) — injection attempts as evaluation cases, comparing a naive model that follows them with a guarded one that does not
+
 **Minimal references** — short scripts showing one idea each:
 
 - [starter-agent](examples/starter-agent/README.md) — the smallest possible agent loop
@@ -185,6 +194,7 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 - [langchain-agent](examples/langchain-agent/README.md) — a minimal LangChain agent
 - [ray-orchestrator](examples/ray-orchestrator/README.md) — parallel task execution with Ray
 - [context-compaction](examples/context-compaction/README.md) — what survives when history is compressed, and why truncation drops the wrong things
+- [context-overflow](examples/context-overflow/README.md) — where a conversation stops being useful, before the model's formal limit, and why keeping the most recent N messages is the wrong fix
 - [graph-agent](examples/graph-agent/README.md) — the same read/write split as hermes-agent, as an explicit LangGraph graph
 - [tool-discovery](examples/tool-discovery/README.md) — tools loaded from a directory at runtime, and why the read/write split has to survive being discovered rather than declared
 - [mcp-server](examples/mcp-server/README.md) — an MCP-shaped tool server that advertises a state-changing tool and refuses to run it without a single-use approval bound to that call's arguments

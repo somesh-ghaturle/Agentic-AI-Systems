@@ -20,6 +20,12 @@ is trying to prevent rather than a fix for it.
 
 The direction it does check is the one that can silently rot: a chapter naming a counterpart that
 has been renamed, deleted, or has quietly stopped pointing back.
+
+The second check is the complement, and it is the one that covers the examples no chapter claims:
+every example must at least be listed in README.md's "Runnable examples" index, with a line saying
+what it shows. That index had drifted to seventeen of twenty-four -- every boundary example added
+in the last stretch was missing from it, so the examples arguing the repository's central claim
+were the ones a reader could not find.
 """
 
 import pathlib
@@ -39,6 +45,7 @@ COUNTERPARTS = re.compile(r"^Runnable counterparts?:(.*?)(?=\n\n)", re.M | re.S)
 EXAMPLE_LINK = re.compile(r"examples/([a-z0-9-]+)/README\.md")
 ROADMAP_ROW = re.compile(r"^\| \[(\w+)\]\([^)]*\) \| (.+?) \|$", re.M)
 BACKTICKED = re.compile(r"`([a-z0-9-]+)`")
+INDEXED = re.compile(r"\(examples/([a-z0-9-]+)/README\.md\)")
 
 
 def chapter_counterparts(root):
@@ -103,6 +110,17 @@ def main(root):
             failures.append(f"ROADMAP.md: {chapter} row disagrees with {CHAPTERS[chapter]} -- "
                             + "; ".join(detail))
 
+    # Every example is findable, whether or not a chapter claims it. A directory with no
+    # chapter and no index entry is not a decision, it is an omission -- which is how seven
+    # of them, including four boundary examples, went unlisted.
+    indexed = set(INDEXED.findall((root / "README.md").read_text()))
+    for example in sorted(d.name for d in (root / "examples").iterdir() if d.is_dir()):
+        if example not in indexed:
+            failures.append(
+                f"README.md: examples/{example}/ is in the tree but not in the "
+                f"'Runnable examples' index -- add it with a line saying what it shows"
+            )
+
     if failures:
         print("Chapters and their runnable counterparts disagree:\n")
         for f in failures:
@@ -110,8 +128,9 @@ def main(root):
         return 1
 
     pairs = sum(len(v) for v in declared.values())
-    print(f"{len(CHAPTERS)} chapters checked, {pairs} chapter/example pairings; "
-          "each example exists, links back, and matches the ROADMAP table")
+    print(f"{len(CHAPTERS)} chapters checked, {pairs} chapter/example pairings, "
+          f"{len(indexed)} examples indexed; each example exists, links back, matches the "
+          "ROADMAP table, and is findable from the README")
     return 0
 
 
