@@ -102,10 +102,11 @@ section saying what has to be decided first.
 | 66 | Correct the module chart and carry the reachability guard to Azure | Documentation | Medium | Done | Two wrong notes, a missing fifth tree, and the same gap one variable away in Azure | 2026-09-07 |
 | 67 | Fix the red `lint` job on `main` | CI/CD | High | Done | Four ruff findings in the two guard suites tasks 65 and 66 added | 2026-09-08 |
 | 68 | Put the handlers on the network, in all three trees | Infrastructure | High | Done | The strict settings had no reachable path behind them; now they do, three different ways | 2026-09-08 |
+| 69 | Close the six candidates the architecture review raised | Repository | High | Done | Duplication that had drifted, including a fingerprint that left the action unverified | 2026-09-08 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 68 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 and 68 on 2026-09-08.
+tree, and kept current as tasks have landed since. **All 69 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 69 on 2026-09-08.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3189,6 +3190,62 @@ discover -s infra/terraform-aws/tests` — 18 tests; the Azure equivalent — 7.
 
 ---
 
+### Task 69 — Close the six candidates the architecture review raised
+
+**Goal.** Act on an architecture review of the repository's hot spots. Six candidates, every one
+of them duplication that had *drifted* rather than duplication that was merely repeated.
+
+**Status: Done.** Twenty-nine files, and the trees stay separate. A reader takes one tree and
+goes, so the fixes make the copies agree and put a test behind the agreement rather than merging
+them into a shared module none of them can be read without.
+
+**The fingerprint left half of what runs unverified.** `fingerprint()` hashed the arguments alone,
+but the executor reads `action` *and* `arguments` back from the same stored record and invokes
+whichever write tool the action names. Whoever can rewrite the stored arguments — the only threat
+the check exists for — could instead leave them untouched and swap the action. It now binds both.
+The five example implementations already hashed the tool name; only the deployed handlers did not,
+which is the drift a reader would never expect in this direction.
+
+**Both halves of that migration are in the docstring, including the one that fails open.**
+Existing fingerprints stop matching, so approvals in flight fail their tamper check — safe. The
+deterministic approval ID is seeded from the same digest, so a validation retried across the
+deploy stops collapsing onto the approval its earlier attempt created and opens a second one —
+a duplicate review to dismiss, not an unapproved write.
+
+**The AWS trace emitter read one usage shape where its siblings read two.** Porting the reason
+handler one tree across produces the flat shape, and the record then carries no tokens and no
+cost. Nothing fails: it is written, the `cost_usd>0` metric filter matches nothing, and the spend
+alarm goes quiet instead of red.
+
+**Fixing that exposed a bug in the idiom being copied.** `{**decision, **nested}` is truthy
+whenever the decision holds anything at all, so the `if not usage` fallback behind it was dead in
+all three trees and usage on the event itself was silently dropped. All three now merge
+widest-first, with a test in each that fails without it. The review caught this one; it was
+introduced by the fix, not found by it.
+
+**Azure's boundary suite stripped comments with a regex the other three warn against.** This
+tree's identity surface is built from `api://` and `https://` values, so `(#|//).*$` truncated ten
+files mid-string, and in `modules/tools/outputs.tf` swallowed a closing brace that `block_body()`
+then counted. The replacement is the sibling trees' character scanner, and the new test is the
+general form: stripping must never change a file's brace balance.
+
+**The rest.** `now_iso` lives in `agentic_trace` rather than being redefined three times per tree;
+the AWS boundary suite skips `.terraform/` like its siblings and raises on unbalanced braces
+instead of returning an empty body every assertion passes against vacuously; one `SKIP_DIRS` set
+across four scripts; a dead `root` parameter, a rename wearing a function, and the AWS test
+loader's argument order. `tests/test_shared_contracts.py` makes the three `contracts.py` copies'
+sameness a checked claim, since only the AWS tree declares `TestContracts`.
+
+**One candidate was declined.** `escape_text` in `docs_preview.py` reads as a pass-through over
+`html.escape`, but it holds `quote=False` in one place for three call sites. Deleting it spreads a
+policy flag rather than concentrating one, which is the deletion test answering the other way.
+
+**Verify.** Every suite: `python3 -m unittest discover -s tests` — 369; the three `src/tests`
+trees — 67, 42, 40; the four boundary suites. `ruff check .` clean. `example_deps.py` needs
+Python 3.10 for `sys.stdlib_module_names` and was compile-checked only.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -3246,6 +3303,7 @@ git status --short
 | 2026-09-07 | Added task 66: fixed two false notes in the module chart, added the missing fifth tree, guarded the Azure sibling | somesh-ghaturle |
 | 2026-09-08 | Added task 67: fixed the red `lint` job the two guard suites introduced | somesh-ghaturle |
 | 2026-09-08 | Added task 68: handlers join the network in all three trees, no NAT, no invented VPC | somesh-ghaturle |
+| 2026-09-08 | Added task 69: closed six architecture-review candidates; the fingerprint now binds the action | somesh-ghaturle |
 
 ---
 

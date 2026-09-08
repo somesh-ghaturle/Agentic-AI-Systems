@@ -24,6 +24,8 @@
 import os
 import time
 
+from agentic_trace import now_iso
+
 _client = None
 _container = None
 
@@ -110,7 +112,7 @@ def claim(approval_id, new_status, callback_url, approver, comment=None):
     # never revised, and the pre-update status is what tells the caller a reclaim happened.
     previous = dict(record)
 
-    now = _now_iso()
+    now = now_iso()
     record.update(
         {
             "status": new_status,
@@ -163,7 +165,7 @@ def record_outcome(approval_id, status, outcome):
     record = get(approval_id)
     if not record:
         return
-    record.update({"status": status, "outcome": outcome, "completed_at": _now_iso()})
+    record.update({"status": status, "outcome": outcome, "completed_at": now_iso()})
     container().replace_item(item=approval_id, body=record)
 
 
@@ -196,6 +198,3 @@ def _require(name):
 def _iso_seconds_ago(seconds):
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - seconds))
 
-
-def _now_iso():
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

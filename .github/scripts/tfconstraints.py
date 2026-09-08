@@ -41,7 +41,7 @@ import pathlib
 import re
 import sys
 
-SKIP_DIRS = {".git", ".terraform", "__pycache__", "node_modules"}
+SKIP_DIRS = {".git", ".terraform", "__pycache__", "node_modules", ".venv", "venv"}
 
 # A `source = "hashicorp/google"` line followed, within a few lines, by its `version`. Both
 # keys sit inside one provider block; matching them as a pair is what ties a constraint to

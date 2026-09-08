@@ -32,7 +32,7 @@ import time
 import uuid
 
 import firestore_io
-from agentic_trace import tracer_for
+from agentic_trace import now_iso, tracer_for
 from contracts import fingerprint, positive_int
 from gcp_http import json_response, request_json
 
@@ -73,7 +73,7 @@ def handler(request):
     reasons = [check["code"] for check in checks if not check["passed"]]
 
     approval_id = _approval_id(execution_id, proposal)
-    created_at = _now_iso()
+    created_at = now_iso()
 
     record = {
         "approval_id": approval_id,
@@ -82,7 +82,9 @@ def handler(request):
         "status": "pending" if valid else "rejected",
         "action": proposal.get("action"),
         "arguments": proposal.get("arguments") or {},
-        "arguments_fingerprint": fingerprint(proposal.get("arguments") or {}),
+        "arguments_fingerprint": fingerprint(
+            proposal.get("action"), proposal.get("arguments") or {}
+        ),
         "rationale": proposal.get("rationale"),
         "actor": {
             "user_id": actor.get("user_id"),
@@ -145,7 +147,7 @@ def _notify(payload):
         )
 
     firestore_io.approvals_collection().document(approval_id).update(
-        {"callback_url": callback_url, "notified_at": _now_iso()}
+        {"callback_url": callback_url, "notified_at": now_iso()}
     )
 
     record = firestore_io.get(approval_id)
@@ -277,7 +279,10 @@ def _resource_owner(action, resource_id):
 
 
 def _approval_id(execution_id, proposal):
-    seed = f"{execution_id}:{proposal.get('action')}:{fingerprint(proposal.get('arguments') or {})}"
+    seed = (
+        f"{execution_id}:{proposal.get('action')}:"
+        f"{fingerprint(proposal.get('action'), proposal.get('arguments') or {})}"
+    )
     return str(uuid.uuid5(_APPROVAL_NAMESPACE, seed))
 
 
@@ -296,6 +301,3 @@ def _policy_max_refund_cents():
     except ValueError:
         return 50_000
 
-
-def _now_iso():
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

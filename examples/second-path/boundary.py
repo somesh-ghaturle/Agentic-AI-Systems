@@ -81,7 +81,9 @@ READ_TOOLS = {name: t for name, t in TOOLS.items() if t.access == "read"}
 def fingerprint(name: str, arguments: dict) -> str:
     """Bind an approval to the exact call. sort_keys so the same arguments in a different order
     produce the same claim, and so approving 'restart_service' in the abstract is impossible."""
-    payload = json.dumps({"tool": name, "arguments": arguments}, sort_keys=True)
+    payload = json.dumps(
+        {"tool": name, "arguments": arguments}, sort_keys=True, separators=(",", ":")
+    )
     return hashlib.sha256(payload.encode()).hexdigest()
 
 

@@ -87,8 +87,19 @@ def _usage(event):
     else:
         decision = {}
 
-    usage = decision.get("usage") if isinstance(decision.get("usage"), dict) else {}
-    usage = usage or (event.get("usage") if isinstance(event.get("usage"), dict) else {})
+    # This tree's reason handler nests usage under `usage`; the Azure and GCP handlers
+    # flatten it onto the response, and both of those emitters read either shape. This one
+    # read only the nested form, so the flat shape — the one a reader carries over when
+    # porting the handler one tree across — produced a terminal record with no tokens and no
+    # cost. Nothing fails in that case: the record is written, the `cost_usd>0` metric filter
+    # matches nothing, and the spend alarm goes quiet instead of red.
+    nested = decision.get("usage") if isinstance(decision.get("usage"), dict) else {}
+    # Precedence, widest first: usage on the event itself, then the model step's response,
+    # then a `usage` block nested inside it. The nested form cannot simply win by truthiness
+    # — `{**decision, **nested}` is non-empty whenever the decision carries anything at all,
+    # so a `if not usage` fallback after it never runs and event-level usage is lost.
+    event_level = event.get("usage") if isinstance(event.get("usage"), dict) else {}
+    usage = {**event_level, **decision, **nested}
 
     fields = {}
     for source, target in (
@@ -98,7 +109,8 @@ def _usage(event):
         ("cost_usd", "cost_usd"),
     ):
         value = usage.get(source)
-        if isinstance(value, (int, float)):
+        # `True` is an `int`, so an unguarded check records a boolean as one token.
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
             fields[target] = value
 
     # Reproducibility: without these, a result cannot be tied to what produced it.

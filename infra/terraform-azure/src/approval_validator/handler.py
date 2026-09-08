@@ -32,7 +32,7 @@ import time
 import uuid
 
 import cosmos_io
-from agentic_trace import tracer_for
+from agentic_trace import now_iso, tracer_for
 from contracts import fingerprint, positive_int
 
 # Namespace for deterministic approval IDs. A retried validation produces the same
@@ -71,7 +71,7 @@ def run(payload):
     reasons = [check["code"] for check in checks if not check["passed"]]
 
     approval_id = _approval_id(correlation_id, proposal)
-    created_at = _now_iso()
+    created_at = now_iso()
 
     record = {
         "id": approval_id,
@@ -81,7 +81,9 @@ def run(payload):
         "status": "pending" if valid else "rejected",
         "action": proposal.get("action"),
         "arguments": proposal.get("arguments") or {},
-        "arguments_fingerprint": fingerprint(proposal.get("arguments") or {}),
+        "arguments_fingerprint": fingerprint(
+            proposal.get("action"), proposal.get("arguments") or {}
+        ),
         "rationale": proposal.get("rationale"),
         "actor": {
             "user_id": actor.get("user_id"),
@@ -142,7 +144,7 @@ def _notify(payload):
         return {"ok": False, "error": "unknown_approval", "approval_id": approval_id}, 404
 
     record["callback_url"] = callback_url
-    record["notified_at"] = _now_iso()
+    record["notified_at"] = now_iso()
     cosmos_io.put(record)
 
     _publish(
@@ -289,7 +291,7 @@ def _resource_owner(action, resource_id):
 def _approval_id(correlation_id, proposal):
     seed = (
         f"{correlation_id}:{proposal.get('action')}:"
-        f"{fingerprint(proposal.get('arguments') or {})}"
+        f"{fingerprint(proposal.get('action'), proposal.get('arguments') or {})}"
     )
     return str(uuid.uuid5(_APPROVAL_NAMESPACE, seed))
 
@@ -309,6 +311,3 @@ def _policy_max_refund_cents():
     except ValueError:
         return 50_000
 
-
-def _now_iso():
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

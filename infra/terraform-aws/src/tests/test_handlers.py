@@ -58,7 +58,7 @@ def _install_stubs():
     sys.modules.setdefault("anthropic", anthropic)
 
 
-def _load(package, filename, alias):
+def _load(package, alias, filename="index.py"):
     """Loads a handler under a unique name.
 
     Two packages both contain index.py, which is exactly what the build produces and
@@ -75,28 +75,41 @@ def _load(package, filename, alias):
 _install_stubs()
 sys.path.insert(0, os.path.join(SRC, "shared"))
 
-contracts = _load("shared", "contracts.py", "contracts")
-ddb = _load("shared", "ddb.py", "ddb")
-agentic_trace = _load("shared", "agentic_trace.py", "agentic_trace")
-retrieve = _load("retrieve", "index.py", "handler_retrieve")
-refund = _load("process_refund", "index.py", "handler_refund")
-validator = _load("approval_validator", "validator.py", "handler_validator")
-executor = _load("approval_executor", "executor.py", "handler_executor")
-emit_trace = _load("emit_trace", "index.py", "handler_emit_trace")
-reason = _load("reason", "index.py", "handler_reason")
+contracts = _load("shared", "contracts", "contracts.py")
+ddb = _load("shared", "ddb", "ddb.py")
+agentic_trace = _load("shared", "agentic_trace", "agentic_trace.py")
+retrieve = _load("retrieve", "handler_retrieve")
+refund = _load("process_refund", "handler_refund")
+validator = _load("approval_validator", "handler_validator", "validator.py")
+executor = _load("approval_executor", "handler_executor", "executor.py")
+emit_trace = _load("emit_trace", "handler_emit_trace")
+reason = _load("reason", "handler_reason")
 
 
 class TestContracts(unittest.TestCase):
     def test_fingerprint_ignores_key_order(self):
         self.assertEqual(
-            contracts.fingerprint({"a": 1, "b": 2}),
-            contracts.fingerprint({"b": 2, "a": 1}),
+            contracts.fingerprint("refund", {"a": 1, "b": 2}),
+            contracts.fingerprint("refund", {"b": 2, "a": 1}),
         )
 
     def test_fingerprint_changes_with_value(self):
         self.assertNotEqual(
-            contracts.fingerprint({"amount_cents": 5000}),
-            contracts.fingerprint({"amount_cents": 500000}),
+            contracts.fingerprint("refund", {"amount_cents": 5000}),
+            contracts.fingerprint("refund", {"amount_cents": 500000}),
+        )
+
+    def test_fingerprint_binds_the_action_not_only_the_arguments(self):
+        """Same arguments under a different action must not share a fingerprint.
+
+        The executor reads back both `action` and `arguments` from the approvals store and
+        invokes the write tool the action names. A hash over arguments alone leaves half of
+        what it executes unverified: whoever can tamper with the stored arguments — the
+        threat this check exists for — can instead leave them alone and change the action.
+        """
+        self.assertNotEqual(
+            contracts.fingerprint("refund", {"amount_cents": 500}),
+            contracts.fingerprint("wire_transfer", {"amount_cents": 500}),
         )
 
     def test_positive_int_rejects_zero_and_over_maximum(self):
@@ -318,7 +331,7 @@ class TestExecutor(unittest.TestCase):
 
     def test_stale_cutoff_sorts_before_now(self):
         """The reclaim condition is a string comparison, so ISO ordering is the contract."""
-        self.assertLess(executor._iso_seconds_ago(900), executor._now_iso())
+        self.assertLess(executor._iso_seconds_ago(900), executor.now_iso())
         self.assertLess(executor._iso_seconds_ago(900), executor._iso_seconds_ago(60))
 
     def test_write_tool_name_comes_from_the_configured_prefix(self):
@@ -574,6 +587,61 @@ class TestEmitTrace(unittest.TestCase):
         self.assertEqual(record["total_tokens"], 4210)
         self.assertEqual(record["cost_usd"], 0.0631)
         self.assertEqual(record["model_version"], "claude-opus-5")
+
+    def test_usage_flattened_onto_the_response_is_still_read(self):
+        """The sibling trees' reason handlers flatten usage; this one nests it.
+
+        Both emitters there read either shape. This one read only the nested one, so the
+        shape a reader would carry over from Azure or GCP — the same handler, one tree
+        across — produced a terminal record with no tokens and no cost. Nothing fails: the
+        record is written, the metric filter matches `cost_usd>0` and finds nothing, and the
+        spend alarm goes quiet rather than red.
+        """
+        record = emit_trace.normalize(
+            {
+                "event_type": "request_complete",
+                "correlation_id": "c-1",
+                "outcome": "success",
+                "decision": {
+                    "Payload": {
+                        "model_version": "claude-opus-5",
+                        "total_tokens": 4210,
+                        "cost_usd": 0.0631,
+                    }
+                },
+            }
+        )
+        self.assertEqual(record["total_tokens"], 4210)
+        self.assertEqual(record["cost_usd"], 0.0631)
+
+    def test_a_boolean_is_not_a_token_count(self):
+        """`True` is an `int` in Python, so an unguarded isinstance check records it as 1."""
+        record = emit_trace.normalize(
+            {
+                "event_type": "request_complete",
+                "correlation_id": "c-1",
+                "decision": {"Payload": {"usage": {"total_tokens": True}}},
+            }
+        )
+        self.assertNotIn("total_tokens", record)
+
+    def test_usage_on_the_event_itself_is_not_lost_to_a_populated_decision(self):
+        """Three places usage can arrive, and the widest one used to be unreachable.
+
+        Merging the decision over the event makes the merged dict truthy whenever the
+        decision carries anything at all, so a fallback guarded by `if not usage` never runs.
+        The record is still written; it just has no tokens and no cost in it.
+        """
+        record = emit_trace.normalize(
+            {
+                "event_type": "request_complete",
+                "correlation_id": "c-1",
+                "decision": {"Payload": {"model_version": "opus"}},
+                "usage": {"total_tokens": 4210, "cost_usd": 0.0631},
+            }
+        )
+        self.assertEqual(record["total_tokens"], 4210)
+        self.assertEqual(record["cost_usd"], 0.0631)
 
     def test_missing_usage_is_absent_rather_than_invented(self):
         record = emit_trace.normalize(

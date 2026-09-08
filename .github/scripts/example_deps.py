@@ -135,11 +135,6 @@ def resolves_in(module, directory):
     ).exists()
 
 
-def is_local(module, example):
-    """A `.py` file or package directory sitting inside the example is not a dependency."""
-    return resolves_in(module, example)
-
-
 def owning_example(module, root, importer):
     """The *other* example this module lives in, if any.
 
@@ -215,7 +210,8 @@ def check(root):
 
         third_party = set()
         for module, files in sorted(modules.items()):
-            if module in stdlib or module == "__future__" or is_local(module, example):
+            # resolves_in(): a `.py` file or package dir inside the example is not a dependency.
+            if module in stdlib or module == "__future__" or resolves_in(module, example):
                 continue
             owner = owning_example(module, root, example)
             if owner:

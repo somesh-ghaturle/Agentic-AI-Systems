@@ -13,7 +13,7 @@ from __future__ import annotations
 import pathlib
 import sys
 
-SKIP_DIRS = {".git", ".terraform", "__pycache__", "node_modules", ".venv"}
+SKIP_DIRS = {".git", ".terraform", "__pycache__", "node_modules", ".venv", "venv"}
 
 
 def markdown_files(root: pathlib.Path):

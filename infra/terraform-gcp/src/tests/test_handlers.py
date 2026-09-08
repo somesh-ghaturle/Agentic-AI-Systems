@@ -345,7 +345,7 @@ class TestFirestoreClaim(unittest.TestCase):
         self.assertFalse(self._claim({"status": "executed"}))
 
     def test_fresh_executing_claim_is_not_stealable(self):
-        fresh = firestore_io._now_iso()
+        fresh = firestore_io.now_iso()
         self.assertFalse(self._claim({"status": "executing", "claimed_at": fresh}))
 
     def test_stale_executing_claim_is_reclaimable(self):
@@ -376,6 +376,24 @@ class TestEmitTrace(unittest.TestCase):
         )
         self.assertEqual(record["cost_usd"], 0.25)
         self.assertEqual(record["total_tokens"], 10)
+
+    def test_usage_on_the_payload_itself_is_not_lost_to_a_populated_decision(self):
+        """Three places usage can arrive, and the widest one was unreachable.
+
+        `{**decision, **nested}` is non-empty whenever the decision carries anything at
+        all, so the `if not usage` fallback behind it never ran and payload-level usage was
+        dropped. Nothing fails when that happens: the record is written, and it simply has no
+        tokens and no cost in it.
+        """
+        record = emit_trace.normalize(
+            {
+                "event": "execution_completed",
+                "decision": {"body": {"model_version": "gpt"}},
+                "usage": {"total_tokens": 4210, "cost_usd": 0.0631},
+            }
+        )
+        self.assertEqual(record["total_tokens"], 4210)
+        self.assertEqual(record["cost_usd"], 0.0631)
 
     def test_usage_is_absent_when_the_model_did_not_report_it(self):
         record = emit_trace.normalize({"event": "execution_completed"})

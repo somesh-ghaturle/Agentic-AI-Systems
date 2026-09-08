@@ -17,9 +17,14 @@
 # keep the model vendor consistent across the three trees and lose that — the catalog's
 # Terraform coverage is thin enough to need azapi for parts of it.
 #
-# What does NOT change is the shape of the contract. The proposal schema, the untrusted
-# document handling, and the usage reporting are identical across all three trees, because
-# they are properties of the architecture rather than of the model.
+# What does NOT change is the shape of the contract. The proposal schema and the untrusted
+# document handling are identical across all three trees, because they are properties of the
+# architecture rather than of the model. Usage reporting is the exception, and only in where
+# the fields sit: this handler and the GCP one flatten them onto the response because neither
+# Logic Apps nor Workflows reaches into a nested object comfortably, while the AWS handler
+# nests them under `usage`. The fields themselves, and the rule that a missing usage block
+# means a missing cost figure rather than a zero, are the same everywhere. All three trace
+# emitters read both shapes.
 #
 # Three properties this handler owns:
 #
