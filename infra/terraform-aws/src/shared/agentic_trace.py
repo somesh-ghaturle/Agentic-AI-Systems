@@ -81,7 +81,7 @@ class Tracer:
             "event_type": event_type,
             "correlation_id": self.correlation_id,
             "step": fields.pop("step", self.default_step),
-            "timestamp": _now_iso(),
+            "timestamp": now_iso(),
         }
         record.update({k: v for k, v in fields.items() if v is not None})
 
@@ -162,5 +162,11 @@ def tracer_for(event, step=None):
     return Tracer(correlation_id, step=step)
 
 
-def _now_iso():
+def now_iso():
+    """UTC, second resolution, the shape every stored timestamp in this tree uses.
+
+    Public and living here because every package already vendors this module (build.sh
+    copies shared/*.py into each one) and every handler already imports from it. It was
+    previously redefined, identically, in three modules per tree.
+    """
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

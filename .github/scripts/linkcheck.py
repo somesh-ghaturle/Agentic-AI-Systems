@@ -36,7 +36,7 @@ import sys
 # matched, and are not used in this repository.
 LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
-SKIP_DIRS = {".git", "node_modules", ".terraform", "__pycache__"}
+SKIP_DIRS = {".git", ".terraform", "__pycache__", "node_modules", ".venv", "venv"}
 
 # Checked with startswith, so anything with a scheme or a pure anchor is left alone.
 EXTERNAL = ("http://", "https://", "mailto:", "#", "tel:")
@@ -48,7 +48,7 @@ def markdown_files(root):
             yield path
 
 
-def broken_links(path, root):
+def broken_links(path):
     """Yield (lineno, target) for each relative link in `path` that does not resolve."""
     in_fence = False
     for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
@@ -82,7 +82,7 @@ def main():
     checked = 0
     for path in markdown_files(root):
         checked += 1
-        for lineno, target in broken_links(path, root):
+        for lineno, target in broken_links(path):
             failures.append((path.relative_to(root), lineno, target))
 
     for relative, lineno, target in failures:

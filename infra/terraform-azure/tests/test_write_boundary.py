@@ -42,11 +42,52 @@ SP_HEADER = re.compile(
 # opens by explaining why Azure Policy cannot deny `app_role_assignment_required = false`.
 # Matching inside a comment would make the test fail on documentation, which trains people
 # to write around it. Stripping comments is not a loophole: HCL does not evaluate them.
-COMMENT = re.compile(r"(#|//).*$")
 
 
 def strip_comments(line):
-    return COMMENT.sub("", line)
+    """Remove a Terraform line comment, ignoring comment markers inside strings.
+
+    Character-by-character rather than a `(#|//).*$` regex, matching the AWS, GCP and
+    Snowflake suites. The regex is wrong specifically here: this tree's identity surface is
+    built from `api://` and `https://` values — modules/tools/main.tf:82 and :252,
+    modules/observability/outputs.tf:41 — and cutting at `//` truncates them mid-value.
+    In modules/tools/outputs.tf that also swallowed a closing brace, leaving text whose
+    brace balance differed from the file's; block_body() counts braces on this output, so
+    it would have read the wrong body or raised on a well-formed file. Ten files in this
+    tree carry `//` or `#` inside a quoted string.
+
+    Heredoc bodies are not string-quoted, so a `#` inside one is still treated as a
+    comment. Nothing asserted here depends on heredoc content surviving intact.
+    """
+    out = []
+    in_string = False
+    escaped = False
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if escaped:
+            out.append(char)
+            escaped = False
+            index += 1
+            continue
+        if char == "\\":
+            out.append(char)
+            escaped = True
+            index += 1
+            continue
+        if char == '"':
+            in_string = not in_string
+            out.append(char)
+            index += 1
+            continue
+        if not in_string:
+            if char == "#":
+                break
+            if char == "/" and index + 1 < len(line) and line[index + 1] == "/":
+                break
+        out.append(char)
+        index += 1
+    return "".join(out)
 
 
 def strip_comments_preserving_lines(text):
@@ -152,6 +193,38 @@ class TestWriteBoundary(unittest.TestCase):
             offenders,
             "{} is set to false at:\n  {}".format(REQUIRED, "\n  ".join(offenders)),
         )
+
+
+class TestTheReaderItself(unittest.TestCase):
+    """The reader is a claim like any other, and it was the one nothing checked.
+
+    Every assertion above is only as good as the text it reads. Three sibling trees scan
+    comments character-by-character and say in their docstrings that a `(#|//).*$` regex is
+    the wrong tool here; this tree used that regex until the brace test below caught it
+    truncating `api://` URIs mid-value.
+    """
+
+    def test_a_url_inside_a_string_survives(self):
+        line = '  identifier_uris = ["api://${var.name_prefix}-tool-${each.key}"]'
+        self.assertEqual(strip_comments(line), line)
+
+    def test_a_real_comment_is_still_removed(self):
+        self.assertEqual(strip_comments("a = 1  # trailing").rstrip(), "a = 1")
+        self.assertEqual(strip_comments("b = 2  // trailing").rstrip(), "b = 2")
+
+    def test_stripping_never_changes_brace_balance(self):
+        # The failure mode that matters: block_body() counts braces on stripped text, so a
+        # stripper that eats a closing brace makes it read the wrong body or raise on a file
+        # that is perfectly well-formed.
+        for path in tf_files():
+            with open(path, encoding="utf-8") as handle:
+                raw = handle.read()
+            stripped = strip_comments_preserving_lines(raw)
+            self.assertEqual(
+                raw.count("{") - raw.count("}"),
+                stripped.count("{") - stripped.count("}"),
+                f"{os.path.relpath(path, TREE)}: comment stripping changed the brace balance",
+            )
 
 
 if __name__ == "__main__":

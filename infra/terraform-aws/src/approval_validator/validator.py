@@ -18,7 +18,7 @@ import time
 import uuid
 
 import boto3
-from agentic_trace import tracer_for
+from agentic_trace import now_iso, tracer_for
 from contracts import fingerprint, positive_int
 from ddb import to_item
 
@@ -50,7 +50,7 @@ def handler(event, context=None):
     reasons = [check["code"] for check in checks if not check["passed"]]
 
     approval_id = _approval_id(correlation_id, decision)
-    created_at = _now_iso()
+    created_at = now_iso()
 
     record = {
         "approval_id": approval_id,
@@ -59,7 +59,9 @@ def handler(event, context=None):
         "status": "pending" if valid else "rejected",
         "action": decision.get("action"),
         "arguments": decision.get("arguments") or {},
-        "arguments_fingerprint": fingerprint(decision.get("arguments") or {}),
+        "arguments_fingerprint": fingerprint(
+            decision.get("action"), decision.get("arguments") or {}
+        ),
         "rationale": decision.get("rationale"),
         "actor": {
             "user_id": actor.get("user_id"),
@@ -199,7 +201,9 @@ def _write_record(record):
 
 
 def _approval_id(correlation_id, decision):
-    arguments_fingerprint = fingerprint(decision.get('arguments') or {})
+    arguments_fingerprint = fingerprint(
+        decision.get('action'), decision.get('arguments') or {}
+    )
     seed = f"{correlation_id}:{decision.get('action')}:{arguments_fingerprint}"
     return str(uuid.uuid5(_APPROVAL_NAMESPACE, seed))
 
@@ -228,6 +232,3 @@ def _policy_max_refund_cents():
     except ValueError:
         return 50_000
 
-
-def _now_iso():
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

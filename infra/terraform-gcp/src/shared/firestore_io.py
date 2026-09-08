@@ -23,6 +23,8 @@
 import os
 import time
 
+from agentic_trace import now_iso
+
 _client = None
 
 
@@ -111,7 +113,7 @@ def claim(approval_id, new_status, callback_url, approver, comment=None, db=None
             captured["record"] = None
             return
 
-        now = _now_iso()
+        now = now_iso()
         update = {
             "status": new_status,
             "callback_url": callback_url,
@@ -151,7 +153,7 @@ def record_outcome(approval_id, status, outcome, db=None):
         {
             "status": status,
             "outcome": outcome,
-            "completed_at": _now_iso(),
+            "completed_at": now_iso(),
         }
     )
 
@@ -172,6 +174,3 @@ def stale_claim_seconds():
 def _iso_seconds_ago(seconds):
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - seconds))
 
-
-def _now_iso():
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

@@ -112,7 +112,7 @@ def _approve(approval_id, callback_url, approver, tracer):
     # Belt and braces: the fingerprint the validator computed over the arguments a human
     # was shown must still describe the arguments about to run.
     stored = record.get("arguments_fingerprint")
-    if stored and stored != fingerprint(arguments):
+    if stored and stored != fingerprint(action, arguments):
         firestore_io.record_outcome(approval_id, "failed", {"error": "arguments_tampered"})
         _resolve(
             callback_url,

@@ -94,9 +94,12 @@ def _usage(payload):
     # `usage` — Workflows has no comfortable way to reach into a nested object with a
     # default. Both shapes are read so a nested caller still works.
     nested = decision.get("usage") if isinstance(decision.get("usage"), dict) else {}
-    usage = {**decision, **nested}
-    if not usage:
-        usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else {}
+    # Precedence, widest first: usage on the event itself, then the model step's response,
+    # then a `usage` block nested inside it. The nested form cannot simply win by truthiness
+    # — `{**decision, **nested}` is non-empty whenever the decision carries anything at all,
+    # so a `if not usage` fallback after it never runs and event-level usage is lost.
+    event_level = payload.get("usage") if isinstance(payload.get("usage"), dict) else {}
+    usage = {**event_level, **decision, **nested}
 
     fields = {}
     for field in ("total_tokens", "input_tokens", "output_tokens", "cost_usd"):

@@ -81,7 +81,7 @@ class Tracer:
             "event": event,
             "correlation_id": self.correlation_id,
             "step": fields.pop("step", self.default_step),
-            "timestamp": _now_iso(),
+            "timestamp": now_iso(),
         }
 
         # The cost metric filters on `terminal=true AND cost_usd>0` rather than on the event
@@ -171,5 +171,11 @@ def tracer_for(payload, step=None):
     return Tracer(correlation_id, step=step)
 
 
-def _now_iso():
+def now_iso():
+    """UTC, second resolution, the shape every stored timestamp in this tree uses.
+
+    Public and living here because every package already vendors this module (build.sh
+    copies shared/*.py into each one) and every handler already imports from it. It was
+    previously redefined, identically, in three modules per tree.
+    """
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

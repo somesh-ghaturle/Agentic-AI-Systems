@@ -66,14 +66,33 @@ def positive_int(value, field, maximum=None):
     return parsed, None
 
 
-def fingerprint(arguments):
-    """A stable hash of the arguments a human approved.
+def fingerprint(action, arguments):
+    """A stable hash of the action and arguments a human approved.
 
     The executor compares this against what it is about to run. Approving a $50 refund and
     executing a $5,000 one differs by one field, and one field is exactly what a hash
     catches.
+
+    The action is bound in, not the arguments alone. The executor reads `action` and
+    `arguments` back from the same stored record and invokes whichever write tool the action
+    names, so hashing only the arguments leaves half of what runs unverified: an attacker who
+    can rewrite the stored arguments — the only threat this check exists for — can instead
+    leave them untouched and change the action. The examples this tree mirrors bind the tool
+    name for the same reason (examples/hermes-agent, examples/second-path).
+
+    Changing what goes into the hash invalidates fingerprints already stored, and that lands
+    in two places. Approvals in flight across the deploy fail their tamper check as
+    `arguments_tampered`, which is the safe direction. The deterministic approval ID moves
+    with it — `_approval_id()` seeds a UUID5 from this digest — so a validation retried
+    across the deploy stops collapsing onto the pending approval its earlier attempt created
+    and opens a second one instead. That half fails open: a duplicate review to dismiss, not
+    an unapproved write. Drain the approvals in flight, or expect both for one deploy.
     """
-    canonical = json.dumps(arguments, sort_keys=True, separators=(",", ":"))
+    canonical = json.dumps(
+        {"action": action, "arguments": arguments},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 

@@ -92,11 +92,19 @@ def strip_comments_preserving_lines(text):
     return "\n".join(strip_comments(line) for line in text.split("\n"))
 
 
+# `terraform init` writes provider binaries and downloaded modules under .terraform/, and
+# those trees contain .tf files that are not this repository's source. Three env roots have
+# one on any machine where the validate job has been reproduced locally. The sibling suites
+# skip these; this one did not, which meant it read whatever a local init had fetched.
+SKIP_DIRS = {".terraform", "node_modules", "__pycache__"}
+
+
 def tf_files(*subdirs):
     for subdir in subdirs:
         root = os.path.join(TREE, subdir)
-        for dirpath, _, filenames in os.walk(root):
-            for filename in filenames:
+        for dirpath, dirnames, filenames in os.walk(root):
+            dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+            for filename in sorted(filenames):
                 if filename.endswith(".tf"):
                     yield os.path.join(dirpath, filename)
 
@@ -107,7 +115,13 @@ def read(path):
 
 
 def block_body(text, open_brace_index):
-    """Returns the balanced body of a block starting at an opening brace."""
+    """Returns the balanced body of a block starting at an opening brace.
+
+    Raises rather than returning "" on unbalanced braces, matching the Azure and GCP
+    suites. An empty body satisfies most assertions here vacuously — a resource whose body
+    could not be read is indistinguishable from one that simply lacks the attribute being
+    hunted, and that is the wrong way for a boundary test to fail.
+    """
     depth = 0
     for index in range(open_brace_index, len(text)):
         if text[index] == "{":
@@ -116,7 +130,7 @@ def block_body(text, open_brace_index):
             depth -= 1
             if depth == 0:
                 return text[open_brace_index + 1 : index]
-    return ""
+    raise AssertionError(f"unbalanced braces starting at offset {open_brace_index}")
 
 
 def resource_bodies(resource_type, *subdirs):

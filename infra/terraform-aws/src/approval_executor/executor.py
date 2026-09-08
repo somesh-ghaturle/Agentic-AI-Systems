@@ -21,7 +21,7 @@ import os
 import time
 
 import boto3
-from agentic_trace import tracer_for
+from agentic_trace import now_iso, tracer_for
 from botocore.exceptions import ClientError
 from contracts import fingerprint, require
 from ddb import from_item, to_item
@@ -95,7 +95,7 @@ def _approve(key, task_token, approver, tracer):
     # Belt and braces: the fingerprint the validator computed over the arguments a human
     # was shown must still describe the arguments about to run.
     stored = record.get("arguments_fingerprint")
-    if stored and stored != fingerprint(arguments):
+    if stored and stored != fingerprint(action, arguments):
         _record_outcome(key, "failed", {"error": "arguments_tampered"})
         _send_task_failure(
             task_token,
@@ -168,7 +168,7 @@ def _claim(key, new_status, task_token, approver, comment=None):
     arguments, fingerprint, correlation ID) are written once by the validator and never
     revised, and the pre-update status is what tells the caller a reclaim happened.
     """
-    now = _now_iso()
+    now = now_iso()
     expression = (
         "SET #s = :new, task_token = :token, approver = :approver, "
         "claimed_at = :now, resolved_at = :now"
@@ -240,7 +240,7 @@ def _record_outcome(key, status, result):
             ":status": status,
             # The write tool's response is parsed JSON, so any decimal in it is a float.
             ":outcome": to_item(result),
-            ":now": _now_iso(),
+            ":now": now_iso(),
         },
     )
 
@@ -302,6 +302,3 @@ def _stale_claim_seconds():
 def _iso_seconds_ago(seconds):
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - seconds))
 
-
-def _now_iso():
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
