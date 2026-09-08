@@ -181,17 +181,18 @@ resource "azurerm_role_assignment" "service_contributor" {
 # buy: it removes the public route, and it changes nothing about authorization. Anything
 # inside the VNet still needs a role assignment above.
 #
-# WHAT IT REMOVES IS NOT REPLACED. In prod and staging, supplying
+# WHAT IT REMOVES IS NOW REPLACED. In prod and staging, supplying
 # `knowledge_private_dns_zone_ids` both creates this endpoint and flips
-# `public_network_access_enabled` to false at the env root. No Function App in this tree is
-# VNet-integrated — `virtual_network_subnet_id` appears nowhere in it — so the public route
-# closes and no handler has a private one. Retrieval then fails at the network layer while
-# the role assignments above still read as correct.
+# `public_network_access_enabled` to false at the env root — so for as long as no Function App
+# was VNet-integrated, that pair closed the public route and left no private one behind it.
+# The delegated subnet in `modules/networking` and the `virtual_network_subnet_id` on each
+# Function App module are the replacement, and tests/test_knowledge_reachability.py fails if a
+# root couples the two settings while leaving a handler module outside the VNet.
 #
-# This is the Azure shape of the gap recorded for AWS in
-# `terraform-aws/modules/knowledge/main.tf`, with one difference that makes it sharper:
-# there the strict setting is hardcoded in prod, here it is triggered by an operator
-# supplying a DNS zone id, which reads like a hardening step rather than a cutover.
+# Y1 IS THE EXCEPTION AND IT IS NOT A GAP. The Consumption plan has no VNet integration at any
+# price, so dev does not wire it and staging follows its own SKU rather than assuming EP1.
+# A staging run on Y1 therefore cannot rehearse the private path — that is a property of the
+# plan, and the reason prod's SKU is not a cost decision alone.
 # ---------------------------------------------------------------------------
 
 resource "azurerm_private_endpoint" "knowledge" {

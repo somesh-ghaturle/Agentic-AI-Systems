@@ -109,6 +109,19 @@ module "archive" {
   tags = local.tags
 }
 
+module "networking" {
+  source = "../../modules/networking"
+
+  name_prefix = local.name_prefix
+
+  # The same VPC the knowledge collection's endpoint lands in. One network, or the handler
+  # ENIs and the collection endpoint are in two places that cannot reach each other.
+  vpc_id     = var.vpc_id
+  subnet_ids = var.subnet_ids
+
+  tags = local.tags
+}
+
 module "knowledge" {
   source = "../../modules/knowledge"
 
@@ -120,7 +133,7 @@ module "knowledge" {
   allow_public_access = false
   vpc_id              = var.vpc_id
   subnet_ids          = var.subnet_ids
-  security_group_ids  = var.security_group_ids
+  security_group_ids  = [module.networking.endpoint_security_group_id]
 
   # The retrieve tool's role, not the orchestrator's. Data access in OpenSearch Serverless
   # is a separate grant from IAM and from network reachability, and it names the principal
@@ -153,6 +166,11 @@ module "observability" {
   alarm_topic_arns = var.alarm_topic_arns
 
   tags = local.tags
+  # On the VPC, so the collection's endpoint is reachable at all. The security group
+  # permits 443 to the interface endpoints and nothing else — there is no NAT here.
+  subnet_ids         = var.subnet_ids
+  security_group_ids = [module.networking.handler_security_group_id]
+
 }
 
 module "tools" {
@@ -179,6 +197,11 @@ module "tools" {
   log_retention_days = var.log_retention_days
 
   tags = local.tags
+  # On the VPC, so the collection's endpoint is reachable at all. The security group
+  # permits 443 to the interface endpoints and nothing else — there is no NAT here.
+  subnet_ids         = var.subnet_ids
+  security_group_ids = [module.networking.handler_security_group_id]
+
 }
 
 module "approval" {
@@ -200,6 +223,11 @@ module "approval" {
   log_retention_days = var.approval_log_retention_days
 
   tags = local.tags
+  # On the VPC, so the collection's endpoint is reachable at all. The security group
+  # permits 443 to the interface endpoints and nothing else — there is no NAT here.
+  subnet_ids         = var.subnet_ids
+  security_group_ids = [module.networking.handler_security_group_id]
+
 }
 
 module "orchestration" {

@@ -101,10 +101,11 @@ section saying what has to be decided first.
 | 65 | State the VPC-only collection's reachability gap | Documentation | Medium | Done | Prod locks the collection to an endpoint no handler can reach | 2026-09-07 |
 | 66 | Correct the module chart and carry the reachability guard to Azure | Documentation | Medium | Done | Two wrong notes, a missing fifth tree, and the same gap one variable away in Azure | 2026-09-07 |
 | 67 | Fix the red `lint` job on `main` | CI/CD | High | Done | Four ruff findings in the two guard suites tasks 65 and 66 added | 2026-09-08 |
+| 68 | Put the handlers on the network, in all three trees | Infrastructure | High | Done | The strict settings had no reachable path behind them; now they do, three different ways | 2026-09-08 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 67 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 on 2026-09-08.
+tree, and kept current as tasks have landed since. **All 68 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 and 68 on 2026-09-08.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3130,6 +3131,64 @@ only the failing one.
 
 ---
 
+### Task 68 — Put the handlers on the network, in all three trees
+
+**Goal.** Give the strict network settings something behind them. Tasks 65 and 66 wrote down
+that prod locks its knowledge store to a private path no handler can reach; this closes it.
+
+**Status: Done.** [`infra/terraform-aws/modules/networking/`](../infra/terraform-aws/modules/networking/),
+`vpc_config` across the three AWS handler modules, a delegated subnet and
+`virtual_network_subnet_id` across the three Azure ones, `vpc_connector` across the two GCP ones,
+and both guard suites rewritten to assert the pairing instead of the absence.
+
+**None of the three creates a network.** The VPC, VNet and connector are inputs, the way
+`modules/knowledge` always took `vpc_id`. An organisation running this has a network with
+routing, flow logs and an address plan, and a reference deployment that invents a second one is
+not a shape anyone adopts. Dev in every tree supplies nothing and stays deployable with no
+network at all.
+
+**AWS: no NAT gateway, deliberately.** A private-subnet Lambda has no route out, and the reflex
+fix is a NAT at about $32 per AZ per month plus $0.045 per GB — the GB being every Bedrock
+response the agent reads. Interface endpoints for the four services `src/` actually calls cost
+about $7 per AZ each and keep the traffic off the public internet entirely: cheaper here and
+stronger. The trade is that a service missing from `interface_services` fails as a timeout rather
+than an error, which is why that list is a variable whose default is the handlers' real call list
+and why a test asserts the two still agree. DynamoDB is a gateway endpoint, which is free.
+
+**The attachment carries what attachment needs.** `AWSLambdaVPCAccessExecutionRole` is attached
+from the same switch that does the attaching, because Lambda builds the ENI with the function's
+own execution role — omit it and the function stalls in `Pending`, then fails with an error
+naming the subnet and nothing about IAM. A precondition refuses subnets supplied without security
+groups, since a VPC-attached function with no group gets the VPC default, which permits all
+egress and inverts the reason it was attached.
+
+**Azure needed a second subnet, not a flag.** A subnet delegated to `Microsoft.Web/serverFarms`
+holds nothing else, and the private endpoint already occupies the first one. **Y1 has no VNet
+integration at any price**, so dev does not wire it and staging follows its own SKU rather than
+assuming EP1 — a staging run on the cheap plan cannot rehearse the private path, which is a
+property of the plan rather than a gap in the tree.
+
+**GCP got the mechanism and kept the posture.** `vpc_connector` on the two function modules, plus
+a precondition making `ALLOW_INTERNAL_ONLY` require one — the trap the `ingress_settings`
+description has named in prose since it was written. Nothing is wired by default: GCP stays
+VPC-free, and the Vertex index endpoint stays public with its reasoning next to it.
+
+**The checkov skips stay, for a different reason than before.** `CKV_AWS_117` fires on a
+`dynamic "vpc_config"` that is empty in dev, because checkov reads the HCL statically. The rule
+cannot express "attached wherever the store is private", which is what the two suites now assert.
+
+**Mutation tested, five breaks, five caught — after the fourth was not.** Detaching prod's
+handlers, dropping the ENI policy, narrowing the endpoint list and un-integrating the Azure apps
+all fail. Changing the subnet delegation did *not*, because the same string appears in a variable
+description and descriptions survive comment-stripping; that assertion is now scoped to the
+resource body, and the mutation fails as it should.
+
+**Verify.** `terraform validate` on all ten roots across the three trees. `python3 -m unittest
+discover -s infra/terraform-aws/tests` — 18 tests; the Azure equivalent — 7.
+`grep -rn 'resource "aws_vpc"\|resource "google_compute_network"' infra/` still returns nothing.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -3186,6 +3245,7 @@ git status --short
 | 2026-09-07 | Added task 65: named the VPC-only collection's reachability gap and guarded it | somesh-ghaturle |
 | 2026-09-07 | Added task 66: fixed two false notes in the module chart, added the missing fifth tree, guarded the Azure sibling | somesh-ghaturle |
 | 2026-09-08 | Added task 67: fixed the red `lint` job the two guard suites introduced | somesh-ghaturle |
+| 2026-09-08 | Added task 68: handlers join the network in all three trees, no NAT, no invented VPC | somesh-ghaturle |
 
 ---
 

@@ -158,3 +158,23 @@ resource "aws_iam_role_policy" "executor" {
   role   = aws_iam_role.executor.id
   policy = data.aws_iam_policy_document.executor.json
 }
+
+# Lambda creates an ENI per function per subnet, and it does that with the *function's*
+# execution role rather than a service role of its own. Without these permissions the
+# attachment stalls the function in `Pending` and then fails invocations with a subnet or
+# ENI-limit error that names nothing about IAM. It is the most common way a first VPC
+# attachment goes wrong, so it is attached from the same `local.vpc_attached` switch that
+# does the attaching.
+resource "aws_iam_role_policy_attachment" "validator_vpc_access" {
+  count = local.vpc_attached ? 1 : 0
+
+  role       = aws_iam_role.validator.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "executor_vpc_access" {
+  count = local.vpc_attached ? 1 : 0
+
+  role       = aws_iam_role.executor.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}

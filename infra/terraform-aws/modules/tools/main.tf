@@ -28,6 +28,9 @@ terraform {
 data "aws_caller_identity" "current" {}
 
 locals {
+  # Subnets are the switch: supplying them is what moves the handlers onto the VPC.
+  vpc_attached = length(var.subnet_ids) > 0
+
   read_tools  = { for k, v in var.tools : k => v if v.access == "read" }
   write_tools = { for k, v in var.tools : k => v if v.access == "write" }
 }
@@ -62,6 +65,26 @@ resource "aws_lambda_function" "tool" {
       },
       var.trace_log_group_name == null ? {} : { TRACE_LOG_GROUP = var.trace_log_group_name },
     )
+  }
+
+  # Attaching a function to a VPC is not a flag, it is a different network: the handler
+  # loses the Lambda-managed route to public AWS endpoints and can reach only what the
+  # subnets route to. `modules/networking` is what makes that a working set rather than a
+  # dead end, and the precondition below refuses the half-configured case where subnets
+  # were supplied and security groups were not.
+  dynamic "vpc_config" {
+    for_each = local.vpc_attached ? [1] : []
+    content {
+      subnet_ids         = var.subnet_ids
+      security_group_ids = var.security_group_ids
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = length(var.subnet_ids) == 0 || length(var.security_group_ids) > 0
+      error_message = "security_group_ids is required when subnet_ids is set. A VPC-attached function with no security group gets the VPC default group, which permits all egress — the opposite of why it was put in the VPC."
+    }
   }
 
   tracing_config {
@@ -207,4 +230,17 @@ resource "aws_lambda_permission" "write_tool_from_approval" {
       error_message = "Write tools are declared but approval_executor_arn is null. A write tool with no approval gate in front of it means the model can execute irreversible actions directly — supply the approval module's executor ARN, or reclassify the tool as read."
     }
   }
+}
+
+# Lambda creates an ENI per function per subnet, and it does that with the *function's*
+# execution role rather than a service role of its own. Without these permissions the
+# attachment stalls the function in `Pending` and then fails invocations with a subnet or
+# ENI-limit error that names nothing about IAM. It is the most common way a first VPC
+# attachment goes wrong, so it is attached from the same `local.vpc_attached` switch that
+# does the attaching.
+resource "aws_iam_role_policy_attachment" "tool_vpc_access" {
+  for_each = local.vpc_attached ? var.tools : {}
+
+  role       = aws_iam_role.tool[each.key].name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }

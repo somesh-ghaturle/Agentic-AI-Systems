@@ -281,6 +281,11 @@ module "tools" {
   storage_shared_access_key_enabled = false
 
   tags = local.tags
+  # EP1, so integration is available. This is the other half of the private endpoint on AI
+  # Search: without it, closing that service's public access removes the only route the
+  # handlers had.
+  virtual_network_subnet_id = module.networking.integration_subnet_id
+
 }
 
 module "approval" {
@@ -330,6 +335,11 @@ module "approval" {
   storage_shared_access_key_enabled = false
 
   tags = local.tags
+  # EP1, so integration is available. This is the other half of the private endpoint on AI
+  # Search: without it, closing that service's public access removes the only route the
+  # handlers had.
+  virtual_network_subnet_id = module.networking.integration_subnet_id
+
 }
 
 module "observability" {
@@ -369,6 +379,11 @@ module "observability" {
   alert_webhook_receivers = var.alert_webhook_receivers
 
   tags = local.tags
+  # EP1, so integration is available. This is the other half of the private endpoint on AI
+  # Search: without it, closing that service's public access removes the only route the
+  # handlers had.
+  virtual_network_subnet_id = module.networking.integration_subnet_id
+
 }
 
 module "orchestration" {

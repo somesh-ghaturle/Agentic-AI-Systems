@@ -234,7 +234,7 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 - `terraform fmt -check` across all four trees, plus a provider-pin check that `terraform validate` cannot see
 - `ruff check` over all Python files, against the rules in `pyproject.toml` — the same command and the same verdict a contributor gets locally
 - `terraform validate` on each of the thirteen environment roots, as a matrix so one broken root does not hide the others
-- `tflint` over all forty-four modules and fourteen roots — `validate` only ever sees a module through a root that calls it, which is why nothing reported that twelve Azure modules pinned no provider version
+- `tflint` over all forty-five modules and fourteen roots — `validate` only ever sees a module through a root that calls it, which is why nothing reported that twelve Azure modules pinned no provider version
 - `checkov` over the trees, failing on any finding not skipped by name and with a reason in [`.checkov.yaml`](.checkov.yaml)
 - `conftest` over all four trees against the OPA policies in [`infra/policies/`](infra/policies/README.md), which check whether resources agree with each other — a content filter that nothing references is the case they exist for — plus the policies' own unit tests
 - Write-boundary tests for all four trees — stdlib `unittest` reading `.tf` files as text

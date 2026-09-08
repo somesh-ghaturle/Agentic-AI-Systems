@@ -86,3 +86,15 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "subnet_ids" {
+  description = "Private subnets for the handler ENIs. Empty leaves the functions on the Lambda-managed network, which is the dev posture; supplying them is what makes a VPC-only dependency reachable. See modules/networking."
+  type        = list(string)
+  default     = []
+}
+
+variable "security_group_ids" {
+  description = "Security groups for the handler ENIs. Required when subnet_ids is set — `modules/networking` outputs one that permits 443 to the endpoints and nothing else."
+  type        = list(string)
+  default     = []
+}

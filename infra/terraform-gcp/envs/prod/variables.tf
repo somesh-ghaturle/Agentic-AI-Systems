@@ -143,3 +143,9 @@ variable "alert_email_receivers" {
   type        = map(string)
   default     = {}
 }
+
+variable "vpc_connector" {
+  description = "Serverless VPC Access connector for the handlers, by name or self-link. Null — the default — keeps this tree free of a VPC, which is the posture recorded in modules/knowledge for the index endpoint."
+  type        = string
+  default     = null
+}

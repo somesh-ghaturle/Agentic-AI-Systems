@@ -364,6 +364,10 @@ module "tools" {
   }
 
   labels = local.labels
+  # Available for a deployment that already runs a VPC; null here, which is what keeps this
+  # tree free of the VPC peering the Vertex endpoint would otherwise need.
+  vpc_connector = var.vpc_connector
+
 }
 
 module "approval" {
@@ -423,6 +427,10 @@ module "approval" {
   message_retention_duration = "3600s"
 
   labels = local.labels
+  # Available for a deployment that already runs a VPC; null here, which is what keeps this
+  # tree free of the VPC peering the Vertex endpoint would otherwise need.
+  vpc_connector = var.vpc_connector
+
 }
 
 module "orchestration" {

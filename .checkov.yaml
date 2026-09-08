@@ -31,15 +31,24 @@ skip-check:
   # -------------------------------------------------------------------------
   # Network isolation the reference architecture deliberately does not have.
   #
-  # Every handler here is reached over a public endpoint and authorized by IAM —
-  # a Lambda resource policy, an Entra app role, a GCP deny policy. Private
-  # networking is the correct production answer and it is a different deployment:
-  # VPCs and subnets, private endpoints and private DNS zones, NAT for egress, and
-  # a bill that starts before the first request. No document here describes that
-  # transition. infra/CHOOSING-A-TREE.md section 4 records the absence across all
-  # three trees, and infra/terraform-aws/modules/knowledge/main.tf names what it
-  # costs there: the collection's VPC-only setting has no handler inside the VPC
-  # to serve.
+  # These skips outlived the absence they were written for. Every tree can now put
+  # its handlers on a network — `vpc_config` on AWS, `virtual_network_subnet_id` on
+  # Azure, `vpc_connector` on GCP — and prod and staging in the first two do. What
+  # they have in common is that the attachment is CONDITIONAL: an empty subnet list
+  # leaves dev on the managed network, which is what keeps it deployable with no VPC.
+  # Checkov reads the HCL statically, so a `dynamic "vpc_config"` that is empty in
+  # one environment still reads as a Lambda outside a VPC, and CKV_AWS_117 fires on
+  # a tree that satisfies it wherever it matters.
+  #
+  # The skips stay for that reason and no longer for the original one. What actually
+  # guards the pairing is infra/terraform-aws/tests/test_knowledge_reachability.py
+  # and its Azure counterpart: a root that locks its knowledge store to a private
+  # path while leaving a handler module off the network fails there, which is a
+  # check on the combination rather than on a single resource.
+  #
+  # Still deliberately absent, and still the reason the Azure and GCP entries below
+  # are here: private endpoints for Cosmos DB, Key Vault, Service Bus and Storage,
+  # private DNS zones, and a private Vertex index endpoint.
   #
   # What must NOT be skipped alongside these, and is not: the authorization checks.
   # The write boundary is enforced by identity, and infra/*/tests/ asserts it holds.

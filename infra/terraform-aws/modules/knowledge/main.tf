@@ -56,16 +56,16 @@ resource "aws_opensearchserverless_security_policy" "encryption" {
 # customer documents. VPC-only is the sane posture; the variable exists so a sandbox can
 # opt out deliberately rather than by omission.
 #
-# REACHABILITY STOPS AT THIS ENDPOINT. Locking the collection to the VPC endpoint does not put
-# the retrieve tool inside the VPC, and nothing else in this tree does either — no Lambda here
-# declares a `vpc_config` (.checkov.yaml skips CKV_AWS_117 with the reasoning, and
-# CHOOSING-A-TREE.md section 4 records the same absence for all three trees). So with
-# allow_public_access = false the retrieve tool has no route to this endpoint, and a query
-# fails at the network layer before the data policy below is read. Closing that is not a
-# variable here: it is a vpc_config on the tools module plus egress for Bedrock, DynamoDB, S3
-# and Logs, through NAT or interface endpoints. The strict setting still ships in staging and
-# prod — a corpus reachable from the internet is the worse default — but treat the VPC-only
-# path as declared rather than exercised.
+# REACHABILITY IS THE OTHER HALF, AND IT NOW EXISTS. Locking the collection to this endpoint
+# does nothing on its own — for a long time no Lambda in this tree had a `vpc_config`, so the
+# retrieve tool had no route here and a query failed at the network layer before the data
+# policy below was read. `modules/networking` and the `vpc_config` on the handler modules are
+# what closed that; the security group passed in as `security_group_ids` is the endpoint group
+# from there, and the handlers hold the matching one.
+#
+# The pair is guarded, in both directions, by tests/test_knowledge_reachability.py: a root
+# that sets allow_public_access = false and leaves a handler module off the VPC fails, and so
+# does a handler module that cannot join one. Either half alone is worse than neither.
 resource "aws_opensearchserverless_security_policy" "network" {
   name = "${var.name_prefix}-knowledge-net"
   type = "network"
