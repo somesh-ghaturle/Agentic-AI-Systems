@@ -104,10 +104,11 @@ section saying what has to be decided first.
 | 68 | Put the handlers on the network, in all three trees | Infrastructure | High | Done | The strict settings had no reachable path behind them; now they do, three different ways | 2026-09-08 |
 | 69 | Close the six candidates the architecture review raised | Repository | High | Done | Duplication that had drifted, including a fingerprint that left the action unverified | 2026-09-08 |
 | 70 | Say that the IaC scanner exists, and re-measure it | Documentation | High | Done | Four documents called it absent or open while it had run on every PR since 2026-08-23 | 2026-09-08 |
+| 71 | Add the `stale-referent` example | Examples | Medium | Done | The approved call and the executed call are identical; the world they name is not | 2026-09-08 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 70 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 70 on 2026-09-08.
+tree, and kept current as tasks have landed since. **All 71 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 71 on 2026-09-08.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3294,6 +3295,55 @@ named in the skip list.
 
 ---
 
+### Task 71 — Add the `stale-referent` example
+
+**Goal.** ROADMAP's near-term list calls for more ways the boundary is lost that are *not* the
+gate being wrong. `second-path` covers a second route to the effect and `tool-discovery` covers a
+filter where a structure was needed. This is the third shape, and the one left standing after
+both of those are fixed.
+
+**Status: Done.** [`examples/stale-referent/`](../examples/stale-referent/README.md), with
+[`tests/test_stale_referent.py`](../tests/test_stale_referent.py) — 13 tests.
+
+**The property.** The approved call and the executed call are byte-identical. The fingerprint
+matches, the gate is consulted, it allows the call, and a different thing happens — because
+arguments are references and the reviewer decided about resolved values. A human approves
+`refund(order="A-42")` after being shown $50.00; the ledger moves to $5,000 before the executor
+resolves it; `fingerprint("refund", {"order": "A-42"})` is unchanged throughout.
+
+**It is the limit of the check task 69 hardened.** Binding the action into the fingerprint closed
+a real gap — the executor reads the action back from the same record. It does not close this one,
+and could not: a hash over a reference certifies the reference, not the referent. Naming that
+limit next to the fix is the point of the example existing rather than being a paragraph.
+
+**`drift()` is the check that separates them.** Not "is this the call that was approved" but "do
+the facts that decision was made about still hold". `execute_bound()` refuses on non-empty drift
+and names the field and both values, because "approval no longer valid" sends an operator to
+re-approve the same thing rather than to ask what changed underneath it.
+
+**The claim is asserted, not described.** `TestTheGateIsNotEnough` runs the whole gate suite
+programmatically *after* the wrong amount has gone out and asserts it still passes — so "a green
+gate suite is not evidence that what was approved is what happened" is a test result.
+
+**Mutation tested, five breaks, all caught.** Dropping the `claim is None` branch, narrowing
+`drift()` to the amount alone, `execute_bound` skipping the drift check, `review()` not recording
+what the reviewer saw, and `execute_bound` skipping the gate once it has checked drift.
+
+**What it declines to teach, stated in its README.** It is not a locking or transaction design.
+Re-checking at execution time closes the window demonstrated here and not the window between that
+check and the effect; the honest answers there are a conditional write, an optimistic-concurrency
+token, or executing against the snapshot rather than the store.
+
+Stdlib only, so it stays in the dependency-free `examples` job, and named in `SECURITY.md` with
+the same shape as `second-path`: the unbound path is *supposed* to refund an unapproved amount and
+its tests assert that it does, so that path is the subject rather than a vulnerability.
+
+**Verify.** `python3 -m unittest tests.test_stale_referent` — 13 tests. `python3
+examples/stale-referent/referent.py` prints the three stages, ending with the refusal that names
+the field that moved.
+
+---
+
 ## Definition of Done
 
 All tasks are considered complete when:
@@ -3353,6 +3403,7 @@ git status --short
 | 2026-09-08 | Added task 68: handlers join the network in all three trees, no NAT, no invented VPC | somesh-ghaturle |
 | 2026-09-08 | Added task 69: closed six architecture-review candidates; the fingerprint now binds the action | somesh-ghaturle |
 | 2026-09-08 | Added task 70: the IaC scanner was documented as absent for two weeks while running on every PR | somesh-ghaturle |
+| 2026-09-08 | Added task 71: `stale-referent`, the third way a correct gate stops mattering | somesh-ghaturle |
 
 ---
 

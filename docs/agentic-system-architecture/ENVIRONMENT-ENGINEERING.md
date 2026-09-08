@@ -12,6 +12,7 @@ action is cheap, visible, and reversible. Those are properties of the environmen
 model, and they are decided before the agent ever runs.
 
 Runnable counterparts: [second-path](../../examples/second-path/README.md),
+[stale-referent](../../examples/stale-referent/README.md),
 [budget-guard](../../examples/budget-guard/README.md),
 [checkpoint-agent](../../examples/checkpoint-agent/README.md),
 [approval-gate-fuzzing](../../examples/approval-gate-fuzzing/README.md), and the four
@@ -208,6 +209,7 @@ a check that looks authoritative and verifies nothing.
 ## Related
 
 - [second-path](../../examples/second-path/README.md) — §2 as a runnable demonstration: a correct gate, and the route that never reaches it
+- [stale-referent](../../examples/stale-referent/README.md) — §2 one step further in: the gate is on the path and consulted, and the world the approved call names has moved under it
 - [budget-guard](../../examples/budget-guard/README.md) — a cap checked before the spend rather than after
 - [checkpoint-agent](../../examples/checkpoint-agent/README.md) — atomic writes, and replay that does not repeat work
 - [approval-gate-fuzzing](../../examples/approval-gate-fuzzing/README.md) — watching the gate refuse, in many phrasings
