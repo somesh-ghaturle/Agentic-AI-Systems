@@ -107,10 +107,11 @@ section saying what has to be decided first.
 | 71 | Add the `stale-referent` example | Examples | Medium | Done | The approved call and the executed call are identical; the world they name is not | 2026-09-08 |
 | 72 | Check the chapter/example pairing instead of asking for it | CI/CD | High | Done | Seven drifts on the first run, five of them a chapter naming an example that never pointed back | 2026-09-08 |
 | 73 | Complete the example index, and guard it | Documentation | High | Done | The README listed 17 of 24; every boundary example added recently was missing | 2026-09-08 |
+| 74 | Say what each example is not, and guard it | Documentation | High | Done | 9 of 24 said it; writing the other 15 found a fail-open approval and an unbacked claim | 2026-09-26 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 73 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, and 67 through 73 on 2026-09-08.
+tree, and kept current as tasks have landed since. **All 74 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 on 2026-09-26.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3407,6 +3408,49 @@ an index entry that stops pointing at a real example fails.
 
 **Verify.** `python3 .github/scripts/pairing.py .` — 4 chapters, 10 pairings, 24 examples indexed.
 
+### Task 74 — Say what each example is not, and guard it
+
+**Goal.** ROADMAP.md asked for per-example "what this teaches, and what it does not" notes,
+"which several examples have and the rest should". That was a request in prose, the same shape
+task 72 replaced with a check.
+
+**Status: Done.** Fifteen READMEs gained a `## What this is not` section, and a third check in
+[`pairing.py`](../.github/scripts/pairing.py) requires one of the four headings already in use
+(`What this is not`, `What this example is not`, `What this does not teach`, `What is
+simplified`) in every example README.
+
+**Nine of twenty-four had one.** Four said what they were not; five said what they simplified.
+`budget-guard`'s "What it demonstrates" and `graph-agent`'s "What it costs" were close, but
+neither says what a reader should not copy the example for.
+
+**Writing the notes meant reading the code, and the code disagreed with three claims.**
+
+- **`graph-agent` approved on any truthy resume value.** `approval()` returned
+  `bool(decision)`, so `Command(resume="no")` executed the refund. The approval gate failed open,
+  which is the failure this repository exists to name. It now requires `decision is True`, and
+  `test_only_a_literal_true_approves` runs without langgraph, so the fast job covers it. Reverting
+  the fix turns it red.
+- **`memory-agent` claimed session scoping it does not do.** The README said `SessionMemory`
+  "scopes recalled facts to a session". `recall()` searches every record, and the session ID is
+  metadata that is never filtered on. The claim is corrected rather than implemented; the note
+  says what a multi-tenant store would leak.
+- **`rag-langchain` kept a second copy of `DOCS`.** This is the positional-mapping bug `rag-faiss`
+  had already fixed and documented. It now imports the list from `build_index`.
+
+`budget-guard`'s README also described a gather-again loop that cannot run: `_do_gather` never
+gathers nothing, so `_do_analyze` never sends it back. The claim is removed, and the note says so.
+
+**The two phrase-matching suites got the bluntest notes.** In both `approval-gate-fuzzing` and
+`eval-red-teaming`, the "naive" and "guarded" paths share one detector, so any bypass phrased
+outside the list passes both and the table still reads clean. The notes say that, and point at
+the structural gate as the thing that holds against an unlisted phrasing.
+
+**Mutation tested, two breaks, both caught.** A renamed heading (`## What this is not yet`) fails,
+and so does a demoted one (plain text instead of `##`).
+
+**Verify.** `python3 .github/scripts/pairing.py .` ends "...and says what it is not";
+`python3 -m unittest tests.test_graph_agent` passes.
+
 ---
 
 ## Definition of Done
@@ -3471,6 +3515,7 @@ git status --short
 | 2026-09-08 | Added task 71: `stale-referent`, the third way a correct gate stops mattering | somesh-ghaturle |
 | 2026-09-08 | Added task 72: the chapter/example pairing is checked in CI; seven drifts fixed | somesh-ghaturle |
 | 2026-09-08 | Added task 73: the README indexed 17 of 24 examples; completed and guarded | somesh-ghaturle |
+| 2026-09-26 | Added task 74: every example says what it is not; fixed graph-agent's fail-open approval | somesh-ghaturle |
 
 ---
 

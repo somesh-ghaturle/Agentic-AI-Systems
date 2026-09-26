@@ -153,7 +153,9 @@ def approval(state: State) -> State:
             "proposal": state["proposal"],
         }
     )
-    return {"approved": bool(decision)}
+    # `is True`, not `bool()`. A resume value is whatever the caller passed, and "no", "false",
+    # and {"approved": False} are all truthy -- `bool()` approved every one of them.
+    return {"approved": decision is True}
 
 
 def execute(state: State) -> State:

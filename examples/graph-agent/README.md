@@ -117,6 +117,16 @@ raise now, and the classifier tests run in the fast CI job with no dependency in
 Worth it when the topology is stable and you need durable interrupts. Overhead when your flow is
 five steps in a line — that is five function calls.
 
+## What this is not
+
+Not an approver. Whoever can call `Command(resume=...)` with the thread id approves; there is no
+approver identity, and nothing binds the resume to the proposal it answers -- the interrupt
+payload is shown, but a caller can resume without reading it. The checkpointer is durable
+storage, not an approval store with a conditional write -- compare the executor claim in
+`infra/*/modules/approval`.
+
+Only a literal `True` approves. It used to be `bool(decision)`, which approved "no".
+
 ## Related
 
 - [architecture.md](architecture.md) — the topology as the graph reports it, where the write

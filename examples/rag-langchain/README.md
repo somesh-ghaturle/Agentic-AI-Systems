@@ -30,6 +30,16 @@ Notes
 - The script will not call OpenAI unless `OPENAI_API_KEY` is set. CI can run the example safely without secrets.
 - For production, replace FAISS with a managed vector DB and add metadata for provenance.
 
+## What this is not
+
+Not grounded answering. Without a key, the fallback prints a fixed sentence about governance
+whatever the question was -- a template, not a summary of what was retrieved. With a key, the
+retrieved text goes into the system prompt unmarked, so a document that contains instructions
+is read as instructions: retrieval is an injection path, and this example does nothing about it.
+
+`query_and_answer.py` once kept its own copy of `DOCS`, the bug `rag-faiss` had already fixed;
+it now imports the list the index is built from.
+
 ## Security
 
 This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The

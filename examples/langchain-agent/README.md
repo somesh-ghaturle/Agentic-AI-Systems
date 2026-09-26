@@ -22,6 +22,12 @@ Notes
 - This example falls back to a helpful message when `langchain` or `OPENAI_API_KEY` are not available so it is safe to include in the repo without secrets.
 - Replace the chain with more advanced agent orchestration (tools, memory) as needed.
 
+## What this is not
+
+Not an agent. One prompt goes to one model and the text comes back: no tools, no loop, no
+memory, no read/write distinction. It shows the LCEL wiring and the fallback behaviour when the
+package or key is missing, and nothing about how a framework changes what an agent may do.
+
 ## Security
 
 This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The

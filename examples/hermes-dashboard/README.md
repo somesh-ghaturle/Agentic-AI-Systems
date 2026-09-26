@@ -19,3 +19,14 @@ For a dependency-managed local run, install `backend/requirements.txt` and run
 or authenticated; use an identity provider, CSRF/origin controls, an atomic durable
 approval store, and TLS before exposing it beyond localhost. The compose file is
 provided for local development only and has no credentials or cloud integrations.
+
+## What this is not
+
+Not an authorization system. `actor` is a free-text field in the request body, so anyone who
+can reach the API can approve as anyone -- including the agent that filed the proposal. The
+`rationale` shown to the reviewer is also the agent's own text, which makes it a channel for
+persuasion rather than evidence.
+
+Not connected to execution. A decision is recorded and broadcast; nothing consumes it. The
+guarantee that an approved action is the one that runs lives in the executor's claim, which is
+`hermes-agent` and `infra/*/modules/approval`, not here.

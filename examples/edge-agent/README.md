@@ -29,3 +29,16 @@ On Raspberry Pi or NVIDIA Jetson, mount a device-local directory at `/data` and
 pass `/data/state.db` and `/data/approval.json`. AWS IoT Greengrass can supervise
 the same container as a local component; keep cloud communication in a separate,
 least-privilege adapter rather than adding it to this agent.
+
+## What this is not
+
+Not a separation of duties. `approval.json` holds the token and the exact proposal together, so
+anything that can read the file can approve it, and anything that can write it can replace the
+arguments before approving. On a device that is usually the agent's own user. The fingerprint is
+recorded for the operator to read; it protects nothing from a file writer, who can recompute it.
+The real control is filesystem permissions: the agent must not be able to read or write the
+approval path.
+
+Single-use holds within one process. `_spent` is in memory, and the file is deleted on approval,
+so a restart with a restored copy of the file would accept it again. One proposal at a time, too:
+`propose()` overwrites whatever was pending.

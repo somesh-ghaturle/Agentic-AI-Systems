@@ -8,7 +8,7 @@ A step budget fires after a fixed count. A token budget fires *before* a spend t
 
 ## What it demonstrates
 
-- **The autonomous loop pattern** from [ARCHITECTURE-PATTERNS.md](../../docs/agentic-system-architecture/ARCHITECTURE-PATTERNS.md). The agent decides its own next step -- it can loop back to gather if analysis found too little, or refine if review found a gap -- rather than following a fixed pipeline.
+- **The autonomous loop pattern** from [ARCHITECTURE-PATTERNS.md](../../docs/agentic-system-architecture/ARCHITECTURE-PATTERNS.md). The agent decides its own next step -- it refines if review found a gap -- rather than following a fixed pipeline.
 - **The token budget bound** from [PRODUCTION-PRINCIPLES.md](../../docs/agentic-system-architecture/PRODUCTION-PRINCIPLES.md): "Enforce strict token limits."
 - **Graceful degradation.** When budget is tight, the agent takes a cheaper ("quick") version of the same step, so it degrades rather than hard-stopping with half an answer.
 - **Naming what was lost.** When even the quick version does not fit, the agent stops and names what it completed and what it skipped. "Skipped: review" tells you the answer is unreviewed; "budget exhausted" tells you nothing.
@@ -22,6 +22,18 @@ python3 examples/budget-guard/agent.py "summarize the refund policy" --budget 50
 ```
 
 The first command gives the agent enough budget to run every step thoroughly. The second forces it into quick mode for the later steps. The third exhausts the budget before the agent finishes, so you see what it names as skipped.
+
+## What this is not
+
+Not token accounting. Every step's cost is a constant in `THOROUGH_COST` and `QUICK_COST`, known
+before the step runs. A real model call's cost is known only afterwards -- output length is the
+model's choice -- so "check before the spend" needs a reservation: cap each call's `max_tokens`
+at what remains and treat that cap as the spend. Without it, the last call can still overrun.
+
+The loop also never truly loops back. `_do_analyze` resets `_gathered` only when nothing was
+gathered, and `_do_gather` never gathers nothing, so the gather-again branch the docstring
+describes is unreachable as written. The budget logic is what this example tests; the
+autonomy around it is scaffolding.
 
 ## Security
 
