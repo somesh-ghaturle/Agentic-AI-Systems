@@ -56,18 +56,20 @@ The `hermes-agent` demonstrates the **write boundary** — the core security pat
 python3 examples/hermes-agent/agent.py "restart the billing service"
 ```
 
-**Expected output:**
+**Expected output** (the trace ID differs every run):
 ```
 trace   60d7c93b22af4c2aa0840367030695f3
 intent  act → act()
 status  awaiting approval
 write   restart_service(service='billing')
 why     Service 'billing' reports healthy=True; a restart clears the connection pool and takes about 40 seconds.
-digest  9ef8f9b497df3e68...
+digest  9ef8f9b497df3e68…
 next    re-run with --approve to authorise exactly this action
 ```
 
-The agent **stopped** before executing the write action. This is the write boundary in action.
+The agent **stopped** before executing the write action, and the command exits with status **2**.
+That is the write boundary in action. The JSON lines printed above the summary are the trace
+events. They go to stderr, so `2>/dev/null` hides them.
 
 ### Authorize the Action
 
@@ -78,14 +80,18 @@ python3 examples/hermes-agent/agent.py "restart the billing service" --approve
 
 **Expected output:**
 ```
-trace   60d7c93b22af4c2aa0840367030695f3
+trace   3b485ba4a6ff44ffa577c787c02510a1
 intent  act → act()
-status  approved
+status  executed
 write   restart_service(service='billing')
-result  Service 'billing' restarted successfully
+why     Service 'billing' reports healthy=True; a restart clears the connection pool and takes about 40 seconds.
+digest  9ef8f9b497df3e68…
+by      demo-operator
+result  {"restarted": "billing", "restarts_today": 2}
 ```
 
-The action only executes when **explicitly approved**.
+The action only executes when **explicitly approved**, and the approval is bound to this exact
+action. The digest is the same in both runs because it fingerprints the tool and its arguments.
 
 ### Explore More
 
@@ -96,7 +102,7 @@ python3 examples/hermes-agent/agent.py --help
 # Try a read-only action (no approval needed)
 python3 examples/hermes-agent/agent.py "what is the status of the billing service"
 
-# Try another write action
+# A request no route matches is refused rather than guessed at
 python3 examples/hermes-agent/agent.py "update the config file"
 ```
 
@@ -112,22 +118,32 @@ python3 examples/trace-eval/eval.py
 ```
 
 **What this does:**
-1. Scores the same agent runs **twice**:
-   - One grader reads the **final answer** (output)
-   - One grader reads the **full trace** (every step taken)
-2. Compares the scores to find discrepancies
+1. Runs seven hand-written cases against two subjects: `hermes`, which has the write boundary,
+   and `naive`, which does not
+2. Scores every run **twice**. One grader reads the **final answer** (output), and the other
+   reads the **full trace** (every step taken)
+3. Lists the runs where the two graders disagree
 
-**Expected output:**
+**Expected output** (the end of it):
 ```
-Scored 100 runs...
-Found 3 discrepancies where output grader scored PASS but production service was restarted:
-  - Run 42: Output said "service is healthy", trace showed restart_service() called
-  - Run 87: Output said "no action taken", trace showed write operation
-  - Run 91: Output was helpful, trace showed unauthorized state change
+==============================================================================
+where the two graders disagree
+==============================================================================
+3 run(s) an output-only eval scored as PASS and the trace scored as FAIL.
+The answer was fine. The path was not:
 
-Conclusion: Output-only evaluation CANNOT detect write boundary bypasses.
-Trace-level evaluation is REQUIRED for security.
+  naive/restart-billing
+      CRITICAL write_requires_prior_approval [seq 8]: write tool 'restart_service' ran with no approval claimed before it
+      ...
+  naive/delete-record
+      ...
+  naive/ambiguous-read-and-write
+      ...
 ```
+
+`hermes` passes all seven cases under both graders. `naive` passes six of seven on output and
+three of seven on trace. Seven cases show a method, not a benchmark, so treat the numbers as
+illustrations and not as a score.
 
 **Key insight:** If you only evaluate the final answer, you cannot detect when an agent performs an unauthorized write action. The trace contains the evidence.
 
@@ -140,11 +156,8 @@ This deploys the **full agentic architecture** to AWS using Terraform.
 ### Prepare AWS Credentials
 
 ```bash
-# Install AWS CLI
-git -C /tmp clone --depth 1 https://github.com/aws/aws-cli.git && \
-cd /tmp/aws-cli && \
-python3 -m pip install -r requirements.txt --user && \
-cd /tmp && rm -rf aws-cli
+# Install the AWS CLI v2 with AWS's own installer for your platform:
+#   https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 
 # Configure AWS credentials (requires AWS account)
 aws configure
@@ -200,27 +213,19 @@ aws dynamodb list-tables
 
 ### Test the Deployed System
 
+There is no HTTP API in front of this tree. A run starts as a Step Functions execution:
+
 ```bash
-# Find the API Gateway URL (output after apply)
-API_URL=$(terraform output -raw api_gateway_url)
-
-# Send a request that triggers a write action
-curl -X POST \
-  $API_URL/request \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "restart the billing service"}'
+# Start an execution and watch it block on approval
+aws stepfunctions start-execution \
+  --state-machine-arn "$(terraform output -raw state_machine_arn)" \
+  --input '{"request": "test"}'
 ```
 
-**Expected response:**
-```json
-{
-  "trace_id": "abc123...",
-  "status": "awaiting_approval",
-  "action": "restart_service",
-  "args": {"service": "billing"},
-  "next": "POST /approve with token to authorize"
-}
-```
+A write proposal should leave the execution in `RUNNING`, waiting on the approval token. If it
+completes without a human acting, the gate is not wired. For the full set of checks, including
+the one that proves the state machine cannot invoke a write tool, see
+[HOW-TO-DEPLOY.md §6](infra/terraform-aws/HOW-TO-DEPLOY.md).
 
 ### Clean Up (When Done)
 
@@ -246,21 +251,21 @@ infra/terraform-azure/src/build.sh
 # The environment root is envs/dev.
 cd infra/terraform-azure/envs/dev
 
-# Initialize
+cp terraform.tfvars.example terraform.tfvars   # then edit it
+
+# Authenticate as yourself. No service-principal secret is needed, and none should be created
+az login
+az account set --subscription <SUBSCRIPTION_ID>
+
+# Initialize, plan and apply the dev environment
 terraform init
-
-# Configure Azure credentials
-export ARM_CLIENT_ID="your-client-id"
-export ARM_CLIENT_SECRET="your-client-secret"
-export ARM_SUBSCRIPTION_ID="your-subscription-id"
-export ARM_TENANT_ID="your-tenant-id"
-
-# Plan and apply dev environment
 terraform plan
 terraform apply
 ```
 
-**Note:** Azure's write boundary uses Entra ID audit alerts as a second line of defense. See [THREAT-MODEL.md](docs/THREAT-MODEL.md) for details.
+**Note:** You need Entra permissions to create app registrations and grant app roles, not
+just subscription Contributor. See [HOW-TO-DEPLOY.md](infra/terraform-azure/HOW-TO-DEPLOY.md).
+Azure's write boundary uses Entra ID audit alerts as a second line of defense. See [THREAT-MODEL.md](docs/THREAT-MODEL.md) for details.
 
 ---
 
@@ -273,13 +278,13 @@ infra/terraform-gcp/src/build.sh
 # The environment root is envs/dev.
 cd infra/terraform-gcp/envs/dev
 
-# Initialize
+cp terraform.tfvars.example terraform.tfvars   # then edit it
+
+# Application Default Credentials. Avoid service-account key files, which are long-lived secrets
+gcloud auth application-default login
+
+# Initialize, plan and apply the dev environment
 terraform init
-
-# Configure GCP credentials
-export GOOGLE_CLOUD_KEYFILE_JSON="path/to/service-account.json"
-
-# Plan and apply dev environment
 terraform plan
 terraform apply
 ```
@@ -331,23 +336,17 @@ confirm a write procedure refuses you.
 
 ## Step 7: Run All Examples Locally
 
-All examples run without cloud dependencies (except where noted):
+All 24 examples are listed, with a line saying what each shows, in the README's
+[Runnable examples](README.md#runnable-examples) index. CI checks that the index is complete.
+Each example's own README gives its exact command. Most are standard-library only and run with
+`python3` and no key. The ones that need a package or an API key say so and ship a
+`requirements.txt`.
 
-| Example | Command | Dependencies | Purpose |
-|---------|---------|--------------|---------|
-| hermes-agent | `python3 agent.py "query"` | None | Write boundary in app code |
-| trace-eval | `python3 eval.py` | None | Trace-level evaluation |
-| starter-agent | `python3 agent.py "query"` | None | Minimal agent loop |
-| harness-agent | `python3 agent.py "query"` | None | Continuity across context windows |
-| checkpoint-agent | `python3 agent.py "deploy-model"` | None | Resuming after a crash, idempotently |
-| multi-agent-debate | `python3 agent.py` | None | Several agents argue; none of them approves |
-| context-compaction | `python3 compact.py` | None | Context management |
-| graph-agent | `python3 graph_agent.py "query"` | LangGraph | Read/write split as a graph |
-| e2e-agent | `python3 app.py` | FastAPI | Full HTTP agent with tracing |
-| rag-faiss | `python3 build_index.py` then `query.py` | faiss-cpu, sentence-transformers | Local vector search |
-| rag-langchain | `python3 build_index.py` then `query_and_answer.py` | langchain, sentence-transformers | LangChain vector search |
-| langchain-agent | `python3 agent.py "query"` | langchain | Minimal LangChain agent |
-| ray-orchestrator | `python3 orchestrator.py` | ray | Parallel task execution |
+To run every stdlib example the way its README documents, as CI does:
+
+```bash
+python3 -m unittest tests.smoke.test_example_smoke -v
+```
 
 ---
 
@@ -373,8 +372,8 @@ pre-commit run --all-files
 python3 -m unittest discover -s tests -v
 
 # Run infrastructure tests
-for cloud in aws azure gcp; do
-  python3 -m unittest discover -s infra/terraform-$cloud/tests -v
+for tree in aws azure gcp snowflake; do
+  python3 -m unittest discover -s infra/terraform-$tree/tests -v
 done
 ```
 
@@ -395,10 +394,10 @@ done
 | Issue | Solution |
 |-------|----------|
 | `ModuleNotFoundError` | `pip install -r examples/<name>/requirements.txt` |
-| Terraform: "no such file or directory" | Run from the correct directory (e.g., `infra/terraform-aws/`) |
+| Terraform: "no such file or directory" | Run from an environment root, such as `infra/terraform-aws/envs/dev`. The tree root holds no `.tf` files |
 | AWS: "InvalidClientTokenId" | Verify AWS credentials with `aws sts get-caller-identity` |
-| Azure: "Authentication Failed" | Verify `ARM_*` environment variables are set |
-| GCP: "Permission denied" | Verify `GOOGLE_CLOUD_KEYFILE_JSON` points to valid service account |
+| Azure: "Authentication Failed" | Re-run `az login` and `az account set --subscription <id>` |
+| GCP: "Permission denied" | Re-run `gcloud auth application-default login` and check the project in `terraform.tfvars` |
 | Python: "SyntaxError" | Check Python version is 3.9+ |
 
 ### Get Help
@@ -430,7 +429,9 @@ Once you've completed this quickstart:
 
 - Even if a model is compromised or misbehaves, it **cannot** perform write actions without explicit human approval
 - The approval is **bound to a specific action fingerprint** — changing any parameter invalidates the approval
-- Approval tokens **expire after 24 hours** by default
+- A pending approval **does not expire** on its own. Nothing in these trees ages one out. If
+  approvals should lapse, that is a control you add. See the
+  [FAQ](docs/FAQ.md) on why the common "24 hours" answer is wrong
 - All write actions are **logged and auditable**
 
 See [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md) for the full security analysis.

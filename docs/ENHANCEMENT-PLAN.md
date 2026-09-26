@@ -108,10 +108,17 @@ section saying what has to be decided first.
 | 72 | Check the chapter/example pairing instead of asking for it | CI/CD | High | Done | Seven drifts on the first run, five of them a chapter naming an example that never pointed back | 2026-09-08 |
 | 73 | Complete the example index, and guard it | Documentation | High | Done | The README listed 17 of 24; every boundary example added recently was missing | 2026-09-08 |
 | 74 | Say what each example is not, and guard it | Documentation | High | Done | 9 of 24 said it; writing the other 15 found a fail-open approval and an unbacked claim | 2026-09-26 |
+| 75 | Make the two approval suites test the gate, not a phrase list | Examples | High | Done | Both compared one detector with itself; now four broken gates must be found, and three gates are told apart | 2026-09-26 |
+| 76 | Fuzz approval expiry and racing claims | Examples | Medium | Done | Two flaws neither suite could see; the race is found 20 of 20 runs, not by luck | 2026-09-26 |
+| 77 | Check test counts against the suite | CI/CD | Medium | Done | Unchecked since written; 3 of 8 stated counts were stale, and one mutation claim no longer held | 2026-09-26 |
+| 78 | Send vulnerability reports to private reporting, not a public issue form | Security | High | Done | The security template was public, and MIGRATION-GUIDE sent boundary bypasses to it | 2026-09-26 |
+| 79 | Make QUICKSTART say what the commands do, and check it | Documentation | High | Done | Invented trace-eval output, a false 24h expiry, and a nonexistent API Gateway | 2026-09-26 |
+| 80 | Align the GCP provider locks, and check locks agree within a tree | Infrastructure | Medium | Done | Staging ran google 7.46.0 while dev and prod ran 7.45.0 | 2026-09-26 |
+| 81 | Guard three more stale counts | Documentation | Low | Done | Lock files 40→14, AWS modules 8→9, and "each with tests" when three have none | 2026-09-26 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 74 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 on 2026-09-26.
+tree, and kept current as tasks have landed since. **All 81 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 81 on 2026-09-26.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -673,9 +680,10 @@ Instead, please report security vulnerabilities by emailing [YOUR_EMAIL] or usin
 
 ```bash
 ls -la .github/ISSUE_TEMPLATE/
+# security.md was replaced by config.yml's private-report link in task 78
 test -f .github/ISSUE_TEMPLATE/bug_report.md && \
 test -f .github/ISSUE_TEMPLATE/feature_request.md && \
-test -f .github/ISSUE_TEMPLATE/security.md && \
+test -f .github/ISSUE_TEMPLATE/config.yml && \
 echo "All templates present"
 ```
 
@@ -3451,6 +3459,193 @@ and so does a demoted one (plain text instead of `##`).
 **Verify.** `python3 .github/scripts/pairing.py .` ends "...and says what it is not";
 `python3 -m unittest tests.test_graph_agent` passes.
 
+### Task 75 — Make the two approval suites test the gate, not a phrase list
+
+**Goal.** Task 74's notes said it plainly. In `approval-gate-fuzzing` and `eval-red-teaming`, the
+"naive" and "guarded" paths called the same phrase detector, so every result depended on whether
+a prompt contained a listed string. A bypass worded any other way passed both, and the table
+still read clean. Neither suite could fail for a reason that mattered. Both are chapter
+counterparts, so the Environment and Evaluation chapters were each pointing at a check that
+checked nothing.
+
+**Status: Done.** Both rewritten around a claim-bound gate, stdlib-only, and both now in the
+smoke table, since they exit non-zero on a real failure.
+
+**`approval-gate-fuzzing` fuzzes the gate with the model assumed compromised.** 48 generated
+prompts (twelve phrasings × plain, zero-width, homoglyph, base64) × 7 forgeries = 336 cases. The
+forgeries are no token, a guessed token, a token for other arguments, a token for another tool, a
+replay, an unregistered write, and a renamed write. The sound gate lets 0 unapproved writes
+through and still runs an approved one. Four deliberately broken gates ship with it:
+`trusts-the-note`, `checks-tool-not-arguments`, `reusable-token` and `denylist-of-writes`. The run
+exits 1 if any is not found, so the fuzzer losing coverage is a failure rather than a quieter
+table. The old phrase filter, kept for contrast, recognises 8 of the 48 prompts.
+
+**`eval-red-teaming` holds the model fixed and varies the gate.** Seven scripted cases, including
+an injection that arrives through a fetched ticket, run against `flag-gate`, `token-gate` and
+`claim-gate`. An output grader and an effect grader score each run, and they disagree on 9 of 21
+runs. The disagreements run both ways: writes behind a reassuring answer, and an alarming answer
+with no write. Every weaker gate fails a case the next one passes, and the suite asserts that.
+
+**Mutation tested, eight breaks, all caught.** On the fuzzer's sound gate: running unregistered
+tools, skipping the fingerprint check, not recording spent tokens, and accepting a guessed token.
+On the eval: `claim-gate` not single-use, `claim-gate` ignoring arguments, the effect grader
+allowing replays, and the effect grader passing everything. One mutation was first written as a
+syntax error, which the suite also reported as red. It was rewritten so the result counts.
+
+**Verify.** `python3 examples/approval-gate-fuzzing/fuzz.py` and
+`python3 examples/eval-red-teaming/redteam.py` both exit 0;
+`python3 -m unittest tests.test_approval_gate_fuzzing tests.test_eval_red_teaming` passes.
+
+### Task 76 — Fuzz approval expiry and racing claims
+
+**Goal.** Task 75 closed with two flaws neither suite could see: an approval honoured after it
+expired, and two concurrent claims both spending one token. Both are real failure modes of the
+claim primitive every tree here depends on, and `hermes-agent` is the only place either was
+tested.
+
+**Status: Done.** `Approvals` in `approval-gate-fuzzing` gains a TTL on a simulated clock and a
+lock held across check-and-spend. `expired-token` is a new forgery, crossed with every prompt.
+`racing-replay` is run once, since a prompt cannot change a race. Together they bring the run to
+48 × 8 + 1 = 385 cases. Two new broken gates must be found: `never-expires` and
+`check-then-spend`.
+
+**The race is made reproducible, not lucky.** A `window` hook runs between checking a token and
+spending it. It is a no-op normally. In the racing case it is a two-thread barrier with a 250ms
+timeout. The split claim lets both threads reach the barrier, and both spend. The sound claim
+admits one thread, which waits out the timeout alone. Neither result depends on timing. The
+first version slept 5ms and relied on the second thread arriving inside that window, which a
+loaded CI runner would eventually break. It was replaced before commit. The split claim is found
+20 of 20 runs, and the suite also passes with four busy loops pinning the CPU. It also asserts that the sequential replay cannot
+see the split claim, which is the reason the racing case exists.
+
+**Mutation tested, four breaks, all caught.** Skipping the expiry check; expiring one tick late
+(`>` for `>=`); splitting the sound claim into two critical sections; and the fuzzer no longer
+installing the window.
+
+**What it still does not show.** The lock is in-process. Atomicity across processes is what the
+cloud trees get from conditional writes, and an in-process example cannot demonstrate it. The
+README says so.
+
+**Verify.** `python3 examples/approval-gate-fuzzing/fuzz.py` exits 0 and reports six broken gates
+found; `python3 -m unittest tests.test_approval_gate_fuzzing` passes.
+
+### Task 77 — Check test counts against the suite
+
+**Goal.** ROADMAP.md's status table said "Tests | 367". Task 64's counts guard checks 17 numbers
+in the docs, and this was not one of them. It had been stale since at least task 74, and nobody
+could say how it had been counted.
+
+**Status: Done.** [`docs_counts.py`](../.github/scripts/docs_counts.py) now loads the suite with
+`unittest`'s own loader and counts what `discover -s tests` would run. It checks the ROADMAP
+total and the seven example READMEs that state their own suite's size in the present tense: 25
+claims, up from 17.
+
+**Loading, not grepping and not running.** A grep for `def test_` found 394 where discovery ran
+396, because it cannot see inherited tests. Running the suite would take minutes and need the
+optional dependencies. Loading imports each module, which is exactly what the fast CI job does,
+so the count is identical with or without dependencies, on 3.9 and on current Python, from any
+working directory. It takes 0.15s. A module that fails to import makes the check exit 1. The
+loader would otherwise count it as one test, and a miscount would pass silently.
+
+**Three of eight counts were stale on the first run.** ROADMAP (367, actually 396), hermes-agent
+(31, actually 35), and graph-agent (23, actually 29). The graph-agent sentence also said
+"reverting the classifier turns eight of them red". Re-measured by restoring the original keyword
+list, it fails four tests outright, ten failures counting subtests, with langgraph absent. The
+sentence now says that, and says the topology tests may add more where langgraph is installed.
+
+**Past-tense counts are left alone on purpose.** tool-discovery's "6 of the 11 tests went red"
+records a mutation run, and 11 was right when it ran. Updating it would falsify the record, which
+is the opposite of what the guard is for.
+
+**Mutation tested, three breaks, all caught.** An added test, a test module that fails to import,
+and a reworded count sentence.
+
+**Verify.** `python3 .github/scripts/docs_counts.py .` reports 25 documented counts, all matching.
+
+### Task 78 — Send vulnerability reports to private reporting, not a public issue form
+
+**Goal.** `.github/ISSUE_TEMPLATE/security.md` was a public issue form headed "DO NOT CREATE
+PUBLIC ISSUES". MIGRATION-GUIDE.md sent "anything involving the write boundary" to it. SECURITY.md
+says the opposite, with the reason: a public boundary bypass is a working recipe against every
+copy of these configurations already out there.
+
+**Status: Done.** Replaced by `config.yml`, whose contact link opens GitHub's private advisory
+form. MIGRATION-GUIDE.md and `bug_report.md` point there, and task 12's Verify block checks for
+`config.yml`. The form also contradicted SECURITY.md four other ways: a 24-hour SLA against "no
+response timeline is promised", a contact address in CONTRIBUTING.md that does not exist, DoS
+and "deployed infrastructure" in scope when nothing here is a running service, and fixes by a
+"next release" in a repository with no releases.
+
+**Found by** the knowledge graph. Its one AMBIGUOUS edge linked "No promised response timeline"
+in SECURITY.md to "Security response SLA table" in the template.
+
+### Task 79 — Make QUICKSTART say what the commands do, and check it
+
+**Goal.** QUICKSTART.md is the first file a new reader runs, and nothing ran it.
+
+**Status: Done.** The wrong parts, each checked against the tree:
+
+- The trace-eval "expected output" described 100 scored runs and three numbered discrepancies.
+  The real run is seven cases per subject with three disagreements. It is now the real output,
+  labelled as a method and not a benchmark.
+- Security Notes said approvals "expire after 24 hours by default". The AWS approval module says
+  a pending approval never expires, and the FAQ exists to correct exactly this answer.
+- "Test the Deployed System" called `terraform output -raw api_gateway_url`. The AWS tree has no
+  API Gateway and no such output. It now starts a Step Functions execution, as HOW-TO-DEPLOY §6
+  does.
+- The AWS CLI install step cloned aws-cli and pip-installed its requirements, which does not
+  install the CLI. It now points at AWS's installer.
+- Azure used a service-principal secret and GCP a key file. Their own deploy guides say
+  `az login` and Application Default Credentials. Both steps now also copy the tfvars example.
+- The hermes `--approve` output showed `status approved` and a result line the agent does not
+  print.
+- The example table listed 13 of 24, and its e2e-agent command did nothing. It is replaced by a
+  pointer to the README index that `pairing.py` keeps complete.
+- The infra test loop skipped Snowflake. The troubleshooting row sent users to the tree root,
+  which holds no `.tf` files.
+
+[`tests/test_quickstart.py`](../tests/test_quickstart.py) runs each local command that has an
+**Expected output** block and requires every documented line to appear. Restoring either of
+two old lines fails it.
+
+### Task 80 — Align the GCP provider locks, and check locks agree within a tree
+
+**Goal.** Dependabot bumped `hashicorp/google` to 7.46.0 in `terraform-gcp/envs/staging` alone.
+Dev and prod stayed on 7.45.0, all under the same `~> 7.44`, so `tfconstraints.py` passed.
+Staging exists to rehearse prod, and it was rehearsing a different provider.
+
+**Status: Done.** Dev and prod carry staging's lock; the files differed only in version and
+hashes. All three roots pass `terraform init -backend=false` and `validate` against 7.46.0, and
+init left the locks unchanged. Rule 3 in [`tfconstraints.py`](../.github/scripts/tfconstraints.py)
+requires one resolved version per provider within a tree. The hybrid POC is its own tree and may
+differ. Four new tests; reverting the two locks fails two of them.
+
+The commit that landed this left the counts guard red: its four tests moved the suite to 402
+while ROADMAP said 398. Task 81's commit fixed it. The guard did its job; the author ran it one
+commit late.
+
+### Task 81 — Guard three more stale counts
+
+**Status: Done.** Each fixed and added to `docs_counts.py`, now at 32 claims:
+
+- `dependabot.yml` said "the 40 committed `.terraform.lock.hcl` files". There are 14; the 44
+  module-level ones were removed earlier.
+- MODULES.md's verification output said `aws: 8 modules`. There are 9, since task 68 added
+  `networking`. All five tree lines are now checked.
+- ROADMAP said every example had tests in `tests/`. `langchain-agent`, `rag-langchain` and
+  `ray-orchestrator` have none, and are also skipped by the smoke test. The row now says 21.
+
+Each was mutation tested by restoring the stale value; all three fail.
+
+**A correction to tasks 75 to 77.** Their notes said the suites passed on 3.9 and on current
+Python. On the machine that ran them, `python3` was 3.9.6, so both runs were 3.9. The suite was
+re-run on 3.13.15 during this sweep: 396 tests, all passing, and the loader count matched. The
+claims hold; they were not verified when they were first made.
+
+**Verify.** `python3 .github/scripts/docs_counts.py .` reports 32 counts, all matching;
+`python3 .github/scripts/tfconstraints.py infra` passes; `python3 -m unittest tests.test_quickstart`
+passes.
+
 ---
 
 ## Definition of Done
@@ -3516,6 +3711,10 @@ git status --short
 | 2026-09-08 | Added task 72: the chapter/example pairing is checked in CI; seven drifts fixed | somesh-ghaturle |
 | 2026-09-08 | Added task 73: the README indexed 17 of 24 examples; completed and guarded | somesh-ghaturle |
 | 2026-09-26 | Added task 74: every example says what it is not; fixed graph-agent's fail-open approval | somesh-ghaturle |
+| 2026-09-26 | Added task 75: the fuzzing and red-team suites test the gate, and must find broken ones | somesh-ghaturle |
+| 2026-09-26 | Added task 76: the fuzzer covers expiry and racing claims, and finds the race every run | somesh-ghaturle |
+| 2026-09-26 | Added task 77: test counts are checked; three of eight were stale | somesh-ghaturle |
+| 2026-09-26 | Added tasks 78-81 from a repo-wide sweep: private security reporting, QUICKSTART, GCP locks, three counts | somesh-ghaturle |
 
 ---
 

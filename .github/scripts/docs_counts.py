@@ -22,12 +22,21 @@ Three different numbers describe the Terraform trees on purpose, and conflating 
 mistake this guards. `validate` skips the hybrid POC (13 roots); tflint walks every module and
 root including it (44 and 14); the write-boundary suites cover the four non-hybrid trees.
 
+Test counts are read by loading the suite, not by running it or grepping for `def test_`.
+Loading imports every test module, and each one is written to import cleanly without its optional
+dependencies, since that is what the fast CI job does. So the count is the same with or without
+them, and it matches what `unittest discover` reports. A grep undercounts inherited tests: it
+found 394 where discovery ran 396. Running the suite would take minutes and need the dependencies.
+A module that fails to import is reported as a failure, not counted as one test.
+
 Standard library only, like every other check here.
 """
 
+import collections
 import pathlib
 import re
 import sys
+import unittest
 
 _UNITS = (
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
@@ -55,6 +64,25 @@ def to_int(token):
         if tens in TENS and unit in UNITS and 0 < UNITS[unit] < 10:
             return TENS[tens] + UNITS[unit]
     return None
+
+
+def _tests(suite):
+    for item in suite:
+        if isinstance(item, unittest.TestSuite):
+            yield from _tests(item)
+        else:
+            yield item
+
+
+def test_counts(root):
+    """{"tests": total, "suite:<module>": n} for everything `discover -s tests` would run."""
+    loader = unittest.TestLoader()
+    ids = [t.id() for t in _tests(loader.discover(str(root / "tests")))]
+    if loader.errors:
+        raise SystemExit("docs_counts: a test module failed to import, so the test counts "
+                         "cannot be trusted:\n" + "\n".join(loader.errors))
+    per_module = collections.Counter(i.split(".")[-3] for i in ids)
+    return {"tests": len(ids), **{f"suite:{m}": n for m, n in per_module.items()}}
 
 
 def counts(root):
@@ -116,6 +144,12 @@ def counts(root):
         "handler_trees": len(matrix_trees[0].split(",")) if matrix_trees else 0,
         "package_trees": len(matrix_trees[1].split(",")) if len(matrix_trees) > 1 else 0,
         "boundary_trees": boundary_trees,
+        "lock_files": len([p for p in root.glob("infra/**/.terraform.lock.hcl")
+                           if ".terraform" not in p.parent.parts]),
+        **{f"modules:{t.name.removeprefix('terraform-')}":
+           len([d for d in (t / "modules").iterdir() if d.is_dir()])
+           for t in sorted(root.glob("infra/terraform-*")) if (t / "modules").is_dir()},
+        **test_counts(root),
     }
 
 
@@ -149,6 +183,34 @@ CLAIMS = [
      "trees with handlers"),
     ("README.md", "package_trees", r"Deployment package builds for the (\S+) trees that have",
      "trees with packages"),
+    ("ROADMAP.md", "tests", r"\| Tests \| (\d+),", "tests under tests/"),
+    ("ROADMAP.md", "suites", r"\| Examples \| \d+, stdlib-first; (\d+) with a suite",
+     "examples with a suite"),
+    (".github/dependabot.yml", "lock_files",
+     r"live in the (\d+) committed `\.terraform\.lock\.hcl`", "committed lock files"),
+    # MODULES.md prints the expected output of its own verification loop; one claim per tree.
+    ("infra/MODULES.md", "modules:aws", r"(?m)^aws: (\d+) modules$", "aws modules"),
+    ("infra/MODULES.md", "modules:azure", r"(?m)^azure: (\d+) modules$", "azure modules"),
+    ("infra/MODULES.md", "modules:gcp", r"(?m)^gcp: (\d+) modules$", "gcp modules"),
+    ("infra/MODULES.md", "modules:snowflake", r"(?m)^snowflake: (\d+) modules$",
+     "snowflake modules"),
+    ("infra/MODULES.md", "modules:hybrid", r"(?m)^hybrid: (\d+) modules", "hybrid modules"),
+    # Per-suite counts, where a README states one in the present tense. Past-tense records --
+    # "6 of the 11 tests went red" in a mutation log -- are history and stay as written.
+    ("examples/harness-agent/README.md", "suite:test_harness_agent",
+     r"(?m)^(\d+) tests, one class per failure mode", "tests in test_harness_agent.py"),
+    ("examples/hermes-agent/README.md", "suite:test_hermes_agent",
+     r"(?m)^(\d+) tests in \[tests/test_hermes_agent\.py\]", "tests in test_hermes_agent.py"),
+    ("examples/mcp-server/README.md", "suite:test_mcp_server",
+     r"tests\.test_mcp_server -v +# (\d+) tests", "tests in test_mcp_server.py"),
+    ("examples/second-path/README.md", "suite:test_second_path",
+     r"(?m)^(\d+) tests in \[`tests/test_second_path\.py`\]", "tests in test_second_path.py"),
+    ("examples/trace-eval/README.md", "suite:test_trace_eval",
+     r"(?m)^(\d+) tests in \[tests/test_trace_eval\.py\]", "tests in test_trace_eval.py"),
+    ("examples/context-compaction/README.md", "suite:test_context_compaction",
+     r"\*\*(\d+) tests pin the policy now\*\*", "tests in test_context_compaction.py"),
+    ("examples/graph-agent/README.md", "suite:test_graph_agent",
+     r"\*\*(\d+) tests\*\* cover this example", "tests in test_graph_agent.py"),
 ]
 
 
@@ -177,7 +239,9 @@ def main(root):
             print(f"  {f}")
         return 1
 
-    summary = ", ".join(f"{v} {k}" for k, v in sorted(have.items()))
+    summary = ", ".join(
+        f"{v} {k}" for k, v in sorted(have.items()) if not k.startswith(("suite:", "modules:"))
+    )
     print(f"{len(CLAIMS)} documented counts checked; all match ({summary})")
     return 0
 

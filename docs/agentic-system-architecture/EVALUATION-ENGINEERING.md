@@ -204,7 +204,7 @@ you did not write a case for actually live.
 ## Related
 
 - [trace-eval](../../examples/trace-eval/README.md) — all of the above, running, with the disagreement table
-- [eval-red-teaming](../../examples/eval-red-teaming/README.md) — the adversarial half: probing whether the gate holds under injection
+- [eval-red-teaming](../../examples/eval-red-teaming/README.md) — the adversarial half: three gates graded by the writes that ran, where grading the answer disagrees on 9 of 21 runs
 - [Harness engineering](HARNESS-ENGINEERING.md) — completion; this document is its verdict counterpart
 - [Environment engineering](ENVIRONMENT-ENGINEERING.md) — the cost of the runs these checks catch too late
 - [Building blocks §5](BUILDING-BLOCKS.md) — the evaluation stack and what to evaluate per step

@@ -220,5 +220,63 @@ class TestRealTree(unittest.TestCase):
             )
 
 
+def lock(version):
+    return f'''
+provider "registry.terraform.io/hashicorp/google" {{
+  version     = "{version}"
+  constraints = "~> 7.44"
+  hashes = [
+    "h1:placeholder=",
+  ]
+}}
+'''
+
+
+class TestRule3LockedVersionsAgreeWithinATree(unittest.TestCase):
+    """Staging rehearsing a different provider than prod is what this rule exists to stop."""
+
+    def layout(self, d, versions):
+        for tree_env, version in versions.items():
+            write(d, f"infra/{tree_env}/main.tf", PINNED)
+            write(d, f"infra/{tree_env}/.terraform.lock.hcl", lock(version))
+        return pathlib.Path(d) / "infra"
+
+    def test_one_env_ahead_of_the_others_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = run(self.layout(d, {
+                "terraform-gcp/envs/dev": "7.45.0",
+                "terraform-gcp/envs/prod": "7.45.0",
+                "terraform-gcp/envs/staging": "7.46.0",
+            }))
+        self.assertEqual(1, code, out)
+        self.assertIn("LOCK     terraform-gcp: hashicorp/google resolved 2 ways", out)
+        self.assertIn("envs/staging/.terraform.lock.hcl 7.46.0", out)
+
+    def test_aligned_envs_pass(self):
+        with tempfile.TemporaryDirectory() as d:
+            code, out = run(self.layout(d, {
+                "terraform-gcp/envs/dev": "7.46.0",
+                "terraform-gcp/envs/staging": "7.46.0",
+            }))
+        self.assertEqual(0, code, out)
+
+    def test_separate_trees_may_differ(self):
+        """The hybrid POC is its own tree and moves on its own schedule."""
+        with tempfile.TemporaryDirectory() as d:
+            code, out = run(self.layout(d, {
+                "terraform-gcp/envs/dev": "7.45.0",
+                "terraform-hybrid/envs/dev": "7.46.0",
+            }))
+        self.assertEqual(0, code, out)
+
+    def test_the_real_tree_has_one_version_per_provider_per_tree(self):
+        resolved = {}
+        for tree, _, source, version in tfconstraints.locked(REPO / "infra"):
+            resolved.setdefault((tree, source), set()).add(version)
+        self.assertTrue(resolved, "no lock files found; the rule is guarding nothing")
+        for key, versions in resolved.items():
+            self.assertEqual(1, len(versions), f"{key} resolved {sorted(versions)}")
+
+
 if __name__ == "__main__":
     unittest.main()

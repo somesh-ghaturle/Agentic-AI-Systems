@@ -22,14 +22,14 @@ Two supporting commitments follow from it:
 
 | Area | Where it stands |
 | --- | --- |
-| Examples | 24, stdlib-first, each with tests in `tests/` |
-| Tests | 367, running on both the 3.9 floor and current Python |
+| Examples | 24, stdlib-first; 21 with a suite in `tests/`, and the three that need a key or a cluster with none |
+| Tests | 402, running on both the 3.9 floor and current Python |
 | Architecture chapters | 4 disciplines — context, harness, evaluation, environment — plus patterns, building blocks, production principles |
 | Diagrams | 47 interactive HTML viewers, each embedded in its document as a GIF |
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
-| Enhancement plan | 74 tasks, all `Done` |
+| Enhancement plan | 81 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction.
 
@@ -65,8 +65,10 @@ both were documented at length.
 
 The area with the most room left, and the one most on-theme.
 
-- More red-team and bypass-phrase variants, and more comparisons between naive and guarded
-  paths that are honest about the naive one being reasonable-looking
+- More attack classes in the fuzzer and more cases in the red-team eval. Since task 75 both
+  test the gate rather than a phrase list, so a new case can actually fail. Since task 76
+  the fuzzer covers expiry and racing claims too; atomicity across processes is the next gap,
+  and it is one the in-process example cannot show
 - More ways the boundary is lost that are *not* the gate being wrong — `second-path` covers a
   second route to the effect, and `tool-discovery` covers a filter instead of a structure;
   there are others

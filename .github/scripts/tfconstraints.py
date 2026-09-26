@@ -29,6 +29,14 @@ The orphan files that motivated rule 2 were deleted rather than fixed, on the gr
 aligning them only holds until the next bump. The rule stays because the failure mode is
 general: any module left behind on a future bump trips it.
 
+**Rule 3: one resolved version per provider within a tree.** Rules 1 and 2 govern what the
+`.tf` files allow. The committed `.terraform.lock.hcl` files record what `init` actually chose,
+and those can disagree while every constraint agrees. Dependabot bumped `hashicorp/google` to
+7.46.0 in `terraform-gcp/envs/staging` alone and left dev and prod on 7.45.0, all three under
+the same `~> 7.44`. Staging exists to rehearse prod, and it was rehearsing a different provider.
+The rule applies per tree and not across trees: the hybrid POC is its own tree and may move on
+its own schedule.
+
 Regex rather than a parser, which is worth stating plainly. `required_providers` bodies in
 this repository are uniform, machine-written HCL — `source` then `version`, one provider per
 block, no interpolation, no `configuration_aliases`. A parser would be more correct about HCL
@@ -69,6 +77,21 @@ def constraints(path):
         yield lineno, match.group("source"), match.group("constraint")
 
 
+LOCKED = re.compile(
+    r'^provider "(?P<source>[^"]+)" \{\s*^\s*version\s*=\s*"(?P<version>[^"]+)"', re.M
+)
+
+
+def locked(root):
+    """Yield (tree, relative lock path, source, version) for every committed lock file."""
+    for path in sorted(root.rglob(".terraform.lock.hcl")):
+        if SKIP_DIRS.isdisjoint(path.parts):
+            tree = path.relative_to(root).parts[0]
+            for match in LOCKED.finditer(path.read_text(encoding="utf-8")):
+                source = match.group("source").split("/", 1)[1]  # drop registry.terraform.io/
+                yield tree, path.relative_to(root.parent), source, match.group("version")
+
+
 def main():
     root = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "infra").resolve()
     if not root.is_dir():
@@ -100,6 +123,20 @@ def main():
                 for relative, lineno in sites:
                     failures.append(f"         {relative}:{lineno} {constraint}")
 
+    # (tree, source) -> version -> [lock paths]
+    resolved = {}
+    locks = 0
+    for tree, relative, source, version in locked(root):
+        locks += 1
+        resolved.setdefault((tree, source), {}).setdefault(version, []).append(relative)
+    for (tree, source), by_version in sorted(resolved.items()):
+        if len(by_version) > 1:
+            spread = ", ".join(f"{v} in {len(p)}" for v, p in sorted(by_version.items()))
+            failures.append(f"LOCK     {tree}: {source} resolved {len(by_version)} ways: {spread}")
+            for version, paths in sorted(by_version.items()):
+                for relative in paths:
+                    failures.append(f"         {relative} {version}")
+
     for line in failures:
         print(line)
 
@@ -111,7 +148,8 @@ def main():
     total = sum(len(sites) for by in seen.values() for sites in by.values())
     print(
         f"{checked} .tf files checked, {total} provider constraints, "
-        f"{len(seen)} providers, all pinned and consistent"
+        f"{len(seen)} providers, all pinned and consistent; {locks} locked versions, "
+        "one per provider in each tree"
     )
     return 0
 
