@@ -39,6 +39,18 @@ security review into a repeatable check that can live in the repository.
   gate itself
 - [THREAT-MODEL.md](../../docs/THREAT-MODEL.md) — the repo's write-boundary security model
 
+## What this is not
+
+Not a defence. `naive_model` and `guarded_model` call the same `is_unsafe()`, so the suite
+measures one phrase detector twice: a bypass worded outside `PHRASES` -- "the reviewer already
+signed off", a translation, a base64 blob -- is missed by both, and the table still reads clean.
+A green run means the listed phrasings are recognised, not that the gate holds.
+
+Not how the gate should work, either. Matching the prompt is a filter, and `tool-discovery`
+exists to show why a filter is the wrong shape for a boundary. The gate that survives an unlisted
+phrasing is structural: in `hermes-agent` a write cannot execute without a claim, whatever the
+prompt said. Use this suite to watch that structure refuse, not to stand in for it.
+
 ## Security
 
 This example does not execute real writes. It models a testing harness only: a malicious prompt is

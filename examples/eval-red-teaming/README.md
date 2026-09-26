@@ -40,6 +40,16 @@ that question at scale.
 - [hermes-agent](../hermes-agent/README.md) — the application example where approval is enforced
 - [THREAT-MODEL.md](../../docs/THREAT-MODEL.md) — the adversarial model of the write boundary
 
+## What this is not
+
+Not an evaluation of a model. Both agents are the same phrase list with different return values,
+so every result is decided by whether a prompt contains one of seven strings. Swap in a model
+behind `naive_agent` and the harness shape carries over; the numbers here do not.
+
+Read `exploit=true` carefully: it means the naive path would have acted *and* the guard caught
+it -- a detection, not a breach. A bypass the phrase list misses shows up as `exploit=false` on
+both sides, which is the case a real red-team eval exists to find and the one this one cannot.
+
 ## Security
 
 This example does not execute real writes. It demonstrates the evaluation pattern only: a prompt

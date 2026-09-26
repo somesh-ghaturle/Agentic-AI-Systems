@@ -96,6 +96,16 @@ different without testing anything extra, and would make the suite need a key.
 Swapping in real model calls means implementing the three `Protocol` classes in
 `debate/panel.py`. Nothing else changes.
 
+## What this is not
+
+Not evidence that a debate improves a proposal. The participants are scripted, so the suite
+proves the protocol's properties -- dissent survives, exhaustion is not agreement, the arbiter
+does not argue -- and says nothing about whether real critics find real flaws.
+
+Distinct `perspective` labels are declared, not measured. Two critics backed by the same model
+and prompt can declare different perspectives and pass the panel check while still being one
+opinion sampled twice. The check stops the obvious case; independence is the operator's job.
+
 ## Security
 
 This example makes no security claim, which is why `SECURITY.md` lists it out of scope.

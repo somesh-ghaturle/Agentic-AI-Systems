@@ -26,6 +26,11 @@ every example must at least be listed in README.md's "Runnable examples" index, 
 what it shows. That index had drifted to seventeen of twenty-four -- every boundary example added
 in the last stretch was missing from it, so the examples arguing the repository's central claim
 were the ones a reader could not find.
+
+The third check is what a reader needs once they have found an example: each README must say
+what the example is not, under one of the headings in LIMITS. ROADMAP.md asked for this in prose
+while four of twenty-four examples did it, and writing the other fifteen found a fail-open
+approval in graph-agent and a session-scoping claim memory-agent's code did not back.
 """
 
 import pathlib
@@ -46,6 +51,10 @@ EXAMPLE_LINK = re.compile(r"examples/([a-z0-9-]+)/README\.md")
 ROADMAP_ROW = re.compile(r"^\| \[(\w+)\]\([^)]*\) \| (.+?) \|$", re.M)
 BACKTICKED = re.compile(r"`([a-z0-9-]+)`")
 INDEXED = re.compile(r"\(examples/([a-z0-9-]+)/README\.md\)")
+# The four spellings already in use. Checked as headings so a passing mention does not count.
+LIMITS = re.compile(
+    r"^## What (this is not|this example is not|this does not teach|is simplified)$", re.M
+)
 
 
 def chapter_counterparts(root):
@@ -114,11 +123,18 @@ def main(root):
     # chapter and no index entry is not a decision, it is an omission -- which is how seven
     # of them, including four boundary examples, went unlisted.
     indexed = set(INDEXED.findall((root / "README.md").read_text()))
-    for example in sorted(d.name for d in (root / "examples").iterdir() if d.is_dir()):
+    examples = sorted(d.name for d in (root / "examples").iterdir() if d.is_dir())
+    for example in examples:
         if example not in indexed:
             failures.append(
                 f"README.md: examples/{example}/ is in the tree but not in the "
                 f"'Runnable examples' index -- add it with a line saying what it shows"
+            )
+        readme = root / "examples" / example / "README.md"
+        if not (readme.is_file() and LIMITS.search(readme.read_text())):
+            failures.append(
+                f"examples/{example}/README.md: no '## What this is not' section -- say what "
+                f"the example does not show, so it is not copied for what it lacks"
             )
 
     if failures:
@@ -130,7 +146,7 @@ def main(root):
     pairs = sum(len(v) for v in declared.values())
     print(f"{len(CHAPTERS)} chapters checked, {pairs} chapter/example pairings, "
           f"{len(indexed)} examples indexed; each example exists, links back, matches the "
-          "ROADMAP table, and is findable from the README")
+          "ROADMAP table, is findable from the README, and says what it is not")
     return 0
 
 

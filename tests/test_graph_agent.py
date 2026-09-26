@@ -20,6 +20,7 @@ import importlib.util
 import pathlib
 import sys
 import unittest
+from unittest import mock
 
 sys.path.insert(
     0, str(pathlib.Path(__file__).resolve().parent.parent / "examples" / "graph-agent")
@@ -125,6 +126,15 @@ class TestWritePathNeverActsUnapproved(unittest.TestCase):
         """Missing must behave as refused, not as permitted."""
         state = ga.execute({"proposal": {"action": "issue_refund"}})
         self.assertIn("Refused", state["answer"])
+
+    def test_only_a_literal_true_approves(self):
+        """A truthy resume value is not an approval. `bool()` once approved "no"."""
+        with mock.patch.object(ga, "LANGGRAPH_AVAILABLE", True):
+            for answer in ("no", "false", 1, {"approved": False}, [False]):
+                with mock.patch.object(ga, "interrupt", lambda _, a=answer: a, create=True):
+                    self.assertFalse(ga.approval({"proposal": {}})["approved"], answer)
+            with mock.patch.object(ga, "interrupt", lambda _: True, create=True):
+                self.assertTrue(ga.approval({"proposal": {}})["approved"])
 
     def test_route_sends_writes_through_draft(self):
         self.assertEqual(ga.route({"kind": "write"}), "draft")

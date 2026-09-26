@@ -27,6 +27,13 @@ Next steps
 - Replace the rule-based `respond()` with calls to model APIs or orchestration frameworks.
 - Add a `docker-compose.yml` or CI smoke test for reproducibility.
 
+## What this is not
+
+Not an agent. `respond()` matches three keywords and returns a string saying what it would do;
+nothing is searched, planned, or deployed. It shows the shape of an example directory in this
+repository. The first thing to replace is the keyword match, and `graph-agent`'s regression
+shows why: a keyword router fails toward the privileged branch.
+
 ## Security
 
 This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The

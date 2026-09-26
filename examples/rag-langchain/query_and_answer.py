@@ -8,13 +8,12 @@ import os
 import sys
 
 import faiss
-from sentence_transformers import SentenceTransformer
 
-DOCS = [
-    "Agentic AI systems coordinate tools and models to solve multi-step tasks.",
-    "Reproducibility and governance are critical for enterprise deployments.",
-    "Use retrieval augmentation to ground model outputs in trusted sources.",
-]
+# Imported, not copied: results are mapped back to text by position, so a second copy of this
+# list that drifts from the one the index was built from labels every hit wrongly and raises
+# nothing. rag-faiss had the same bug and the same fix.
+from build_index import DOCS
+from sentence_transformers import SentenceTransformer
 
 
 def retrieve(q: str, k: int = 2, model_name: str = "all-MiniLM-L6-v2"):

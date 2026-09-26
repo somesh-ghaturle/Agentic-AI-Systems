@@ -88,6 +88,17 @@ complete, which is the failure mode arriving through the front door.
 - [hermes-agent](../hermes-agent/README.md) — whether an agent is *allowed* to act, rather than whether it is finished
 - [trace-eval](../trace-eval/README.md) — scoring the path rather than the answer
 
+## What this is not
+
+Not safe for two runners at once. Writes are atomic -- a reader never sees half a file -- but
+there is no lock, so two processes on the same progress file each load, advance, and replace,
+and the second silently discards the first's transition. The directory is not fsynced after the
+rename either, so a crash at the wrong moment can lose the newest version on some filesystems.
+
+Not a sandbox. `CommandVerifier` runs each command with `shell=True`, which is safe exactly as
+long as the commands come from the harness author and never from the agent. The demo uses
+`ScriptedVerifier`, so nothing here shells out unless you configure it to.
+
 ## Security
 
 This example makes no security claim, which is why `SECURITY.md` lists it out of scope. The

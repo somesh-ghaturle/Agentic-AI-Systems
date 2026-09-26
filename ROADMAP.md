@@ -29,7 +29,7 @@ Two supporting commitments follow from it:
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
-| Enhancement plan | 73 tasks, all `Done` |
+| Enhancement plan | 74 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction.
 
@@ -89,8 +89,9 @@ The repository is designed to be copied. The most valuable future work makes it 
 adopt *part* of it without silently dropping the property that makes it worth adopting.
 
 - Clearer guidance for taking one boundary into an existing codebase
-- Per-example "what this teaches, and what it does not" notes, which several examples have and
-  the rest should
+- Per-example "what this is not" notes: every example has one since task 74, checked by
+  [`pairing.py`](.github/scripts/pairing.py). Keeping them true as the code changes is the part
+  no check does
 - Migration guidance that survives someone skipping a step
 
 ### What is deliberately not here

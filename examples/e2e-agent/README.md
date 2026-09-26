@@ -115,3 +115,18 @@ Notes & production hardening
 - Add authentication/authorization (OIDC, mTLS) for endpoints.
 
 This example is intentionally minimal to make the end-to-end flow easy to inspect and test. Use it as a template to build production-grade pipelines with stronger controls and monitoring.
+
+## What this is not
+
+Not secure in the sense its title implies, and `SECURITY.md` lists it in scope for exactly that
+reason. There is no approval step: nothing distinguishes a read from a state-changing request.
+One shared API key admits every caller, and `user_id` is whatever the request body says -- so the
+"who" in every trace and audit entry is self-asserted.
+
+Not auditable in the sense the word usually carries. `audit.log` is a plaintext file appended by
+the same process it audits, with no signature, hash chain, or separate writer; anyone who can
+write the service can rewrite its history. It also stores prompts and responses verbatim, which
+is a data-retention decision this example makes for you.
+
+Read it for the wiring -- trace id to audit line to provenance file -- and take the approval
+boundary from `hermes-agent`.
