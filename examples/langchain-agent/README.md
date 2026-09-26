@@ -22,6 +22,15 @@ Notes
 - This example falls back to a helpful message when `langchain` or `OPENAI_API_KEY` are not available so it is safe to include in the repo without secrets.
 - Replace the chain with more advanced agent orchestration (tools, memory) as needed.
 
+## Tests
+
+[`tests/test_langchain_agent.py`](../../tests/test_langchain_agent.py) has 5 tests and runs with no
+package and no key. LangChain is replaced with small fakes, and the tests cover this example's
+own logic: the missing-package and missing-key messages, the `template | model | parser`
+wiring, and the fallback naming the error it caught. Four mutations were each caught: removing
+the key check, not stripping the answer, the fallback swallowing the error, and widening
+`except ImportError` to `except Exception`. The last is the bug agent.py's comments record.
+
 ## What this is not
 
 Not an agent. One prompt goes to one model and the text comes back: no tools, no loop, no

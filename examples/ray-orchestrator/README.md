@@ -21,6 +21,14 @@ Notes
 - Use Ray for distributed execution and background actor-based orchestration for heavy workloads.
 - For production, integrate with Ray Serve or Ray AIR for model serving and training orchestration.
 
+## Tests
+
+[`tests/test_ray_orchestrator.py`](../../tests/test_ray_orchestrator.py) has 3 tests against a real
+local Ray: results come back in input order, the eight tasks run in parallel, and `main()`
+prints the squares. They skip where Ray is not installed and run in the `example-deps` job.
+There is no fake-Ray variant, because a fake would only test itself. Reordering the gathered
+results was caught.
+
 ## What this is not
 
 Not orchestration in the sense the rest of this repository means. Eight independent squarings

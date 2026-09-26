@@ -30,6 +30,15 @@ Notes
 - The script will not call OpenAI unless `OPENAI_API_KEY` is set. CI can run the example safely without secrets.
 - For production, replace FAISS with a managed vector DB and add metadata for provenance.
 
+## Tests
+
+[`tests/test_rag_langchain.py`](../../tests/test_rag_langchain.py) has 5 tests and runs with no
+package, model download or key. `faiss`, `sentence_transformers` and LangChain are replaced
+with fakes that return chosen vectors and indices. The tests cover index positions mapping back
+to documents, the fallback reporting why it fell back, and `DOCS` being one list and not a copy.
+Three mutations were each caught: copying `DOCS` again, mapping results by rank instead of by
+index, and dropping the no-key message.
+
 ## What this is not
 
 Not grounded answering. Without a key, the fallback prints a fixed sentence about governance
