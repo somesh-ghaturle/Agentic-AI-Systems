@@ -108,10 +108,11 @@ section saying what has to be decided first.
 | 72 | Check the chapter/example pairing instead of asking for it | CI/CD | High | Done | Seven drifts on the first run, five of them a chapter naming an example that never pointed back | 2026-09-08 |
 | 73 | Complete the example index, and guard it | Documentation | High | Done | The README listed 17 of 24; every boundary example added recently was missing | 2026-09-08 |
 | 74 | Say what each example is not, and guard it | Documentation | High | Done | 9 of 24 said it; writing the other 15 found a fail-open approval and an unbacked claim | 2026-09-26 |
+| 75 | Make the two approval suites test the gate, not a phrase list | Examples | High | Done | Both compared one detector with itself; now four broken gates must be found, and three gates are told apart | 2026-09-26 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 74 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 on 2026-09-26.
+tree, and kept current as tasks have landed since. **All 75 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 and 75 on 2026-09-26.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3451,6 +3452,43 @@ and so does a demoted one (plain text instead of `##`).
 **Verify.** `python3 .github/scripts/pairing.py .` ends "...and says what it is not";
 `python3 -m unittest tests.test_graph_agent` passes.
 
+### Task 75 — Make the two approval suites test the gate, not a phrase list
+
+**Goal.** Task 74's notes said it plainly. In `approval-gate-fuzzing` and `eval-red-teaming`, the
+"naive" and "guarded" paths called the same phrase detector, so every result depended on whether
+a prompt contained a listed string. A bypass worded any other way passed both, and the table
+still read clean. Neither suite could fail for a reason that mattered. Both are chapter
+counterparts, so the Environment and Evaluation chapters were each pointing at a check that
+checked nothing.
+
+**Status: Done.** Both rewritten around a claim-bound gate, stdlib-only, and both now in the
+smoke table, since they exit non-zero on a real failure.
+
+**`approval-gate-fuzzing` fuzzes the gate with the model assumed compromised.** 48 generated
+prompts (twelve phrasings × plain, zero-width, homoglyph, base64) × 7 forgeries = 336 cases. The
+forgeries are no token, a guessed token, a token for other arguments, a token for another tool, a
+replay, an unregistered write, and a renamed write. The sound gate lets 0 unapproved writes
+through and still runs an approved one. Four deliberately broken gates ship with it:
+`trusts-the-note`, `checks-tool-not-arguments`, `reusable-token` and `denylist-of-writes`. The run
+exits 1 if any is not found, so the fuzzer losing coverage is a failure rather than a quieter
+table. The old phrase filter, kept for contrast, recognises 8 of the 48 prompts.
+
+**`eval-red-teaming` holds the model fixed and varies the gate.** Seven scripted cases, including
+an injection that arrives through a fetched ticket, run against `flag-gate`, `token-gate` and
+`claim-gate`. An output grader and an effect grader score each run, and they disagree on 9 of 21
+runs. The disagreements run both ways: writes behind a reassuring answer, and an alarming answer
+with no write. Every weaker gate fails a case the next one passes, and the suite asserts that.
+
+**Mutation tested, eight breaks, all caught.** On the fuzzer's sound gate: running unregistered
+tools, skipping the fingerprint check, not recording spent tokens, and accepting a guessed token.
+On the eval: `claim-gate` not single-use, `claim-gate` ignoring arguments, the effect grader
+allowing replays, and the effect grader passing everything. One mutation was first written as a
+syntax error, which the suite also reported as red. It was rewritten so the result counts.
+
+**Verify.** `python3 examples/approval-gate-fuzzing/fuzz.py` and
+`python3 examples/eval-red-teaming/redteam.py` both exit 0;
+`python3 -m unittest tests.test_approval_gate_fuzzing tests.test_eval_red_teaming` passes.
+
 ---
 
 ## Definition of Done
@@ -3516,6 +3554,7 @@ git status --short
 | 2026-09-08 | Added task 72: the chapter/example pairing is checked in CI; seven drifts fixed | somesh-ghaturle |
 | 2026-09-08 | Added task 73: the README indexed 17 of 24 examples; completed and guarded | somesh-ghaturle |
 | 2026-09-26 | Added task 74: every example says what it is not; fixed graph-agent's fail-open approval | somesh-ghaturle |
+| 2026-09-26 | Added task 75: the fuzzing and red-team suites test the gate, and must find broken ones | somesh-ghaturle |
 
 ---
 
