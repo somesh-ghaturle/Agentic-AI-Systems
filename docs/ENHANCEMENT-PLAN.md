@@ -110,10 +110,11 @@ section saying what has to be decided first.
 | 74 | Say what each example is not, and guard it | Documentation | High | Done | 9 of 24 said it; writing the other 15 found a fail-open approval and an unbacked claim | 2026-09-26 |
 | 75 | Make the two approval suites test the gate, not a phrase list | Examples | High | Done | Both compared one detector with itself; now four broken gates must be found, and three gates are told apart | 2026-09-26 |
 | 76 | Fuzz approval expiry and racing claims | Examples | Medium | Done | Two flaws neither suite could see; the race is found 20 of 20 runs, not by luck | 2026-09-26 |
+| 77 | Check test counts against the suite | CI/CD | Medium | Done | Unchecked since written; 3 of 8 stated counts were stale, and one mutation claim no longer held | 2026-09-26 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 76 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 76 on 2026-09-26.
+tree, and kept current as tasks have landed since. **All 77 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 77 on 2026-09-26.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3523,6 +3524,39 @@ README says so.
 **Verify.** `python3 examples/approval-gate-fuzzing/fuzz.py` exits 0 and reports six broken gates
 found; `python3 -m unittest tests.test_approval_gate_fuzzing` passes.
 
+### Task 77 — Check test counts against the suite
+
+**Goal.** ROADMAP.md's status table said "Tests | 367". Task 64's counts guard checks 17 numbers
+in the docs, and this was not one of them. It had been stale since at least task 74, and nobody
+could say how it had been counted.
+
+**Status: Done.** [`docs_counts.py`](../.github/scripts/docs_counts.py) now loads the suite with
+`unittest`'s own loader and counts what `discover -s tests` would run. It checks the ROADMAP
+total and the seven example READMEs that state their own suite's size in the present tense: 25
+claims, up from 17.
+
+**Loading, not grepping and not running.** A grep for `def test_` found 394 where discovery ran
+396, because it cannot see inherited tests. Running the suite would take minutes and need the
+optional dependencies. Loading imports each module, which is exactly what the fast CI job does,
+so the count is identical with or without dependencies, on 3.9 and on current Python, from any
+working directory. It takes 0.15s. A module that fails to import makes the check exit 1. The
+loader would otherwise count it as one test, and a miscount would pass silently.
+
+**Three of eight counts were stale on the first run.** ROADMAP (367, actually 396), hermes-agent
+(31, actually 35), and graph-agent (23, actually 29). The graph-agent sentence also said
+"reverting the classifier turns eight of them red". Re-measured by restoring the original keyword
+list, it fails four tests outright, ten failures counting subtests, with langgraph absent. The
+sentence now says that, and says the topology tests may add more where langgraph is installed.
+
+**Past-tense counts are left alone on purpose.** tool-discovery's "6 of the 11 tests went red"
+records a mutation run, and 11 was right when it ran. Updating it would falsify the record, which
+is the opposite of what the guard is for.
+
+**Mutation tested, three breaks, all caught.** An added test, a test module that fails to import,
+and a reworded count sentence.
+
+**Verify.** `python3 .github/scripts/docs_counts.py .` reports 25 documented counts, all matching.
+
 ---
 
 ## Definition of Done
@@ -3590,6 +3624,7 @@ git status --short
 | 2026-09-26 | Added task 74: every example says what it is not; fixed graph-agent's fail-open approval | somesh-ghaturle |
 | 2026-09-26 | Added task 75: the fuzzing and red-team suites test the gate, and must find broken ones | somesh-ghaturle |
 | 2026-09-26 | Added task 76: the fuzzer covers expiry and racing claims, and finds the race every run | somesh-ghaturle |
+| 2026-09-26 | Added task 77: test counts are checked; three of eight were stale | somesh-ghaturle |
 
 ---
 
