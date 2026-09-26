@@ -23,13 +23,13 @@ Two supporting commitments follow from it:
 | Area | Where it stands |
 | --- | --- |
 | Examples | 24, stdlib-first, each with tests in `tests/` |
-| Tests | 367, running on both the 3.9 floor and current Python |
+| Tests | 396, running on both the 3.9 floor and current Python |
 | Architecture chapters | 4 disciplines — context, harness, evaluation, environment — plus patterns, building blocks, production principles |
 | Diagrams | 47 interactive HTML viewers, each embedded in its document as a GIF |
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
-| Enhancement plan | 76 tasks, all `Done` |
+| Enhancement plan | 77 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction.
 

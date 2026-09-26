@@ -91,8 +91,9 @@ generalises past this example — a bare noun appears in both the question and t
 keyword list is the wrong shape for the job.
 
 The fix here is questions-are-reads-first plus action phrases, which is better but still
-guessing from a string. **23 tests now pin it**, including the exact string that was misrouted —
-reverting the classifier turns eight of them red. **hermes-agent's design is the more robust one:** it never infers intent
+guessing from a string. **29 tests** cover this example, including the exact string that was
+misrouted. Reverting the classifier to the keyword list fails four of them outright, ten failures
+counting subtests, with langgraph absent; the topology tests that need it may add more. **hermes-agent's design is the more robust one:** it never infers intent
 from text at all. The caller names a tool, and the tool is registered read or write. Where you
 can dispatch on a declaration instead of a guess, do.
 

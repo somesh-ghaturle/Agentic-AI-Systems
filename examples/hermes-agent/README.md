@@ -197,7 +197,7 @@ The trace goes to stderr as one JSON object per line, so the answer on stdout st
 python3 -m unittest tests.test_hermes_agent -v
 ```
 
-31 tests in [tests/test_hermes_agent.py](../../tests/test_hermes_agent.py), in two groups.
+35 tests in [tests/test_hermes_agent.py](../../tests/test_hermes_agent.py), in two groups.
 The behavioural ones check that requests route where they should. The boundary ones check
 that a write *cannot* happen by the wrong path, including one that corrupts a registry past
 its own guard to confirm the second lock holds when the first is defeated.
