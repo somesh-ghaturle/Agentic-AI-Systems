@@ -144,6 +144,11 @@ def counts(root):
         "handler_trees": len(matrix_trees[0].split(",")) if matrix_trees else 0,
         "package_trees": len(matrix_trees[1].split(",")) if len(matrix_trees) > 1 else 0,
         "boundary_trees": boundary_trees,
+        "lock_files": len([p for p in root.glob("infra/**/.terraform.lock.hcl")
+                           if ".terraform" not in p.parent.parts]),
+        **{f"modules:{t.name.removeprefix('terraform-')}":
+           len([d for d in (t / "modules").iterdir() if d.is_dir()])
+           for t in sorted(root.glob("infra/terraform-*")) if (t / "modules").is_dir()},
         **test_counts(root),
     }
 
@@ -179,6 +184,17 @@ CLAIMS = [
     ("README.md", "package_trees", r"Deployment package builds for the (\S+) trees that have",
      "trees with packages"),
     ("ROADMAP.md", "tests", r"\| Tests \| (\d+),", "tests under tests/"),
+    ("ROADMAP.md", "suites", r"\| Examples \| \d+, stdlib-first; (\d+) with a suite",
+     "examples with a suite"),
+    (".github/dependabot.yml", "lock_files",
+     r"live in the (\d+) committed `\.terraform\.lock\.hcl`", "committed lock files"),
+    # MODULES.md prints the expected output of its own verification loop; one claim per tree.
+    ("infra/MODULES.md", "modules:aws", r"(?m)^aws: (\d+) modules$", "aws modules"),
+    ("infra/MODULES.md", "modules:azure", r"(?m)^azure: (\d+) modules$", "azure modules"),
+    ("infra/MODULES.md", "modules:gcp", r"(?m)^gcp: (\d+) modules$", "gcp modules"),
+    ("infra/MODULES.md", "modules:snowflake", r"(?m)^snowflake: (\d+) modules$",
+     "snowflake modules"),
+    ("infra/MODULES.md", "modules:hybrid", r"(?m)^hybrid: (\d+) modules", "hybrid modules"),
     # Per-suite counts, where a README states one in the present tense. Past-tense records --
     # "6 of the 11 tests went red" in a mutation log -- are history and stay as written.
     ("examples/harness-agent/README.md", "suite:test_harness_agent",
@@ -223,7 +239,9 @@ def main(root):
             print(f"  {f}")
         return 1
 
-    summary = ", ".join(f"{v} {k}" for k, v in sorted(have.items()) if not k.startswith("suite:"))
+    summary = ", ".join(
+        f"{v} {k}" for k, v in sorted(have.items()) if not k.startswith(("suite:", "modules:"))
+    )
     print(f"{len(CLAIMS)} documented counts checked; all match ({summary})")
     return 0
 

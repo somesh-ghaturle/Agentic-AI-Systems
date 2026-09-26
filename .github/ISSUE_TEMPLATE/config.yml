@@ -1,0 +1,10 @@
+# A vulnerability report must not start as a public issue: the configurations here are meant to
+# be copied, so a public boundary bypass is a working recipe against every copy already out
+# there. There used to be a `security.md` issue template here. It was a public form headed "DO
+# NOT CREATE PUBLIC ISSUES", and MIGRATION-GUIDE.md sent write-boundary reports to it. This link
+# sends reporters to GitHub's private advisory form instead, which only maintainers can read.
+# SECURITY.md is the policy.
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/somesh-ghaturle/Agentic-AI-Systems/security/advisories/new
+    about: Opens a private advisory only the maintainers can read. See SECURITY.md for scope.

@@ -32,4 +32,4 @@ Add any other context about the problem here.
 
 ---
 
-**Note:** For security vulnerabilities, please use the [Security Report](security.md) template instead of this one.
+**Note:** Do not report security vulnerabilities here. Use [private vulnerability reporting](https://github.com/somesh-ghaturle/Agentic-AI-Systems/security/advisories/new) instead, since a public issue is readable by everyone. See [SECURITY.md](../../SECURITY.md).
