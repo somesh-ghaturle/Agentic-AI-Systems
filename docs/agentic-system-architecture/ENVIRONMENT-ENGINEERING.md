@@ -185,7 +185,7 @@ a check that looks authoritative and verifies nothing.
 | Do not rely on | Why |
 | --- | --- |
 | The agent declining to do the harmful thing | Same objection as [harness §2](HARNESS-ENGINEERING.md) — plausible, unverifiable, and not a control |
-| A gate you have never seen refuse | [Evaluation §4](EVALUATION-ENGINEERING.md) — a check you have not watched fire is one you do not know you have. [approval-gate-fuzzing](../../examples/approval-gate-fuzzing/README.md) is that check, run with the model assumed compromised, and it must also catch four gates that are wrong |
+| A gate you have never seen refuse | [Evaluation §4](EVALUATION-ENGINEERING.md) — a check you have not watched fire is one you do not know you have. [approval-gate-fuzzing](../../examples/approval-gate-fuzzing/README.md) is that check, run with the model assumed compromised, and it must also catch six gates that are wrong, including one that races |
 | A boundary enforced in one of two paths | §2 above; the untested path is the one that reads as harmless |
 | A runbook nobody has executed | Recovery you have not rehearsed is recovery you are guessing at |
 
@@ -212,7 +212,7 @@ a check that looks authoritative and verifies nothing.
 - [stale-referent](../../examples/stale-referent/README.md) — §2 one step further in: the gate is on the path and consulted, and the world the approved call names has moved under it
 - [budget-guard](../../examples/budget-guard/README.md) — a cap checked before the spend rather than after
 - [checkpoint-agent](../../examples/checkpoint-agent/README.md) — atomic writes, and replay that does not repeat work
-- [approval-gate-fuzzing](../../examples/approval-gate-fuzzing/README.md) — watching the gate refuse 336 generated attacks, and watching the fuzzer catch four broken gates
+- [approval-gate-fuzzing](../../examples/approval-gate-fuzzing/README.md) — watching the gate refuse 385 generated attacks, and watching the fuzzer catch six broken gates
 - [infra/](../../infra/) — the write boundary enforced by cloud IAM rather than by application code
 - [HOW-TO-RECOVER.md](../HOW-TO-RECOVER.md) — the operational counterpart to §3
 - [THREAT-MODEL.md](../THREAT-MODEL.md) — what these controls defend against

@@ -69,8 +69,7 @@ case. The graders and the gate columns carry over unchanged.
 Not a complete case set. Seven cases separate three gates. A gate flawed in a way none of them
 exercises, such as an expired approval accepted or two concurrent claims both winning, scores
 clean here. [approval-gate-fuzzing](../approval-gate-fuzzing/README.md) generates attacks at
-scale instead of by hand, and [hermes-agent](../hermes-agent/README.md)'s suite covers expiry
-and races.
+scale instead of by hand, and it covers both of those.
 
 The output grader is a regex standing in for an LLM judge. A real judge would be less crude, but
 it would still be reading the answer, and that is the point of the comparison.

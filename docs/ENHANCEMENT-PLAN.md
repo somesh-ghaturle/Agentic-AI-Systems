@@ -109,10 +109,11 @@ section saying what has to be decided first.
 | 73 | Complete the example index, and guard it | Documentation | High | Done | The README listed 17 of 24; every boundary example added recently was missing | 2026-09-08 |
 | 74 | Say what each example is not, and guard it | Documentation | High | Done | 9 of 24 said it; writing the other 15 found a fail-open approval and an unbacked claim | 2026-09-26 |
 | 75 | Make the two approval suites test the gate, not a phrase list | Examples | High | Done | Both compared one detector with itself; now four broken gates must be found, and three gates are told apart | 2026-09-26 |
+| 76 | Fuzz approval expiry and racing claims | Examples | Medium | Done | Two flaws neither suite could see; the race is found 20 of 20 runs, not by luck | 2026-09-26 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 75 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 and 75 on 2026-09-26.
+tree, and kept current as tasks have landed since. **All 76 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 76 on 2026-09-26.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3489,6 +3490,39 @@ syntax error, which the suite also reported as red. It was rewritten so the resu
 `python3 examples/eval-red-teaming/redteam.py` both exit 0;
 `python3 -m unittest tests.test_approval_gate_fuzzing tests.test_eval_red_teaming` passes.
 
+### Task 76 — Fuzz approval expiry and racing claims
+
+**Goal.** Task 75 closed with two flaws neither suite could see: an approval honoured after it
+expired, and two concurrent claims both spending one token. Both are real failure modes of the
+claim primitive every tree here depends on, and `hermes-agent` is the only place either was
+tested.
+
+**Status: Done.** `Approvals` in `approval-gate-fuzzing` gains a TTL on a simulated clock and a
+lock held across check-and-spend. `expired-token` is a new forgery, crossed with every prompt.
+`racing-replay` is run once, since a prompt cannot change a race. Together they bring the run to
+48 × 8 + 1 = 385 cases. Two new broken gates must be found: `never-expires` and
+`check-then-spend`.
+
+**The race is made reproducible, not lucky.** A `window` hook runs between checking a token and
+spending it. It is a no-op normally. In the racing case it is a two-thread barrier with a 250ms
+timeout. The split claim lets both threads reach the barrier, and both spend. The sound claim
+admits one thread, which waits out the timeout alone. Neither result depends on timing. The
+first version slept 5ms and relied on the second thread arriving inside that window, which a
+loaded CI runner would eventually break. It was replaced before commit. The split claim is found
+20 of 20 runs, and the suite also passes with four busy loops pinning the CPU. It also asserts that the sequential replay cannot
+see the split claim, which is the reason the racing case exists.
+
+**Mutation tested, four breaks, all caught.** Skipping the expiry check; expiring one tick late
+(`>` for `>=`); splitting the sound claim into two critical sections; and the fuzzer no longer
+installing the window.
+
+**What it still does not show.** The lock is in-process. Atomicity across processes is what the
+cloud trees get from conditional writes, and an in-process example cannot demonstrate it. The
+README says so.
+
+**Verify.** `python3 examples/approval-gate-fuzzing/fuzz.py` exits 0 and reports six broken gates
+found; `python3 -m unittest tests.test_approval_gate_fuzzing` passes.
+
 ---
 
 ## Definition of Done
@@ -3555,6 +3589,7 @@ git status --short
 | 2026-09-08 | Added task 73: the README indexed 17 of 24 examples; completed and guarded | somesh-ghaturle |
 | 2026-09-26 | Added task 74: every example says what it is not; fixed graph-agent's fail-open approval | somesh-ghaturle |
 | 2026-09-26 | Added task 75: the fuzzing and red-team suites test the gate, and must find broken ones | somesh-ghaturle |
+| 2026-09-26 | Added task 76: the fuzzer covers expiry and racing claims, and finds the race every run | somesh-ghaturle |
 
 ---
 

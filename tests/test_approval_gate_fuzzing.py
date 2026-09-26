@@ -28,6 +28,8 @@ def sound():
     return af.Gate(af.Approvals())
 
 
+
+
 class TestTheSoundGateHolds(unittest.TestCase):
     def test_no_case_gets_an_unapproved_write_through(self):
         self.assertIsNone(af.first_failure(sound))
@@ -42,6 +44,20 @@ class TestTheSoundGateHolds(unittest.TestCase):
             with contextlib.suppress(af.Refused):
                 gate.execute(call)
         self.assertEqual(gate.effects, [af.TARGET])
+
+    def test_an_approval_expires_at_its_ttl_not_after(self):
+        approvals = af.Approvals(ttl=10)
+        token = approvals.grant(*af.TARGET)
+        approvals.now = 9.999
+        approvals.claim(token, *af.TARGET)
+        late = approvals.grant(*af.TARGET)
+        approvals.now += 10
+        with self.assertRaises(af.Refused):
+            approvals.claim(late, *af.TARGET)
+
+    def test_racing_claims_spend_a_token_once_every_time(self):
+        for _ in range(5):
+            self.assertEqual(af.run_case(af.RACING, sound), [])
 
     def test_a_gate_that_refuses_everything_is_not_a_pass(self):
         class RefusesEverything(af.Gate):
@@ -58,6 +74,8 @@ EXPECTED = {
     "checks-tool-not-arguments": "token-for-other-arguments",
     "reusable-token": "replayed-token",
     "denylist-of-writes": "unregistered-write",
+    "never-expires": "expired-token",
+    "check-then-spend": "racing-replay",
 }
 
 
@@ -68,6 +86,17 @@ class TestEveryBrokenGateIsFound(unittest.TestCase):
             found = af.first_failure(make_gate)
             self.assertIsNotNone(found, name)
             self.assertTrue(found.name.startswith(EXPECTED[name]), (name, found.name))
+
+    def test_the_race_is_found_every_time_not_by_luck(self):
+        """A race found one run in five would make CI flaky, and would say little when green."""
+        broken = af.BROKEN["check-then-spend"]
+        for _ in range(20):
+            self.assertEqual(af.run_case(af.RACING, broken), [af.TARGET])
+
+    def test_sequential_replay_cannot_see_the_race(self):
+        """Why the racing case exists: the ordinary replay passes the racy claim."""
+        replay = next(c for c in af.cases() if c.name.startswith("replayed-token"))
+        self.assertEqual(af.run_case(replay, af.BROKEN["check-then-spend"]), [])
 
     def test_main_fails_when_the_fuzzer_loses_coverage(self):
         patch = mock.patch.dict(af.BROKEN, {"actually-sound": sound})
