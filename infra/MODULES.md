@@ -363,7 +363,7 @@ grep -c "terraform-aws\|terraform-azure\|terraform-gcp" infra/MODULES.md
 
 **Expected output:**
 ```
-aws: 8 modules
+aws: 9 modules
 azure: 12 modules
 gcp: 10 modules
 snowflake: 10 modules

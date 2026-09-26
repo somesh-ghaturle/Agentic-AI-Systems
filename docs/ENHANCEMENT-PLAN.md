@@ -111,10 +111,14 @@ section saying what has to be decided first.
 | 75 | Make the two approval suites test the gate, not a phrase list | Examples | High | Done | Both compared one detector with itself; now four broken gates must be found, and three gates are told apart | 2026-09-26 |
 | 76 | Fuzz approval expiry and racing claims | Examples | Medium | Done | Two flaws neither suite could see; the race is found 20 of 20 runs, not by luck | 2026-09-26 |
 | 77 | Check test counts against the suite | CI/CD | Medium | Done | Unchecked since written; 3 of 8 stated counts were stale, and one mutation claim no longer held | 2026-09-26 |
+| 78 | Send vulnerability reports to private reporting, not a public issue form | Security | High | Done | The security template was public, and MIGRATION-GUIDE sent boundary bypasses to it | 2026-09-26 |
+| 79 | Make QUICKSTART say what the commands do, and check it | Documentation | High | Done | Invented trace-eval output, a false 24h expiry, and a nonexistent API Gateway | 2026-09-26 |
+| 80 | Align the GCP provider locks, and check locks agree within a tree | Infrastructure | Medium | Done | Staging ran google 7.46.0 while dev and prod ran 7.45.0 | 2026-09-26 |
+| 81 | Guard three more stale counts | Documentation | Low | Done | Lock files 40→14, AWS modules 8→9, and "each with tests" when three have none | 2026-09-26 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 77 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 77 on 2026-09-26.
+tree, and kept current as tasks have landed since. **All 81 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 81 on 2026-09-26.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3558,6 +3562,90 @@ and a reworded count sentence.
 
 **Verify.** `python3 .github/scripts/docs_counts.py .` reports 25 documented counts, all matching.
 
+### Task 78 — Send vulnerability reports to private reporting, not a public issue form
+
+**Goal.** `.github/ISSUE_TEMPLATE/security.md` was a public issue form headed "DO NOT CREATE
+PUBLIC ISSUES". MIGRATION-GUIDE.md sent "anything involving the write boundary" to it. SECURITY.md
+says the opposite, with the reason: a public boundary bypass is a working recipe against every
+copy of these configurations already out there.
+
+**Status: Done.** Replaced by `config.yml`, whose contact link opens GitHub's private advisory
+form. MIGRATION-GUIDE.md and `bug_report.md` point there, and task 12's Verify block checks for
+`config.yml`. The form also contradicted SECURITY.md four other ways: a 24-hour SLA against "no
+response timeline is promised", a contact address in CONTRIBUTING.md that does not exist, DoS
+and "deployed infrastructure" in scope when nothing here is a running service, and fixes by a
+"next release" in a repository with no releases.
+
+**Found by** the knowledge graph. Its one AMBIGUOUS edge linked "No promised response timeline"
+in SECURITY.md to "Security response SLA table" in the template.
+
+### Task 79 — Make QUICKSTART say what the commands do, and check it
+
+**Goal.** QUICKSTART.md is the first file a new reader runs, and nothing ran it.
+
+**Status: Done.** The wrong parts, each checked against the tree:
+
+- The trace-eval "expected output" described 100 scored runs and three numbered discrepancies.
+  The real run is seven cases per subject with three disagreements. It is now the real output,
+  labelled as a method and not a benchmark.
+- Security Notes said approvals "expire after 24 hours by default". The AWS approval module says
+  a pending approval never expires, and the FAQ exists to correct exactly this answer.
+- "Test the Deployed System" called `terraform output -raw api_gateway_url`. The AWS tree has no
+  API Gateway and no such output. It now starts a Step Functions execution, as HOW-TO-DEPLOY §6
+  does.
+- The AWS CLI install step cloned aws-cli and pip-installed its requirements, which does not
+  install the CLI. It now points at AWS's installer.
+- Azure used a service-principal secret and GCP a key file. Their own deploy guides say
+  `az login` and Application Default Credentials. Both steps now also copy the tfvars example.
+- The hermes `--approve` output showed `status approved` and a result line the agent does not
+  print.
+- The example table listed 13 of 24, and its e2e-agent command did nothing. It is replaced by a
+  pointer to the README index that `pairing.py` keeps complete.
+- The infra test loop skipped Snowflake. The troubleshooting row sent users to the tree root,
+  which holds no `.tf` files.
+
+[`tests/test_quickstart.py`](../tests/test_quickstart.py) runs each local command that has an
+**Expected output** block and requires every documented line to appear. Restoring either of
+two old lines fails it.
+
+### Task 80 — Align the GCP provider locks, and check locks agree within a tree
+
+**Goal.** Dependabot bumped `hashicorp/google` to 7.46.0 in `terraform-gcp/envs/staging` alone.
+Dev and prod stayed on 7.45.0, all under the same `~> 7.44`, so `tfconstraints.py` passed.
+Staging exists to rehearse prod, and it was rehearsing a different provider.
+
+**Status: Done.** Dev and prod carry staging's lock; the files differed only in version and
+hashes. All three roots pass `terraform init -backend=false` and `validate` against 7.46.0, and
+init left the locks unchanged. Rule 3 in [`tfconstraints.py`](../.github/scripts/tfconstraints.py)
+requires one resolved version per provider within a tree. The hybrid POC is its own tree and may
+differ. Four new tests; reverting the two locks fails two of them.
+
+The commit that landed this left the counts guard red: its four tests moved the suite to 402
+while ROADMAP said 398. Task 81's commit fixed it. The guard did its job; the author ran it one
+commit late.
+
+### Task 81 — Guard three more stale counts
+
+**Status: Done.** Each fixed and added to `docs_counts.py`, now at 32 claims:
+
+- `dependabot.yml` said "the 40 committed `.terraform.lock.hcl` files". There are 14; the 44
+  module-level ones were removed earlier.
+- MODULES.md's verification output said `aws: 8 modules`. There are 9, since task 68 added
+  `networking`. All five tree lines are now checked.
+- ROADMAP said every example had tests in `tests/`. `langchain-agent`, `rag-langchain` and
+  `ray-orchestrator` have none, and are also skipped by the smoke test. The row now says 21.
+
+Each was mutation tested by restoring the stale value; all three fail.
+
+**A correction to tasks 75 to 77.** Their notes said the suites passed on 3.9 and on current
+Python. On the machine that ran them, `python3` was 3.9.6, so both runs were 3.9. The suite was
+re-run on 3.13.15 during this sweep: 396 tests, all passing, and the loader count matched. The
+claims hold; they were not verified when they were first made.
+
+**Verify.** `python3 .github/scripts/docs_counts.py .` reports 32 counts, all matching;
+`python3 .github/scripts/tfconstraints.py infra` passes; `python3 -m unittest tests.test_quickstart`
+passes.
+
 ---
 
 ## Definition of Done
@@ -3626,6 +3714,7 @@ git status --short
 | 2026-09-26 | Added task 75: the fuzzing and red-team suites test the gate, and must find broken ones | somesh-ghaturle |
 | 2026-09-26 | Added task 76: the fuzzer covers expiry and racing claims, and finds the race every run | somesh-ghaturle |
 | 2026-09-26 | Added task 77: test counts are checked; three of eight were stale | somesh-ghaturle |
+| 2026-09-26 | Added tasks 78-81 from a repo-wide sweep: private security reporting, QUICKSTART, GCP locks, three counts | somesh-ghaturle |
 
 ---
 
