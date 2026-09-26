@@ -676,9 +676,10 @@ Instead, please report security vulnerabilities by emailing [YOUR_EMAIL] or usin
 
 ```bash
 ls -la .github/ISSUE_TEMPLATE/
+# security.md was replaced by config.yml's private-report link in task 78
 test -f .github/ISSUE_TEMPLATE/bug_report.md && \
 test -f .github/ISSUE_TEMPLATE/feature_request.md && \
-test -f .github/ISSUE_TEMPLATE/security.md && \
+test -f .github/ISSUE_TEMPLATE/config.yml && \
 echo "All templates present"
 ```
 

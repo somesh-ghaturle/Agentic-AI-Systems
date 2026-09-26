@@ -208,5 +208,7 @@ only if the deny policy is actually attached. Neither is automatic.
   assumptions that are weakest
 - [MODULES.md](../infra/MODULES.md) — what each Terraform module contains, per cloud
 - [DECISION-LOGS](DECISION-LOGS/README.md) — why the choices went the way they did
-- Open an issue using one of the [templates](../.github/ISSUE_TEMPLATE) — bug report, feature
-  request, or the security template for anything involving the write boundary
+- Open an issue using one of the [templates](../.github/ISSUE_TEMPLATE) — bug report or feature
+  request. Anything that bypasses the write boundary goes to
+  [private vulnerability reporting](https://github.com/somesh-ghaturle/Agentic-AI-Systems/security/advisories/new)
+  instead, never a public issue — see [SECURITY.md](../SECURITY.md)
