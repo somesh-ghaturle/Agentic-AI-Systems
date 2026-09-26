@@ -124,6 +124,19 @@ jobs:
         if: matrix.example == 'e2e-agent'
         run: python3 -m unittest tests.test_e2e_agent -v
 
+      # The suites whose tests skip without these packages. Each says it "runs in the
+      # example-deps job", and until task 82 none of them did: they skipped in checks.yml for
+      # lack of the package and were never invoked here, so graph-agent's langgraph tests
+      # (durable interrupt, topology) and rag-faiss's retrieval tests had never run in CI.
+      # Measured locally against these same pins before this step was added: graph-agent 28
+      # run and 1 skipped (the one that is only meaningful when langgraph is absent);
+      # rag-faiss 7 run and 1 skipped (the model download).
+      - name: Run the suite that needs this example's dependencies
+        if: contains(fromJSON('["graph-agent", "rag-faiss", "ray-orchestrator"]'), matrix.example)
+        run: python3 -m unittest "tests.test_${EXAMPLE//-/_}" -v
+        env:
+          EXAMPLE: ${{ matrix.example }}
+
       # Same reasoning, for graph-agent. tests/smoke/ runs each example as a subprocess and
       # checks its exit code; graph-agent's case skips in checks.yml because langgraph is not
       # installed there, and this is the one job where it is. Importing graph_agent above

@@ -115,10 +115,11 @@ section saying what has to be decided first.
 | 79 | Make QUICKSTART say what the commands do, and check it | Documentation | High | Done | Invented trace-eval output, a false 24h expiry, and a nonexistent API Gateway | 2026-09-26 |
 | 80 | Align the GCP provider locks, and check locks agree within a tree | Infrastructure | Medium | Done | Staging ran google 7.46.0 while dev and prod ran 7.45.0 | 2026-09-26 |
 | 81 | Guard three more stale counts | Documentation | Low | Done | Lock files 40→14, AWS modules 8→9, and "each with tests" when three have none | 2026-09-26 |
+| 82 | Give the last three examples a suite, and run the suites that only claimed to run | CI/CD | High | Done | graph-agent's langgraph tests and rag-faiss's retrieval tests had never run in CI | 2026-09-26 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 81 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 81 on 2026-09-26.
+tree, and kept current as tasks have landed since. **All 82 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 82 on 2026-09-26.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3646,6 +3647,48 @@ claims hold; they were not verified when they were first made.
 `python3 .github/scripts/tfconstraints.py infra` passes; `python3 -m unittest tests.test_quickstart`
 passes.
 
+### Task 82 — Give the last three examples a suite, and run the suites that only claimed to run
+
+**Goal.** Task 81 left ROADMAP saying three examples had no tests: `langchain-agent`,
+`rag-langchain` and `ray-orchestrator`. The smoke test skips all three, since two need an API
+key and one starts a Ray cluster. So nothing checked them at all.
+
+**Status: Done.** Three suites, 13 tests, and every example now has one.
+
+- **`langchain-agent`, 5 tests, fast job.** LangChain is replaced in `sys.modules` with small
+  fakes. The tests cover the missing-package and missing-key messages, the
+  `template | model | parser` wiring, and the fallback naming its error. One test pins the bug
+  agent.py's own comments record: a bare `except Exception` reported a broken install as a
+  missing one. The first draft of the suite passed with that bug restored. The mutation run
+  caught the gap, and the test was added then.
+- **`rag-langchain`, 5 tests, fast job.** `faiss`, `sentence_transformers` and LangChain are
+  faked. The tests cover positional mapping, the fallback's stated reason, and `DOCS` being one
+  list, which is task 74's fix. Modules load under unique names, because rag-faiss also ships a
+  `build_index.py` and a bare import would bind whichever came first (task 54).
+- **`ray-orchestrator`, 3 tests, example-deps only.** These run against real Ray, because a fake
+  would test only itself. They check input order, parallelism (3.5s bound against 4s serial),
+  and `main()`. Measured on the pinned Ray 2.58.0: 3 pass in 9.5s.
+
+**The bigger finding: four suites said they ran in example-deps, and two did not run anywhere.**
+`test_graph_agent`, `test_rag_faiss`, `test_hermes_dashboard` and `test_trace_eval_service` each
+skip with "runs in the example-deps job", but that job only ran the e2e-agent suite and the
+smoke and performance suites. The dashboard and trace-eval-service suites do run, in the
+`examples` job, which installs `tests/requirements.txt`, so only their skip messages were wrong
+and are now corrected. graph-agent's langgraph tests (durable interrupt, topology) and
+rag-faiss's retrieval tests had never run in CI. A new example-deps step runs all three
+dependency-gated suites. Before adding it, each was run against its own pins: graph-agent 28
+run and 1 skipped (only meaningful without langgraph), rag-faiss 7 run and 1 skipped (the model
+download), ray-orchestrator 3 run. None had been silently broken; they had only never run.
+
+**Mutation tested, eight breaks, all caught.** For langchain-agent: removing the key check, not
+stripping the answer, swallowing the fallback error, and widening the `except`. For
+rag-langchain: copying `DOCS`, mapping by rank, and a silent no-key fallback. For
+ray-orchestrator: reordering the results.
+
+**Verify.** `python3 -m unittest tests.test_langchain_agent tests.test_rag_langchain` passes in
+the dependency-free job; `python3 .github/scripts/docs_counts.py .` reports 35 counts, all
+matching.
+
 ---
 
 ## Definition of Done
@@ -3715,6 +3758,7 @@ git status --short
 | 2026-09-26 | Added task 76: the fuzzer covers expiry and racing claims, and finds the race every run | somesh-ghaturle |
 | 2026-09-26 | Added task 77: test counts are checked; three of eight were stale | somesh-ghaturle |
 | 2026-09-26 | Added tasks 78-81 from a repo-wide sweep: private security reporting, QUICKSTART, GCP locks, three counts | somesh-ghaturle |
+| 2026-09-26 | Added task 82: every example has a suite; two dependency-gated suites had never run in CI | somesh-ghaturle |
 
 ---
 

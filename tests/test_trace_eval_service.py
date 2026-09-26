@@ -33,7 +33,7 @@ if not _MISSING:
 @unittest.skipIf(
     _MISSING,
     f"trace-eval service dependencies are not installed ({', '.join(_MISSING)}); "
-    "this suite runs in the example-deps job",
+    "this suite runs in the examples job, which installs tests/requirements.txt",
 )
 class TestTraceEvalService(unittest.TestCase):
     def setUp(self):
