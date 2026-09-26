@@ -29,7 +29,7 @@ Two supporting commitments follow from it:
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
-| Enhancement plan | 74 tasks, all `Done` |
+| Enhancement plan | 75 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction.
 
@@ -65,8 +65,9 @@ both were documented at length.
 
 The area with the most room left, and the one most on-theme.
 
-- More red-team and bypass-phrase variants, and more comparisons between naive and guarded
-  paths that are honest about the naive one being reasonable-looking
+- More attack classes in the fuzzer and more cases in the red-team eval. Since task 75 both
+  test the gate rather than a phrase list, so a new case can actually fail. Expiry and
+  concurrent claims are the obvious gaps
 - More ways the boundary is lost that are *not* the gate being wrong — `second-path` covers a
   second route to the effect, and `tool-discovery` covers a filter instead of a structure;
   there are others

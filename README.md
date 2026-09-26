@@ -66,8 +66,8 @@ Agentic-AI-Systems/
 ├── examples/                     runnable examples and focused proof-of-concepts
 │   ├── hermes-agent/             the write boundary in application code
 │   ├── trace-eval/               scoring the path rather than the answer
-│   ├── eval-red-teaming/         prompt-injection probes against an approval gate
-│   ├── approval-gate-fuzzing/    prompt variants that try to bypass approval
+│   ├── eval-red-teaming/         three gates graded by effect, not by answer
+│   ├── approval-gate-fuzzing/    generated attacks on the gate, and the broken gates it finds
 │   ├── harness-agent/            continuity across context windows
 │   ├── budget-guard/             a token budget checked before the spend, not after
 │   ├── multi-agent-debate/       several agents argue; none of them approves
@@ -183,8 +183,8 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 - [stale-referent](examples/stale-referent/README.md) — approval binds the request, not the world the request named; the fingerprint matches and a different amount leaves the account
 - [budget-guard](examples/budget-guard/README.md) — the fourth bound the harness-agent leaves out: a per-request token cap checked before the spend rather than after
 - [checkpoint-agent](examples/checkpoint-agent/README.md) — crash recovery that resumes without repeating the work it already paid for
-- [approval-gate-fuzzing](examples/approval-gate-fuzzing/README.md) — bypass phrasing run at the gate, so "it refuses" is a test result rather than a belief
-- [eval-red-teaming](examples/eval-red-teaming/README.md) — injection attempts as evaluation cases, comparing a naive model that follows them with a guarded one that does not
+- [approval-gate-fuzzing](examples/approval-gate-fuzzing/README.md) — 336 generated attacks against the gate with the model assumed compromised, so "it refuses" is a test result rather than a belief, plus four broken gates the fuzzer must find
+- [eval-red-teaming](examples/eval-red-teaming/README.md) — one compromised model, three gates, graded by the writes that ran rather than the answer; the two graders disagree on 9 of 21 runs
 
 **Minimal references** — short scripts showing one idea each:
 

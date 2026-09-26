@@ -50,6 +50,7 @@ EXAMPLES = ROOT / "examples"
 # repository's central control as a failure. All three hermes rows are here together because
 # the interesting assertion is the difference between them.
 CASES = [
+    ("approval-gate-fuzzing", "fuzz.py", [], 0),
     ("budget-guard", "agent.py", ["summarize the refund policy"], 0),
     ("checkpoint-agent", "agent.py", ["deploy-model"], 0),
     ("context-compaction", "compact.py", [], 0),
@@ -60,6 +61,7 @@ CASES = [
     ("multi-agent-debate", "agent.py", [], 0),
     ("memory-agent", "agent.py", [], 0),
     ("edge-agent", "agent.py", [], 0),
+    ("eval-red-teaming", "redteam.py", [], 0),
     ("starter-agent", "agent.py", ["what is the refund policy"], 0),
     ("mcp-server", "server.py", ["--demo"], 0),
     ("second-path", "boundary.py", [], 0),
@@ -77,10 +79,8 @@ CONDITIONAL = [
 # Deliberately not smoke-tested, and why. Left here because "which examples does this cover"
 # is the first question anyone reading it will have.
 SKIPPED = {
-    "approval-gate-fuzzing": "a fuzzing harness; covered by its focused test suite",
     "context-overflow": "a context stress fixture; not a standalone runnable demo",
     "e2e-agent": "an HTTP server; it does not exit on its own",
-    "eval-red-teaming": "a red-team fixture; covered by its focused test suite",
     "langchain-agent": "needs an API key",
     "rag-langchain": "needs an API key",
     "rag-faiss": "builds an index over a Torch model download; too slow for this job",
