@@ -183,7 +183,7 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 - [stale-referent](examples/stale-referent/README.md) — approval binds the request, not the world the request named; the fingerprint matches and a different amount leaves the account
 - [budget-guard](examples/budget-guard/README.md) — the fourth bound the harness-agent leaves out: a per-request token cap checked before the spend rather than after
 - [checkpoint-agent](examples/checkpoint-agent/README.md) — crash recovery that resumes without repeating the work it already paid for
-- [approval-gate-fuzzing](examples/approval-gate-fuzzing/README.md) — 336 generated attacks against the gate with the model assumed compromised, so "it refuses" is a test result rather than a belief, plus four broken gates the fuzzer must find
+- [approval-gate-fuzzing](examples/approval-gate-fuzzing/README.md) — 385 generated attacks against the gate with the model assumed compromised, so "it refuses" is a test result rather than a belief, plus six broken gates the fuzzer must find, a race among them
 - [eval-red-teaming](examples/eval-red-teaming/README.md) — one compromised model, three gates, graded by the writes that ran rather than the answer; the two graders disagree on 9 of 21 runs
 
 **Minimal references** — short scripts showing one idea each:
