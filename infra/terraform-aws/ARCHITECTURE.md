@@ -29,7 +29,7 @@ flowchart TB
     end
 
     subgraph readpath["Read path — direct invocation"]
-        retrieve["retrieve<br/><i>AI Search over the corpus</i>"]
+        retrieve["retrieve<br/><i>OpenSearch over the corpus</i>"]
         reason["reason<br/><i>the model step</i>"]
     end
 
@@ -354,7 +354,7 @@ flowchart TB
 | `orchestration` | State machine, role | ARN list excludes write tools by construction |
 | `observability` | Trace log group, 4 metric filters, alarms, `trace_emitter` | Filters live on one shared group |
 | `state` | Execution state table | PITR on in prod |
-| `knowledge` | AI Search collection, access policies | Data access is separate from IAM — the principal must be the **retrieve tool's** role, not the orchestrator's |
+| `knowledge` | OpenSearch Serverless collection, access policies | Data access is separate from IAM — the principal must be the **retrieve tool's** role, not the orchestrator's |
 | `archive` | S3 bucket, Object Lock | COMPLIANCE mode cannot be shortened by anyone, including root |
 
 ---
