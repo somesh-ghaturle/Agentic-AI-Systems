@@ -119,10 +119,11 @@ section saying what has to be decided first.
 | 83 | Resolve the four contradictions the knowledge graph flagged | Documentation | Medium | Done | A module count, a wrong cloud's service name, and two Azure rows that predated task 68 | 2026-09-26 |
 | 84 | Test that each tree's approval claim is atomic across processes | Security | High | Done | The conditional write in three trees could be deleted with every suite green | 2026-09-27 |
 | 85 | Make the claimability tests call the claim | Security | High | Done | They tested a copy of the rule; a stealable fresh claim left them green | 2026-09-27 |
+| 86 | Mutation-audit the handler properties only code keeps, and close a fail-open | Security | High | Done | 8 of 12 survived; a deleted fingerprint skipped the tamper check in three trees | 2026-09-27 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 85 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 and 85 on 2026-09-27.
+tree, and kept current as tasks have landed since. **All 86 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 through 86 on 2026-09-27.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3789,6 +3790,49 @@ that task 84 pins.
 **Verify.** `python3 -m unittest discover -s infra/terraform-azure/src/tests` and the GCP
 equivalent pass.
 
+### Task 86 — Mutation-audit the handler properties only code keeps, and close a fail-open
+
+**Goal.** The architecture docs list the properties that Terraform cannot enforce and only the
+handler source keeps: the executor re-checking the fingerprint, the validator checking
+ownership, retrieval filtering by tenant inside the query, and the write tool requiring an
+idempotency key. Azure's says `src/tests/` "asserts exactly those properties". Task 85 had just
+shown a suite can look complete and miss a broken rule, so each property was broken on purpose
+in each tree to see whether the suite noticed.
+
+**Measured before any change: 8 of 12 mutations survived.**
+
+| Mutation | AWS | Azure | GCP |
+|---|---|---|---|
+| Fingerprint re-check disabled | survived | survived | survived |
+| Ownership comparison always passes | survived | survived | survived |
+| Ownership lookup failure fails open | caught | caught | caught |
+| Idempotency key not required | caught | survived | survived |
+
+The tenant filter was the exception. Dropping it, or letting a request with no tenant through,
+was caught in every tree.
+
+**A fail-open found while reading the check.** All three executors guarded with
+`if stored and stored != fingerprint(...)`, so a record with no stored fingerprint skipped the
+check entirely. `contracts.py` names the threat the check exists for: someone able to rewrite
+the stored record. The action is bound into the hash precisely because that person could
+otherwise change the action instead of the arguments. By the same reasoning they could delete
+the fingerprint field, and the check would not run. The validator always writes one, so no
+legitimate record lacks it. It now fails closed in all three trees, like the claim's handling
+of a missing `claimed_at`. Snowflake was already closed: its claim `UPDATE` requires
+`ARGUMENTS_FINGERPRINT = :EXPECTED_FINGERPRINT`, which a NULL never satisfies.
+
+**Status: Done.** Per tree:
+- Four executor tests: the approved action runs, changed arguments are refused and the tool
+  never runs, a changed action is refused, and a deleted fingerprint is refused.
+- Three ownership tests: another user's resource, no owner, and the real owner.
+- For Azure and GCP, a refund carrying an `approval_id` but no idempotency key. The existing
+  refusal test omitted both fields, so it passed on the approval ID alone.
+
+**Re-measured: 21 of 21 caught**, the original 12 plus the tenant mutations and restoring the
+old `if stored and` guard.
+
+**Verify.** The three `infra/terraform-*/src/tests` suites pass on 3.9 and 3.13.
+
 ---
 
 ## Definition of Done
@@ -3862,6 +3906,7 @@ git status --short
 | 2026-09-26 | Added task 83: four doc contradictions the knowledge graph flagged, all confirmed and fixed | somesh-ghaturle |
 | 2026-09-27 | Added task 84: each tree's claim is raced through its store's own primitive | somesh-ghaturle |
 | 2026-09-27 | Added task 85: the claimability tests call the real claim instead of a copy | somesh-ghaturle |
+| 2026-09-27 | Added task 86: mutation audit of code-kept properties; tamper check fails closed | somesh-ghaturle |
 
 ---
 

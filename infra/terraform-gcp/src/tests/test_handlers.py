@@ -20,6 +20,8 @@ import sys
 import types
 import unittest
 import unittest.mock
+from typing import ClassVar
+from unittest import mock
 
 SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -567,6 +569,107 @@ class TestClaimIsAtomicAcrossExecutors(unittest.TestCase):
         self.assertEqual(len(results), 2, "the competing claim never ran")
         self.assertEqual(len(winners), 1, f"both executors claimed one approval: {results}")
         self.assertEqual(self.store.commits, 1, "the approval was written more than once")
+
+
+# ---------------------------------------------------------------------------
+# The Code properties, each shown to fail when broken (task 86)
+# ---------------------------------------------------------------------------
+#
+# A mutation audit found that disabling the executor's fingerprint re-check, or making the
+# validator's ownership comparison always pass, left this suite green. ARCHITECTURE.md said
+# src/tests/ asserts those properties. It now does.
+
+
+class TestTheExecutorRunsOnlyWhatWasApproved(unittest.TestCase):
+    """The fingerprint re-check, and the write tool never running when it fails."""
+
+    ARGS: ClassVar[dict] = {
+        "order_id": "o-1", "amount_cents": 5000, "currency": "USD", "reason": "damaged",
+    }
+
+    def record(self, **overrides):
+        record = {
+            "action": "process_refund",
+            "arguments": dict(self.ARGS),
+            "arguments_fingerprint": contracts.fingerprint("process_refund", self.ARGS),
+        }
+        record.update(overrides)
+        return record
+
+    def approve(self, record):
+        invoked = []
+
+        def invoke(action, payload):
+            invoked.append((action, payload))
+            return {"ok": True}, False
+
+        with mock.patch.object(firestore_io, "claim", return_value=(record, "pending")), \
+                mock.patch.object(firestore_io, "record_outcome"), \
+                mock.patch.object(executor, "_resolve"), \
+                mock.patch.object(executor, "_invoke_write_tool", side_effect=invoke):
+            result = executor._approve("a1", "https://callback", {"id": "human"},
+                                       agentic_trace.Tracer("c"))
+        return result, invoked
+
+    def test_the_approved_action_runs(self):
+        result, invoked = self.approve(self.record())
+        self.assertEqual(result["status"], "executed")
+        self.assertEqual(len(invoked), 1)
+
+    def test_changed_arguments_are_refused_and_nothing_runs(self):
+        tampered = self.record(arguments={**self.ARGS, "amount_cents": 500_000})
+        result, invoked = self.approve(tampered)
+        self.assertEqual(result.get("error"), "arguments_tampered")
+        self.assertEqual(invoked, [], "the write tool ran on arguments nobody approved")
+
+    def test_a_changed_action_is_refused_too(self):
+        result, invoked = self.approve(self.record(action="delete_account"))
+        self.assertEqual(result.get("error"), "arguments_tampered")
+        self.assertEqual(invoked, [])
+
+    def test_a_deleted_fingerprint_is_refused(self):
+        """Whoever can rewrite the record can delete the field; that must not skip the check."""
+        record = self.record()
+        del record["arguments_fingerprint"]
+        result, invoked = self.approve(record)
+        self.assertEqual(result.get("error"), "arguments_tampered")
+        self.assertEqual(invoked, [])
+
+
+class TestOwnershipIsCompared(unittest.TestCase):
+    """The lookup failing was tested. The comparison itself was not."""
+
+    ACTOR: ClassVar[dict] = {"user_id": "u-1", "tenant_id": "t-1"}
+
+    def check(self, owner):
+        with mock.patch.object(validator, "_resource_owner", return_value=owner):
+            return validator._check_ownership("process_refund", {"order_id": "o-1"}, self.ACTOR)
+
+    def test_another_users_resource_is_refused(self):
+        self.assertFalse(self.check("u-2")["passed"])
+
+    def test_an_unowned_resource_is_refused(self):
+        self.assertFalse(self.check(None)["passed"])
+
+    def test_the_owner_passes(self):
+        self.assertTrue(self.check("u-1")["passed"])
+
+
+class TestTheWriteToolRequiresAnIdempotencyKey(unittest.TestCase):
+    """The existing refusal test omits approval_id too, so it passed without this check."""
+
+    def test_a_refund_without_an_idempotency_key_is_refused(self):
+        result = refund._process(
+            {
+                "approval_id": "a1",
+                "arguments": {
+                    "order_id": "o1", "amount_cents": 100, "currency": "USD", "reason": "test",
+                },
+            },
+            agentic_trace.Tracer("c"),
+        )
+        self.assertFalse(result["ok"])
+        self.assertIn("idempotency_key", json.dumps(result))
 
 
 if __name__ == "__main__":

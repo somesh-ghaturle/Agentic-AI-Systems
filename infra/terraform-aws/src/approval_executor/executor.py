@@ -95,7 +95,12 @@ def _approve(key, task_token, approver, tracer):
     # Belt and braces: the fingerprint the validator computed over the arguments a human
     # was shown must still describe the arguments about to run.
     stored = record.get("arguments_fingerprint")
-    if stored and stored != fingerprint(action, arguments):
+    #
+    # A missing fingerprint fails too. The threat this check exists for is someone able to
+    # rewrite the stored record, and that person can delete the field as easily as change
+    # the arguments. `if stored and ...` let them do exactly that and skip the check. The
+    # validator always writes one, so no legitimate record lacks it (task 86).
+    if stored != fingerprint(action, arguments):
         _record_outcome(key, "failed", {"error": "arguments_tampered"})
         _send_task_failure(
             task_token,
