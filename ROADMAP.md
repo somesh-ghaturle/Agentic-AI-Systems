@@ -29,7 +29,7 @@ Two supporting commitments follow from it:
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
-| Enhancement plan | 83 tasks, all `Done` |
+| Enhancement plan | 84 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction.
 
@@ -67,8 +67,9 @@ The area with the most room left, and the one most on-theme.
 
 - More attack classes in the fuzzer and more cases in the red-team eval. Since task 75 both
   test the gate rather than a phrase list, so a new case can actually fail. Since task 76
-  the fuzzer covers expiry and racing claims too; atomicity across processes is the next gap,
-  and it is one the in-process example cannot show
+  the fuzzer covers expiry and racing claims too, and since task 84 each cloud tree's suite
+  races two claimants through its store's own primitive, so atomicity across processes is
+  tested there. What no suite here can show is the real store's behaviour under load
 - More ways the boundary is lost that are *not* the gate being wrong — `second-path` covers a
   second route to the effect, and `tool-discovery` covers a filter instead of a structure;
   there are others

@@ -24,6 +24,7 @@ import os
 import sys
 import types
 import unittest
+from unittest import mock
 
 SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -464,6 +465,68 @@ class TestReason(unittest.TestCase):
             set(reason.DECISION_SCHEMA["required"]),
             set(reason.DECISION_SCHEMA["properties"]),
         )
+
+
+# ---------------------------------------------------------------------------
+# The claim is atomic across processes, not only within one (task 84)
+# ---------------------------------------------------------------------------
+
+
+class _RacingContainer:
+    """One approval document, and the one guarantee Cosmos gives the claim.
+
+    Every write moves the ETag. A replace sent with `match_condition=IfNotModified` and
+    an ETag that has since moved is rejected with a 412. A replace sent without it is
+    last-write-wins. That second half is what lets this test fail: drop `if_match` and
+    the fake, like Cosmos, lets both writers through.
+
+    `race` runs once, between this caller's read and its replace, which is exactly the
+    window the claim's docstring calls optimistic concurrency. A second Function App
+    instance claiming there is what single-process tests cannot see.
+    """
+
+    def __init__(self):
+        self.doc = {"id": "a1", "status": "pending", "_etag": "v1"}
+        self.version = 1
+        self.race = None
+
+    def read_item(self, item, partition_key):
+        snapshot = dict(self.doc)
+        competitor, self.race = self.race, None
+        if competitor:
+            competitor()
+        return snapshot
+
+    def replace_item(self, item, body, etag=None, match_condition=None):
+        if match_condition is not None and etag != self.doc["_etag"]:
+            raise _AccessConditionFailed("412")
+        self.version += 1
+        self.doc = {**body, "_etag": f"v{self.version}"}
+        return self.doc
+
+
+class TestClaimIsAtomicAcrossExecutors(unittest.TestCase):
+    """Two executor instances claiming one approval: exactly one may win.
+
+    The claimability tests above check which states qualify, against a copy of the rule.
+    These call the real `cosmos_io.claim` and check that the store is what makes the
+    decision stick.
+    """
+
+    def claim(self, url):
+        return cosmos_io.claim("a1", "executing", url, {"oid": "human"})
+
+    def test_two_racing_claims_produce_exactly_one_winner(self):
+        store = _RacingContainer()
+        results = []
+        store.race = lambda: results.append(self.claim("https://callback/b"))
+        with mock.patch.object(cosmos_io, "container", return_value=store):
+            results.append(self.claim("https://callback/a"))
+        winners = [r for r in results if r[0] is not None]
+        self.assertEqual(len(results), 2, "the competing claim never ran")
+        self.assertEqual(len(winners), 1, f"both executors claimed one approval: {results}")
+        self.assertEqual(store.doc["callback_url"], "https://callback/b",
+                         "the loser's write landed over the winner's")
 
 
 if __name__ == "__main__":

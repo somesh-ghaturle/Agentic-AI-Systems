@@ -79,9 +79,11 @@ registries.
 
 Not proof the gate is sound. The fuzzer searches a space someone wrote down: eight forgeries and
 twelve phrasings, plus one race. A flaw that no forgery exercises passes quietly. A store that loses writes is
-one example. A claim that is atomic in one process and not across two is another: the lock here
-is in-process, and the cloud trees in `infra/` get the same guarantee from a conditional write
-instead. The clock is simulated too, so clock skew between the machine that grants an approval
+one example. A claim that is atomic in one process and not across two is another. The lock
+here is in-process, and the cloud trees in `infra/` get the same guarantee from their store
+instead: a DynamoDB condition expression, a Cosmos ETag, a Firestore transaction, or a guarded
+Snowflake `UPDATE` on a hybrid table. Each tree's suite races two claimants through a fake store
+that enforces that one primitive, which covers that half (task 84). The clock is simulated too, so clock skew between the machine that grants an approval
 and the machine that claims it is not modelled.
 
 Not a model test. The model is replaced by the worst case on purpose, so nothing here says how
