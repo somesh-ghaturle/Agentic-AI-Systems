@@ -12,6 +12,7 @@ import sys
 import types
 import unittest
 from typing import ClassVar
+from unittest import mock
 
 SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -702,6 +703,88 @@ class TestEmitTrace(unittest.TestCase):
         )
         self.assertTrue(result["ok"])
         self.assertFalse(result["delivered"])
+
+
+# ---------------------------------------------------------------------------
+# The claim is atomic across processes, not only within one (task 84)
+# ---------------------------------------------------------------------------
+
+
+class _RacingTable:
+    """One approval record, and the one guarantee DynamoDB gives the claim.
+
+    A write carrying a ConditionExpression applies only if the condition still holds when
+    the write lands, and a write without one applies unconditionally. That second half is
+    what makes this test able to fail: drop the condition and the fake, like DynamoDB,
+    lets both writers through.
+
+    `race` runs once, at the worst moment for the caller. That is inside its write, after
+    it decided to claim and before the store checks anything, and on any read, between the
+    read and whatever the caller does with it. A second executor process arriving in that
+    window is the case single-process tests cannot see.
+    """
+
+    def __init__(self):
+        self.item = {"approval_id": "a1", "status": "pending"}
+        self.race = None
+
+    def _race(self):
+        competitor, self.race = self.race, None
+        if competitor:
+            competitor()
+
+    def get_item(self, Key):
+        snapshot = dict(self.item)
+        self._race()
+        return {"Item": snapshot}
+
+    def update_item(self, Key, UpdateExpression, ExpressionAttributeValues,
+                    ConditionExpression=None, ExpressionAttributeNames=None, ReturnValues=None):
+        self._race()
+        values = ExpressionAttributeValues
+        if ConditionExpression is not None and not (
+            self.item["status"] == values.get(":pending")
+            or (self.item["status"] == values.get(":executing")
+                and self.item.get("claimed_at", "") < values.get(":stale", ""))
+        ):
+            raise _ClientError({"Error": {"Code": "ConditionalCheckFailedException"}})
+        previous = dict(self.item)
+        self.item.update(status=values[":new"], claimed_at=values[":now"])
+        return {"Attributes": previous}
+
+
+class TestClaimIsAtomicAcrossExecutors(unittest.TestCase):
+    """Two executor Lambdas claiming one approval: exactly one may win.
+
+    The existing tests check which states are claimable. These check that the store,
+    not the Python, is what makes the decision stick. The failure they catch is a claim
+    that reads, decides, and writes without a condition, so both executors see `pending`
+    and both invoke the write tool for one human approval.
+    """
+
+    KEY: ClassVar[dict] = {"approval_id": "a1"}
+
+    def claim(self, token):
+        return executor._claim(self.KEY, "executing", token, {"id": "human"})
+
+    def test_two_racing_claims_produce_exactly_one_winner(self):
+        table = _RacingTable()
+        results = []
+        table.race = lambda: results.append(self.claim("token-b"))
+        with mock.patch.object(executor, "_table", return_value=table):
+            results.append(self.claim("token-a"))
+        winners = [r for r in results if r[0] is not None]
+        self.assertEqual(len(results), 2, "the competing claim never ran")
+        self.assertEqual(len(winners), 1, f"both executors claimed one approval: {results}")
+
+    def test_the_condition_guards_status_in_the_store(self):
+        table = _RacingTable()
+        with mock.patch.object(table, "update_item", wraps=table.update_item) as spy, \
+                mock.patch.object(executor, "_table", return_value=table):
+            self.claim("token-a")
+        condition = spy.call_args.kwargs.get("ConditionExpression") or ""
+        self.assertIn("#s = :pending", condition)
+        self.assertIn("#s = :executing AND claimed_at < :stale", condition)
 
 
 if __name__ == "__main__":

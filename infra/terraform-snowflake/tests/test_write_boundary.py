@@ -265,6 +265,37 @@ class WriteBoundary(unittest.TestCase):
             "same approval and the write tool runs twice for one authorization.",
         )
 
+    def test_the_claim_update_guards_status_itself(self):
+        """The status check belongs in the UPDATE's WHERE, not only in the SELECT before it.
+
+        SQLROWCOUNT = 1 is a concurrency control only because the UPDATE matches nothing once
+        another executor has moved the row out of APPROVED. Guard status in the preceding
+        SELECT alone and both racing executors read APPROVED, both UPDATEs match their row,
+        and both see a row count of 1.
+        """
+        body = next(
+            body for _, typ, name, body in all_blocks("modules", "approval")
+            if typ == "snowflake_procedure_sql" and name == "claim_approval"
+        )
+        update = body[body.index("UPDATE"):body.index("SQLROWCOUNT")]
+        where = update[update.index("WHERE"):]
+        self.assertIn("STATUS = 'APPROVED'", where,
+                      "CLAIM_APPROVAL's UPDATE no longer guards status in its own WHERE.")
+
+    def test_the_approvals_table_is_a_hybrid_table(self):
+        """Row locking is what makes the guarded UPDATE atomic across executors.
+
+        A standard Snowflake table has no row-level locking, and two concurrent UPDATEs
+        against the same logical row can both report success. The module comment says so,
+        and this makes it a checked claim: the table the claim writes to must stay a
+        `snowflake_hybrid_table`.
+        """
+        kinds = [
+            typ for _, typ, name, _ in all_blocks("modules", "approval") if name == "approvals"
+        ]
+        self.assertEqual(kinds, ["snowflake_hybrid_table"],
+                         f"APPROVALS is declared as {kinds}; the claim needs a hybrid table.")
+
     def test_approve_is_not_granted_to_a_machine_role(self):
         """APPROVE goes to human roles only.
 
