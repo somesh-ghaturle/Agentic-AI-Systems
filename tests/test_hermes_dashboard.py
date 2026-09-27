@@ -42,7 +42,7 @@ if not _MISSING:
 @unittest.skipIf(
     _MISSING,
     f"hermes-dashboard dependencies are not installed ({', '.join(_MISSING)}); "
-    "this suite runs in the example-deps job",
+    "this suite runs in the examples job, which installs tests/requirements.txt",
 )
 class TestDashboardBoundary(unittest.IsolatedAsyncioTestCase):
     def setUp(self):

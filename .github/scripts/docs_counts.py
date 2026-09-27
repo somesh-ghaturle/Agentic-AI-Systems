@@ -209,6 +209,13 @@ CLAIMS = [
      r"(?m)^(\d+) tests in \[tests/test_trace_eval\.py\]", "tests in test_trace_eval.py"),
     ("examples/context-compaction/README.md", "suite:test_context_compaction",
      r"\*\*(\d+) tests pin the policy now\*\*", "tests in test_context_compaction.py"),
+    ("examples/langchain-agent/README.md", "suite:test_langchain_agent",
+     r"test_langchain_agent\.py`\]\([^)]*\) has (\d+) tests", "tests in test_langchain_agent.py"),
+    ("examples/rag-langchain/README.md", "suite:test_rag_langchain",
+     r"test_rag_langchain\.py`\]\([^)]*\) has (\d+) tests", "tests in test_rag_langchain.py"),
+    ("examples/ray-orchestrator/README.md", "suite:test_ray_orchestrator",
+     r"test_ray_orchestrator\.py`\]\([^)]*\) has (\d+) tests",
+     "tests in test_ray_orchestrator.py"),
     ("examples/graph-agent/README.md", "suite:test_graph_agent",
      r"\*\*(\d+) tests\*\* cover this example", "tests in test_graph_agent.py"),
 ]
