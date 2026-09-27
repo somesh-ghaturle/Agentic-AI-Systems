@@ -320,16 +320,20 @@ class TestExecutor(unittest.TestCase):
 
 
 class TestCosmosClaim(unittest.TestCase):
-    """The claim is the concurrency control. These exercise the decision, not Cosmos."""
+    """Which records the claim accepts, decided by the real `cosmos_io.claim`.
+
+    This helper used to re-implement the rule inside the test and assert against that copy.
+    Making a fresh `executing` claim stealable in cosmos_io.py, which is a double execution,
+    left every test here green (task 85). It now runs the real claim against a one-document
+    store seeded with the record under test.
+    """
 
     def _claimable(self, record):
-        status = record.get("status")
-        stale_before = cosmos_io._iso_seconds_ago(cosmos_io.stale_claim_seconds())
-        return status == "pending" or (
-            status == "executing"
-            and isinstance(record.get("claimed_at"), str)
-            and record["claimed_at"] < stale_before
-        )
+        store = _RacingContainer()
+        store.doc = {"id": "a1", "_etag": "v1", **record}
+        with mock.patch.object(cosmos_io, "container", return_value=store):
+            previous, _ = cosmos_io.claim("a1", "executing", "https://callback", {})
+        return previous is not None
 
     def test_pending_is_claimable(self):
         self.assertTrue(self._claimable({"status": "pending"}))

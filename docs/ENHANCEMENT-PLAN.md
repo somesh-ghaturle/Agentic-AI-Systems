@@ -118,10 +118,11 @@ section saying what has to be decided first.
 | 82 | Give the last three examples a suite, and run the suites that only claimed to run | CI/CD | High | Done | graph-agent's langgraph tests and rag-faiss's retrieval tests had never run in CI | 2026-09-26 |
 | 83 | Resolve the four contradictions the knowledge graph flagged | Documentation | Medium | Done | A module count, a wrong cloud's service name, and two Azure rows that predated task 68 | 2026-09-26 |
 | 84 | Test that each tree's approval claim is atomic across processes | Security | High | Done | The conditional write in three trees could be deleted with every suite green | 2026-09-27 |
+| 85 | Make the claimability tests call the claim | Security | High | Done | They tested a copy of the rule; a stealable fresh claim left them green | 2026-09-27 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 84 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 on 2026-09-27.
+tree, and kept current as tasks have landed since. **All 85 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 and 85 on 2026-09-27.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3763,6 +3764,31 @@ fuzzer README and ROADMAP now say so.
 **Verify.** The suites under `infra/terraform-{aws,azure,gcp}/src/tests` and
 `infra/terraform-snowflake/tests` pass on 3.9 and 3.13.
 
+### Task 85 — Make the claimability tests call the claim
+
+**Goal.** Task 84 found that Azure's and GCP's claimability tests asserted against a copy of the
+claim rule written inside the test file. GCP's helper carried the docstring "Runs the claim body
+against an in-memory document" while never calling `firestore_io.claim`. That was noted in task
+84 and not fixed there.
+
+**Measured before the fix.** Making a fresh `executing` claim stealable in the real
+`cosmos_io.py` and `firestore_io.py` means a second executor takes an approval a live one is
+still running. It left both claimability classes green. On Azure the whole suite stayed green,
+task 84's race test included, because that test starts from `pending`. GCP's whole suite failed
+only by accident, through the race test's transaction retry.
+
+**Status: Done.** Both helpers keep their names, and every test method is unchanged. They now
+run the real claim against task 84's one-document fake store, seeded with the record under
+test. The GCP fake gained a missing-document case.
+
+**Mutation tested, six breaks, all caught by the claimability class itself.** Per tree: a fresh
+claim made stealable, `pending` made unclaimable, and a record with no `claimed_at` made
+reclaimable. AWS needed no change, because its rule lives in the `ConditionExpression` string
+that task 84 pins.
+
+**Verify.** `python3 -m unittest discover -s infra/terraform-azure/src/tests` and the GCP
+equivalent pass.
+
 ---
 
 ## Definition of Done
@@ -3835,6 +3861,7 @@ git status --short
 | 2026-09-26 | Added task 82: every example has a suite; two dependency-gated suites had never run in CI | somesh-ghaturle |
 | 2026-09-26 | Added task 83: four doc contradictions the knowledge graph flagged, all confirmed and fixed | somesh-ghaturle |
 | 2026-09-27 | Added task 84: each tree's claim is raced through its store's own primitive | somesh-ghaturle |
+| 2026-09-27 | Added task 85: the claimability tests call the real claim instead of a copy | somesh-ghaturle |
 
 ---
 
