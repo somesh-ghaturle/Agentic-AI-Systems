@@ -298,46 +298,21 @@ class TestExecutor(unittest.TestCase):
 
 
 class TestFirestoreClaim(unittest.TestCase):
-    """The claim is the concurrency control. These exercise the decision, not Firestore."""
+    """Which records the claim accepts, decided by the real `firestore_io.claim`.
 
-    class _Snapshot:
-        def __init__(self, data):
-            self._data = data
-            self.exists = data is not None
-
-        def to_dict(self):
-            return self._data
-
-    class _Ref:
-        def __init__(self, data):
-            self._data = data
-            self.updated = None
-
-        def get(self, transaction=None):
-            return TestFirestoreClaim._Snapshot(self._data)
-
-    class _Transaction:
-        def update(self, ref, values):
-            ref.updated = values
+    This helper used to re-implement the rule inside the test, under a docstring saying it
+    ran "the claim body". Making a fresh `executing` claim stealable in firestore_io.py left
+    every test here green (task 85). It now runs the real claim, through a real-shaped
+    transaction, against a one-document store seeded with the record under test.
+    """
 
     def _claim(self, record):
-        """Runs the claim body against an in-memory document."""
-        ref = self._Ref(record)
-        captured = {}
-        stale_before = firestore_io._iso_seconds_ago(firestore_io.stale_claim_seconds())
-
-        snapshot = ref.get()
-        if not snapshot.exists:
-            return None
-        data = snapshot.to_dict() or {}
-        status = data.get("status")
-        claimable = status == "pending" or (
-            status == "executing"
-            and isinstance(data.get("claimed_at"), str)
-            and data["claimed_at"] < stale_before
-        )
-        captured["claimable"] = claimable
-        return claimable
+        store = _RacingFirestore()
+        store.data = None if record is None else dict(record)
+        firestore = sys.modules["google.cloud.firestore"]
+        with unittest.mock.patch.object(firestore, "transactional", store.transactional):
+            previous, _ = firestore_io.claim("a1", "executing", "https://cb", {}, db=store)
+        return previous is not None
 
     def test_pending_is_claimable(self):
         self.assertTrue(self._claim({"status": "pending"}))
@@ -539,7 +514,8 @@ class _RacingFirestore:
     def get(self, transaction=None):
         if transaction is not None:
             transaction.reads.setdefault("doc", self.version)
-        snapshot = types.SimpleNamespace(exists=True, to_dict=lambda d=dict(self.data): d)
+        data = None if self.data is None else dict(self.data)
+        snapshot = types.SimpleNamespace(exists=data is not None, to_dict=lambda d=data: d)
         competitor, self.race = self.race, None
         if competitor:
             competitor()
