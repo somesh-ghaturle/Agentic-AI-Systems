@@ -342,6 +342,79 @@ class TestLockTwoDenyPolicy(unittest.TestCase):
             )
 
 
+class TestTheLocksCannotBeHollowedOut(unittest.TestCase):
+    """Each lock present in the text and doing nothing, caught (task 87).
+
+    A mutation audit opened each lock the way a well-meaning edit could, and the tests
+    above passed every time. They check that the deny policy is *declared*, that its
+    principal is *URI-shaped*, and that its body *mentions* the write tools. `count = 0`,
+    `nobody@example.com` and a condition of `"false"` satisfy all three. The tests below
+    check what each part actually says.
+    """
+
+    def setUp(self):
+        self.policies = list(resources("google_iam_deny_policy"))
+        self.assertEqual(1, len(self.policies), "expected one deny policy")
+        _, _, _, self.policy = self.policies[0]
+
+    def _sub_block(self, body, name):
+        m = re.search(name + r"\s*\{", body)
+        self.assertIsNotNone(m, f"no {name} block in the deny policy")
+        return block_body(body, m.end() - 1)
+
+    def test_the_deny_policy_is_created_whenever_there_are_write_tools(self):
+        m = re.search(r"^\s*count\s*=\s*(?P<expr>.+)$", self.policy, re.M)
+        self.assertIsNotNone(m, "deny policy has no count; the check below assumes one")
+        expr = m.group("expr").strip()
+        self.assertIn("var.write_tool_service_names", expr,
+                      f"deny policy count is {expr!r}; it must follow the write tools")
+        self.assertNotRegex(expr, r"^(0|false)$", "deny policy count is hard-coded off")
+
+    def test_the_denied_principal_is_the_orchestrator(self):
+        principals = re.search(r"denied_principals\s*=\s*\[(?P<items>[^\]]*)\]",
+                               self.policy, re.S).group("items")
+        self.assertIn("var.orchestrator_service_account_email", principals,
+                      "the deny rule no longer names the orchestrator; it denies someone else")
+
+    def test_the_denial_condition_is_built_from_the_write_tools(self):
+        condition = self._sub_block(self.policy, "denial_condition")
+        expression = re.search(r"expression\s*=\s*(?P<e>.+)", condition).group("e")
+        self.assertIn("var.write_tool_service_names", expression,
+                      "the denial condition is not built from the write tools, so it may "
+                      "match nothing while the policy applies cleanly")
+
+    def test_the_permissions_default_includes_routes_invoke(self):
+        """Parsed from `default = [...]`. The variable's description also names the
+        permission, which is how dropping it from the list used to pass."""
+        path = os.path.join(TREE, "modules", "orchestration", "variables.tf")
+        with open(path, encoding="utf-8") as fh:
+            text = strip_comments_preserving_lines(fh.read())
+        start = re.search(r'variable\s+"denied_invoke_permissions"\s*\{', text)
+        body = block_body(text, start.end() - 1)
+        default = re.search(r"default\s*=\s*\[(?P<items>[^\]]*)\]", body, re.S).group("items")
+        self.assertIn('"run.googleapis.com/routes.invoke"', default)
+
+    def test_orchestrator_bindings_iterate_read_tools_only(self):
+        """Lock 1: the orchestrator's run.invoker must never iterate write tools."""
+        checked = 0
+        for path, _type, name, body in resources("google_cloud_run_service_iam_member", "modules"):
+            if "var.orchestrator_member" not in body or "for_each" not in body:
+                continue
+            checked += 1
+            for_each = re.search(r"for_each\s*=\s*(?P<e>.+)", body).group("e").strip()
+            self.assertEqual(for_each, "local.read_tools",
+                             f"{rel(path)}: {name} grants the orchestrator run.invoker over "
+                             f"{for_each}, which includes write tools")
+        self.assertGreaterEqual(checked, 1, "no orchestrator binding found; the walk is broken")
+
+    def test_the_tool_filters_split_on_access(self):
+        path = os.path.join(TREE, "modules", "tools", "main.tf")
+        with open(path, encoding="utf-8") as fh:
+            text = strip_comments_preserving_lines(fh.read())
+        self.assertRegex(text, r'read_tools\s*=\s*\{[^}]*if v\.access == "read"\s*\}')
+        self.assertRegex(text, r'write_tools\s*=\s*\{[^}]*if v\.access == "write"\s*\}')
+
+
 class TestWriteToolUrlsHaveOneConsumer(unittest.TestCase):
     """The shape layer: the orchestrator is never handed a write tool's address."""
 

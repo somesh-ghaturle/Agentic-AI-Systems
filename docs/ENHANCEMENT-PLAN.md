@@ -120,10 +120,11 @@ section saying what has to be decided first.
 | 84 | Test that each tree's approval claim is atomic across processes | Security | High | Done | The conditional write in three trees could be deleted with every suite green | 2026-09-27 |
 | 85 | Make the claimability tests call the claim | Security | High | Done | They tested a copy of the rule; a stealable fresh claim left them green | 2026-09-27 |
 | 86 | Mutation-audit the handler properties only code keeps, and close a fail-open | Security | High | Done | 8 of 12 survived; a deleted fingerprint skipped the tamper check in three trees | 2026-09-27 |
+| 87 | Mutation-audit the Terraform write-boundary locks | Security | High | Done | 9 of 20 survived; GCP's deny policy could be disabled four ways with its tests green | 2026-09-27 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 86 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 through 86 on 2026-09-27.
+tree, and kept current as tasks have landed since. **All 87 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 through 87 on 2026-09-27.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3833,6 +3834,42 @@ old `if stored and` guard.
 
 **Verify.** The three `infra/terraform-*/src/tests` suites pass on 3.9 and 3.13.
 
+### Task 87 — Mutation-audit the Terraform write-boundary locks
+
+**Goal.** Task 86 audited the properties handler code keeps. This audits the layer below: the
+locks the four `infra/*/tests` suites exist to guard. Each lock was opened the way a
+well-meaning edit could open it, and the tree's suite was run.
+
+**Measured before any change: 9 of 20 survived.** No Terraform was wrong, since every lock
+was intact. The tests could not see a lock being hollowed out.
+
+| Tree | Survived | Why the suite missed it |
+|---|---|---|
+| AWS | `read_tools` filter widened to `v.access != "none"` | Permissions were checked to iterate `local.read_tools`, never what that local contains. The suite's own docstring named this failure as hypothetical |
+| Azure | Write-tool role assigned to the orchestrator | Only `app_role_assignment_required = true` was tested. That attribute requires *an* assignment, and which identity holds it is the lock's content |
+| Azure | Orchestrator's assignment iterates every tool | Same |
+| Azure | Easy Auth allows anonymous callers | The second guard, and untested |
+| GCP | Orchestrator's `run.invoker` iterates every tool | Only the write-tool binding's member was checked |
+| GCP | Deny policy `count = 0` | The test checked that the resource is *declared* |
+| GCP | Deny rule names `nobody@example.com` | The test checked that the principal is *URI-shaped* |
+| GCP | Denial condition `"false"` | The test checked that the body *mentions* `var.write_tool_service_names`, which the `count` line satisfies on its own |
+| GCP | `routes.invoke` dropped from the permission default | The test searched all of `variables.tf`, and the variable's description still names it. That is the permission behind `roles/run.invoker`, and the test's own message says a rule without it "applies cleanly and leaves the invoke path open" |
+
+Snowflake's five were all caught, including the one found in task 84.
+
+**Status: Done.** New tests read what each part says:
+- AWS: one test that the two tool locals split on `access == "read"` and `access == "write"`.
+- Azure: three tests. Each role assignment's principal is checked against what it iterates,
+  the tool filters are checked, and every tool app's Easy Auth block is checked.
+- GCP: six tests. The deny policy's `count`, its principal, its condition expression and its
+  permission list are each checked, plus the orchestrator's binding scope and the tool
+  filters.
+
+**Re-measured: 20 of 20 caught.**
+
+**Verify.** `python3 -m unittest discover -s infra/terraform-<tree>/tests` passes for all four
+trees.
+
 ---
 
 ## Definition of Done
@@ -3907,6 +3944,7 @@ git status --short
 | 2026-09-27 | Added task 84: each tree's claim is raced through its store's own primitive | somesh-ghaturle |
 | 2026-09-27 | Added task 85: the claimability tests call the real claim instead of a copy | somesh-ghaturle |
 | 2026-09-27 | Added task 86: mutation audit of code-kept properties; tamper check fails closed | somesh-ghaturle |
+| 2026-09-27 | Added task 87: mutation audit of the Terraform locks; 9 of 20 had been invisible | somesh-ghaturle |
 
 ---
 

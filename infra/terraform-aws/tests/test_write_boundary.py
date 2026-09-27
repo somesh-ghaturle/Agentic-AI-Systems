@@ -299,6 +299,19 @@ class TestAccessClassificationIsEnforced(unittest.TestCase):
             "in a tool's access classification silently skips the split.",
         )
 
+    def test_the_tool_filters_split_on_access(self):
+        """The two locals every permission above iterates (task 87).
+
+        The permission tests check that `aws_lambda_permission.read_tool_from_orchestrator`
+        iterates `local.read_tools`, and they cannot see what `local.read_tools` contains.
+        A mutation audit widened the filter to `v.access != "none"`, which puts every write
+        tool in it and grants Step Functions invoke on all of them, and the suite stayed
+        green. The docstring above names this exact failure as hypothetical.
+        """
+        text = read(os.path.join(TREE, "modules", "tools", "main.tf"))
+        self.assertRegex(text, r'read_tools\s*=\s*\{[^}]*if v\.access == "read"\s*\}')
+        self.assertRegex(text, r'write_tools\s*=\s*\{[^}]*if v\.access == "write"\s*\}')
+
 
 if __name__ == "__main__":
     unittest.main()
