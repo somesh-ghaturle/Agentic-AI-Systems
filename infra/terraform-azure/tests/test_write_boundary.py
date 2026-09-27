@@ -195,6 +195,64 @@ class TestWriteBoundary(unittest.TestCase):
         )
 
 
+class TestWhoHoldsTheWriteRole(unittest.TestCase):
+    """What `app_role_assignment_required = true` actually enforces (task 87).
+
+    That attribute makes Entra require *an* assignment. Which identity holds the assignment
+    is the lock's content, and it was untested. A mutation audit assigned the write-tool
+    role to the orchestrator, widened the orchestrator's assignment to every tool, and
+    turned off Easy Auth, and this suite stayed green each time. With the orchestrator
+    holding the write role, the required-assignment check passes and admits it.
+    """
+
+    TOOLS = os.path.join(TREE, "modules", "tools", "main.tf")
+
+    def setUp(self):
+        with open(self.TOOLS, encoding="utf-8") as fh:
+            self.text = strip_comments_preserving_lines(fh.read())
+
+    def _resources(self, rtype):
+        for m in re.finditer(r'resource\s+"' + rtype + r'"\s+"(?P<name>\w+)"\s*\{', self.text):
+            yield m.group("name"), block_body(self.text, m.end() - 1)
+
+    def _attr(self, body, key):
+        m = re.search(r"^\s*" + key + r"\s*=\s*(?P<v>.+)$", body, re.M)
+        return m.group("v").strip() if m else None
+
+    def test_write_tools_are_assigned_to_the_executor_only(self):
+        assignments = list(self._resources("azuread_app_role_assignment"))
+        self.assertGreaterEqual(len(assignments), 2, "role assignments not found; walk broken?")
+        for name, body in assignments:
+            principal = self._attr(body, "principal_object_id")
+            for_each = self._attr(body, "for_each")
+            if principal == "var.approval_executor_principal_id":
+                self.assertEqual(for_each, "local.write_tools", name)
+            elif principal == "var.orchestrator_principal_id":
+                self.assertEqual(for_each, "local.read_tools",
+                                 f"{name} assigns the orchestrator a role over {for_each}")
+            else:
+                self.fail(f"{name}: unexpected principal {principal}")
+        executor_id = "var.approval_executor_principal_id"
+        executors = [n for n, b in assignments
+                     if self._attr(b, "principal_object_id") == executor_id]
+        self.assertEqual(len(executors), 1, "the executor's write-tool assignment is missing")
+
+    def test_the_tool_filters_split_on_access(self):
+        self.assertRegex(self.text, r'read_tools\s*=\s*\{[^}]*if v\.access == "read"\s*\}')
+        self.assertRegex(self.text, r'write_tools\s*=\s*\{[^}]*if v\.access == "write"\s*\}')
+
+    def test_every_tool_app_rejects_unauthenticated_callers(self):
+        """Easy Auth is the Azure form of a Lambda resource policy, and it was untested."""
+        found = 0
+        for m in re.finditer(r"auth_settings_v2\s*\{", self.text):
+            body = block_body(self.text, m.end() - 1)
+            found += 1
+            self.assertEqual(self._attr(body, "auth_enabled"), "true")
+            self.assertEqual(self._attr(body, "require_authentication"), "true")
+            self.assertEqual(self._attr(body, "unauthenticated_action"), '"Return401"')
+        self.assertGreaterEqual(found, 1, "no auth_settings_v2 block in modules/tools")
+
+
 class TestTheReaderItself(unittest.TestCase):
     """The reader is a claim like any other, and it was the one nothing checked.
 
