@@ -195,6 +195,13 @@ CLAIMS = [
     ("infra/MODULES.md", "modules:snowflake", r"(?m)^snowflake: (\d+) modules$",
      "snowflake modules"),
     ("infra/MODULES.md", "modules:hybrid", r"(?m)^hybrid: (\d+) modules", "hybrid modules"),
+    # The same five numbers again, in MODULES.md's overview table. Task 81 fixed the expected
+    # output lower in the file and left this row saying 8; the knowledge graph flagged it.
+    ("infra/MODULES.md", "modules:aws", r"(?m)^\| AWS \| (\d+) \|", "aws modules (overview)"),
+    ("infra/MODULES.md", "modules:azure", r"(?m)^\| Azure \| (\d+) \|", "azure modules (overview)"),
+    ("infra/MODULES.md", "modules:gcp", r"(?m)^\| GCP \| (\d+) \|", "gcp modules (overview)"),
+    ("infra/MODULES.md", "modules:snowflake", r"(?m)^\| Snowflake \| (\d+) \|",
+     "snowflake modules (overview)"),
     # Per-suite counts, where a README states one in the present tense. Past-tense records --
     # "6 of the 11 tests went red" in a mutation log -- are history and stay as written.
     ("examples/harness-agent/README.md", "suite:test_harness_agent",

@@ -18,7 +18,7 @@ This document lists every module in the repository, its purpose, dependencies, a
 
 | Cloud | Module Count | Key Difference | Write Boundary Mechanism |
 |-------|--------------|----------------|--------------------------|
-| AWS | 8 | Dual-lock (IAM + Lambda resource policy) | `aws_iam_policy` + `aws_lambda_permission` |
+| AWS | 9 | Dual-lock (IAM + Lambda resource policy) | `aws_iam_policy` + `aws_lambda_permission` |
 | Azure | 12 | Entra audit alerts | `app_role_assignment_required = true` + audit |
 | GCP | 10 | IAM Deny policies | `google_iam_policy` with deny rules |
 | Snowflake | 10 | Not an IaaS peer — a data platform running on one of the other three | Role graph: USAGE on write procedures granted to the executor role alone |
