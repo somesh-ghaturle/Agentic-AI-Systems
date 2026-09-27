@@ -19,6 +19,7 @@ import os
 import sys
 import types
 import unittest
+import unittest.mock
 
 SRC = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -483,6 +484,113 @@ class TestReason(unittest.TestCase):
             set(reason.DECISION_SCHEMA["required"]),
             set(reason.DECISION_SCHEMA["properties"]),
         )
+
+
+# ---------------------------------------------------------------------------
+# The claim is atomic across processes, not only within one (task 84)
+# ---------------------------------------------------------------------------
+
+
+class _Conflict(Exception):
+    """A commit whose read set changed underneath it; Firestore aborts and retries."""
+
+
+class _Txn:
+    def __init__(self):
+        self.reads, self.writes = {}, []
+
+    def update(self, ref, update):
+        self.writes.append((ref, update))
+
+
+class _RacingFirestore:
+    """One approval document, and the one guarantee Firestore gives the claim.
+
+    A transaction records the version of every document it reads *through the
+    transaction*, buffers its writes, and commits them only if none of those documents has
+    changed since. `transactional` re-runs the function on a conflict, as the real
+    decorator does. Two ways to lose the guarantee are therefore visible here: reading
+    outside the transaction (the version is never recorded), and dropping the decorator
+    (nothing commits, and both callers believe they won).
+
+    The module stub makes `firestore.transactional` the identity, which is fine for the
+    claimability rules and is exactly why atomicity had never been tested. These tests
+    install this fake's decorator for their duration.
+
+    `race` runs once, after this caller's read and before its commit.
+    """
+
+    def __init__(self):
+        self.data = {"status": "pending"}
+        self.version = 1
+        self.race = None
+        self.commits = 0
+
+    # -- the client surface firestore_io uses ------------------------------------------
+    def collection(self, name):
+        return self
+
+    def document(self, doc_id):
+        return self
+
+    def transaction(self):
+        return _Txn()
+
+    def get(self, transaction=None):
+        if transaction is not None:
+            transaction.reads.setdefault("doc", self.version)
+        snapshot = types.SimpleNamespace(exists=True, to_dict=lambda d=dict(self.data): d)
+        competitor, self.race = self.race, None
+        if competitor:
+            competitor()
+        return snapshot
+
+    # -- the transaction semantics -------------------------------------------------------
+    def transactional(self, fn):
+        def run(txn):
+            for _ in range(5):
+                txn.reads.clear()
+                txn.writes.clear()
+                result = fn(txn)
+                try:
+                    self._commit(txn)
+                    return result
+                except _Conflict:
+                    continue
+            raise _Conflict("gave up after 5 attempts")
+
+        return run
+
+    def _commit(self, txn):
+        if any(v != self.version for v in txn.reads.values()):
+            raise _Conflict("read set changed")
+        for _, update in txn.writes:
+            self.data.update(update)
+            self.version += 1
+            self.commits += 1
+
+
+class TestClaimIsAtomicAcrossExecutors(unittest.TestCase):
+    """Two executor instances claiming one approval: exactly one may win."""
+
+    def setUp(self):
+        self.store = _RacingFirestore()
+        firestore = sys.modules["google.cloud.firestore"]
+        patcher = unittest.mock.patch.object(firestore, "transactional", self.store.transactional)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def claim(self, url):
+        return firestore_io.claim("a1", "executing", url, {"sub": "human"}, db=self.store)
+
+    def test_two_racing_claims_produce_exactly_one_winner(self):
+        results = []
+        self.store.race = lambda: results.append(self.claim("https://callback/b"))
+        results.append(self.claim("https://callback/a"))
+        winners = [r for r in results if r[0] is not None]
+        self.assertEqual(len(results), 2, "the competing claim never ran")
+        self.assertEqual(len(winners), 1, f"both executors claimed one approval: {results}")
+        self.assertEqual(self.store.commits, 1, "the approval was written more than once")
 
 
 if __name__ == "__main__":

@@ -117,10 +117,11 @@ section saying what has to be decided first.
 | 81 | Guard three more stale counts | Documentation | Low | Done | Lock files 40→14, AWS modules 8→9, and "each with tests" when three have none | 2026-09-26 |
 | 82 | Give the last three examples a suite, and run the suites that only claimed to run | CI/CD | High | Done | graph-agent's langgraph tests and rag-faiss's retrieval tests had never run in CI | 2026-09-26 |
 | 83 | Resolve the four contradictions the knowledge graph flagged | Documentation | Medium | Done | A module count, a wrong cloud's service name, and two Azure rows that predated task 68 | 2026-09-26 |
+| 84 | Test that each tree's approval claim is atomic across processes | Security | High | Done | The conditional write in three trees could be deleted with every suite green | 2026-09-27 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 83 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 83 on 2026-09-26.
+tree, and kept current as tasks have landed since. **All 84 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 on 2026-09-27.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3720,6 +3721,48 @@ checked against the Terraform before anything was changed.
 **Verify.** `python3 .github/scripts/docs_counts.py .` reports 39 counts, all matching;
 `grep -rn "AI Search" infra/terraform-aws docs/diagrams/src/terraform-aws-*` finds nothing.
 
+### Task 84 — Test that each tree's approval claim is atomic across processes
+
+**Goal.** Task 76 made the fuzzer race two claims, but inside one process with one lock. The
+cloud trees depend on something else: the store's own conditional write, which is what stops a
+second executor process. The existing handler tests checked which states are claimable. The
+Azure and GCP ones did so against a copy of the rule written in the test file. None checked
+that the write itself was conditional. AWS's `ConditionExpression`, Azure's `if_match` and GCP's
+`@firestore.transactional` could each be deleted with every suite still green. GCP's stub
+replaced the transactional decorator with the identity, and its comment said so.
+
+**Status: Done.** One race test per tree, each against a fake that enforces exactly its
+store's primitive and nothing more:
+
+- **AWS.** The fake applies an `update_item` unconditionally unless it carries a
+  `ConditionExpression`, as DynamoDB does. A second test pins the condition's two clauses.
+- **Azure.** Every write moves the ETag, and a replace sent with `IfNotModified` and a stale
+  ETag raises the 412, as Cosmos does. The test calls the real `cosmos_io.claim`.
+- **GCP.** Reads through the transaction record a version, writes are buffered, a commit fails
+  when the read set changed, and the decorator retries, as Firestore does. The fake's decorator
+  replaces the identity stub only for these tests.
+- **Snowflake.** It already checked `SQLROWCOUNT`. It now also checks that the status guard
+  sits in the `UPDATE`'s own `WHERE`, and that `APPROVALS` stays a `snowflake_hybrid_table`,
+  since the module says a standard table lets two UPDATEs both succeed.
+
+In each, a `race` hook runs a complete competing claim at the worst moment for the first: after
+its read, or inside its write, before the store checks anything. That is what a second
+executor process does and a single-process test cannot.
+
+**Mutation tested, seven breaks, all caught.**
+- AWS: removing the `ConditionExpression`. Both executors then claim, one seeing `pending` and
+  one a stale-looking `executing`.
+- Azure: removing `etag`/`match_condition`. Both then read `pending` and both win.
+- GCP: reading outside the transaction, and removing the decorator.
+- Snowflake: dropping the status guard from the `UPDATE`, and declaring a standard table.
+
+**What it still does not show.** Each fake models the documented guarantee, not the service.
+Consistency level, retry limits and behaviour under load are the service's own, and the
+fuzzer README and ROADMAP now say so.
+
+**Verify.** The suites under `infra/terraform-{aws,azure,gcp}/src/tests` and
+`infra/terraform-snowflake/tests` pass on 3.9 and 3.13.
+
 ---
 
 ## Definition of Done
@@ -3791,6 +3834,7 @@ git status --short
 | 2026-09-26 | Added tasks 78-81 from a repo-wide sweep: private security reporting, QUICKSTART, GCP locks, three counts | somesh-ghaturle |
 | 2026-09-26 | Added task 82: every example has a suite; two dependency-gated suites had never run in CI | somesh-ghaturle |
 | 2026-09-26 | Added task 83: four doc contradictions the knowledge graph flagged, all confirmed and fixed | somesh-ghaturle |
+| 2026-09-27 | Added task 84: each tree's claim is raced through its store's own primitive | somesh-ghaturle |
 
 ---
 
