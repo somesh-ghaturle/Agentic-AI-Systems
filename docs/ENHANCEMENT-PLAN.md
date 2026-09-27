@@ -121,10 +121,11 @@ section saying what has to be decided first.
 | 85 | Make the claimability tests call the claim | Security | High | Done | They tested a copy of the rule; a stealable fresh claim left them green | 2026-09-27 |
 | 86 | Mutation-audit the handler properties only code keeps, and close a fail-open | Security | High | Done | 8 of 12 survived; a deleted fingerprint skipped the tamper check in three trees | 2026-09-27 |
 | 87 | Mutation-audit the Terraform write-boundary locks | Security | High | Done | 9 of 20 survived; GCP's deny policy could be disabled four ways with its tests green | 2026-09-27 |
+| 88 | Mutation-audit the guardrail wiring policy | Security | Medium | Done | A GCP floor setting with enforcement off passed; the flag was never read | 2026-09-27 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 87 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 through 87 on 2026-09-27.
+tree, and kept current as tasks have landed since. **All 88 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 through 88 on 2026-09-27.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3870,6 +3871,40 @@ Snowflake's five were all caught, including the one found in task 84.
 **Verify.** `python3 -m unittest discover -s infra/terraform-<tree>/tests` passes for all four
 trees.
 
+### Task 88 — Mutation-audit the guardrail wiring policy
+
+**Goal.** The third layer after tasks 86 and 87. `infra/policies/guardrail_wiring.rego` exists
+to catch a content filter that is declared but not attached, in each tree. It was audited in
+both directions. Real guardrails were unwired, and `conftest test` over the tree must fail.
+The policy's own rules were disabled, and `conftest verify` must fail. conftest 0.62.0 was run
+locally, checksum-verified. The release's Linux checksum matches the one pinned in CI.
+
+**Measured.** The policy's unit tests caught all seven policy mutations: each of the five rules
+disabled, `references()` always true, and `resource_names()` always empty. Of six unwirings of
+the real trees, five were denied. The one that passed was a GCP floor setting present with
+`enable_floor_setting_enforcement = false`. The rule counted floor settings and never read the
+flag, so a floor that enforces nothing satisfied it. The "allowed" test fixture already set the
+flag to `true`, so the intent was there and nothing checked it.
+
+A first run also reported the Snowflake "wrapper granted to nobody" unwiring as passing. That
+was the mutation's fault, not the policy's. It rewrote the *ownership* grant, the first
+`object_name = local.complete_signature` in the file, and left the USAGE grant the rule checks
+intact. Pointed at the right block, it is denied.
+
+**Status: Done.** A sixth rule denies any floor setting that does not set the flag explicitly
+to `true`; an omitted flag is not trusted to default on. Two new unit tests cover the flag set
+to false and the flag absent. The policies README says so.
+
+Azure's equivalent was probed and deliberately left alone. Its RAI policy's per-filter
+`block_enabled` comes from variable defaults, which is one resource's attributes and not
+wiring, and the README assigns that to checkov.
+
+**Re-measured.** All six unwirings are denied, and all eight policy mutations are caught,
+including the new rule disabled.
+
+**Verify.** `conftest verify --policy infra/policies` runs 15 tests, all passing, and the policy
+passes over all four trees.
+
 ---
 
 ## Definition of Done
@@ -3945,6 +3980,7 @@ git status --short
 | 2026-09-27 | Added task 85: the claimability tests call the real claim instead of a copy | somesh-ghaturle |
 | 2026-09-27 | Added task 86: mutation audit of code-kept properties; tamper check fails closed | somesh-ghaturle |
 | 2026-09-27 | Added task 87: mutation audit of the Terraform locks; 9 of 20 had been invisible | somesh-ghaturle |
+| 2026-09-27 | Added task 88: guardrail policy audit; a GCP floor with enforcement off now fails | somesh-ghaturle |
 
 ---
 

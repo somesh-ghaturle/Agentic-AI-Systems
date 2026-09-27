@@ -72,6 +72,22 @@ test_gcp_template_with_floorsetting_is_allowed if {
 	count(result) == 0
 }
 
+test_gcp_floorsetting_with_enforcement_off_is_denied if {
+	result := deny with input as combined({
+		"google_model_armor_template": {"guardrail": [{"template_id": "g"}]},
+		"google_model_armor_floorsetting": {"guardrail": [{"enable_floor_setting_enforcement": false}]},
+	})
+	count(result) == 1
+}
+
+test_gcp_floorsetting_without_the_enforcement_flag_is_denied if {
+	result := deny with input as combined({
+		"google_model_armor_template": {"guardrail": [{"template_id": "g"}]},
+		"google_model_armor_floorsetting": {"guardrail": [{"location": "global"}]},
+	})
+	count(result) == 1
+}
+
 # --- No guardrail at all --------------------------------------------------
 
 # A tree that creates no guardrail (create_guardrail = false) must not be denied for the
