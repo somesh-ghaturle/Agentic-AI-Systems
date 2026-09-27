@@ -32,8 +32,10 @@ resource's attributes belongs in checkov, where the rule already exists and is m
   to the thing it filters. Each tree wires this differently, which is deliberate (see
   [ADR 0002](../../docs/DECISION-LOGS/0002-azure-openai-vs-claude.md)): AWS through
   `aws_bedrock_guardrail_version`, Azure through `azurerm_cognitive_deployment.rai_policy_name`,
-  GCP through `google_model_armor_floorsetting`. One invariant, three primitives, one file —
-  three copied files would drift.
+  GCP through `google_model_armor_floorsetting`, which must also set
+  `enable_floor_setting_enforcement = true` because a floor setting with enforcement off is
+  declared, wired, and applies nothing. One invariant, three primitives, one file — three
+  copied files would drift.
 - **[`lib.rego`](lib.rego)** — shared accessors over conftest's HCL2 parse tree.
 
 ## Running it

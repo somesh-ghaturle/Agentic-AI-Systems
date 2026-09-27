@@ -53,6 +53,22 @@ deny contains msg if {
 	msg := "google_model_armor_template is declared with no google_model_armor_floorsetting — filtering becomes opt-in per handler, and a handler that omits the sanitize call reaches the model unfiltered."
 }
 
+# A floor setting with enforcement off is the same failure one attribute later: it exists,
+# reads as the control that makes Vertex apply the template, and applies it to nothing. The
+# rule above only counts floor settings, so `enable_floor_setting_enforcement = false` passed
+# it (task 88). Must be explicitly true; an omitted flag is not trusted to default on.
+deny contains msg if {
+	some i
+	some name, blocks in object.get(input[i], ["contents", "resource", "google_model_armor_floorsetting"], {})
+	some block in blocks
+	object.get(block, "enable_floor_setting_enforcement", false) != true
+
+	msg := sprintf(
+		"google_model_armor_floorsetting.%s does not set enable_floor_setting_enforcement = true — the floor exists and enforces nothing.",
+		[name],
+	)
+}
+
 # Snowflake — the guard is an option on COMPLETE, not an object, so there is nothing to
 # attach and nothing to name. What makes it apply is that the only Cortex-capable role in
 # the tree is the one nothing logs in as, and every caller reaches the model through the
