@@ -483,8 +483,8 @@ everything with a principal depends on it — which is the only reason it exists
 | `knowledge` | Azure AI Search service | Data-plane access is separate from control-plane RBAC, same trap as OpenSearch on AWS |
 | `archive` | Blob container, immutability policy, versioning, lifecycle policy | Tiers to cool then archive, 7-year expiry in prod. `locked = true` in prod is irreversible — retention can be extended, never shortened |
 | `entra-audit` | Tenant-scoped Entra diagnostic setting, severity-0 alert on the write boundary being disabled | Applied from `envs/tenant`, not dev or prod. Tenant-scoped, so two roots managing it would revert each other. See section 2 |
-| `networking` | Resource group, VNet, subnet | Nothing joins the subnet yet — Consumption plans cannot |
-| `model-integration` | Nothing, deliberately | Azure OpenAI needs tenant enrollment Terraform cannot request |
+| `networking` | Resource group, VNet, integration subnet delegated to `Microsoft.Web/serverFarms` | Prod's Function Apps join it through `virtual_network_subnet_id`. Staging joins unless its SKU is `Y1`. Dev does not, because Consumption plans cannot integrate with a VNet at any price |
+| `model-integration` | Nothing by default. With `create_account = true`: the Azure OpenAI account, the deployment, its RAI content filter, the handler role assignment and diagnostics | The default brings your own endpoint, because Azure OpenAI needs tenant enrollment Terraform cannot request. Turn it on only where enrollment is done |
 
 ---
 
@@ -506,9 +506,9 @@ exactly those properties — the fingerprint re-check, the tenant filter, the cl
 | Traces cannot be deleted early | **Blob** — container immutability policy, locked in prod | Evidence disappears before an audit asks for it |
 | Failures are visible | **Config** — diagnostic settings + alert rules | Every alert sits at zero and reads as health |
 
-The remaining gap is the `src/` tree. Four of the rows above say **Code**, and until the
-Azure handlers exist those five are claims the infrastructure cannot keep on its own —
-the gate is enforced, but what happens behind it is unwritten.
+Four of the rows above say **Code**. Terraform cannot keep those on its own: they hold
+because the handlers in `src/` implement them and `src/tests/` asserts them. Break one there
+and the gate still holds while what runs behind it is wrong.
 
 ---
 

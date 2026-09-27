@@ -74,7 +74,7 @@
       "id": "retrieve",
       "type": "backend",
       "label": "retrieve",
-      "sublabel": "AI Search over the corpus",
+      "sublabel": "OpenSearch over the corpus",
       "pos": [
         440,
         120

@@ -116,10 +116,11 @@ section saying what has to be decided first.
 | 80 | Align the GCP provider locks, and check locks agree within a tree | Infrastructure | Medium | Done | Staging ran google 7.46.0 while dev and prod ran 7.45.0 | 2026-09-26 |
 | 81 | Guard three more stale counts | Documentation | Low | Done | Lock files 40→14, AWS modules 8→9, and "each with tests" when three have none | 2026-09-26 |
 | 82 | Give the last three examples a suite, and run the suites that only claimed to run | CI/CD | High | Done | graph-agent's langgraph tests and rag-faiss's retrieval tests had never run in CI | 2026-09-26 |
+| 83 | Resolve the four contradictions the knowledge graph flagged | Documentation | Medium | Done | A module count, a wrong cloud's service name, and two Azure rows that predated task 68 | 2026-09-26 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 82 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 82 on 2026-09-26.
+tree, and kept current as tasks have landed since. **All 83 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, and 74 through 83 on 2026-09-26.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3689,6 +3690,36 @@ ray-orchestrator: reordering the results.
 the dependency-free job; `python3 .github/scripts/docs_counts.py .` reports 35 counts, all
 matching.
 
+### Task 83 — Resolve the four contradictions the knowledge graph flagged
+
+**Goal.** A second graphify pass re-extracted the infra architecture docs that task 78's pass
+could not reach, and marked four edges AMBIGUOUS because two documents disagreed. Each was
+checked against the Terraform before anything was changed.
+
+**Status: Done.** All four were real:
+
+1. **MODULES.md's overview table said AWS has 8 modules.** It has 9, since task 68 added
+   `networking`. Task 81 fixed the same number in the file's expected-output block and missed
+   this row. All four overview rows are now in `docs_counts.py`, which has 39 claims.
+2. **The AWS architecture doc called retrieval "AI Search"**, which is Azure's service name,
+   in its diagram and in its module table. The module is `aws_opensearchserverless_collection`.
+   The label was also stale in the diagram's JSON source and its HTML viewer. All three now say
+   OpenSearch, and the embedded GIF was re-rendered with the repo's own `render-gifs.mjs`. The
+   new label is within one character of the old one, so it fits the fixed-width node.
+3. **Azure's networking row said "Nothing joins the subnet yet".** Task 68 put the Function
+   Apps on it. Prod joins, staging joins unless its SKU is `Y1`, and dev cannot, because a
+   Consumption plan has no VNet integration.
+4. **Azure's `model-integration` row said it creates "Nothing, deliberately".** The module has
+   five resources behind `create_account`, which defaults to `false`. The row now says what
+   each setting creates. §7 also said the Code rows were unkept "until the Azure handlers
+   exist", while the same document's status note says `src/` is built and `src/tests/` passes.
+   That paragraph now says where those four properties are kept.
+
+**Mutation tested.** Restoring `| AWS | 8 |` fails the counts check.
+
+**Verify.** `python3 .github/scripts/docs_counts.py .` reports 39 counts, all matching;
+`grep -rn "AI Search" infra/terraform-aws docs/diagrams/src/terraform-aws-*` finds nothing.
+
 ---
 
 ## Definition of Done
@@ -3759,6 +3790,7 @@ git status --short
 | 2026-09-26 | Added task 77: test counts are checked; three of eight were stale | somesh-ghaturle |
 | 2026-09-26 | Added tasks 78-81 from a repo-wide sweep: private security reporting, QUICKSTART, GCP locks, three counts | somesh-ghaturle |
 | 2026-09-26 | Added task 82: every example has a suite; two dependency-gated suites had never run in CI | somesh-ghaturle |
+| 2026-09-26 | Added task 83: four doc contradictions the knowledge graph flagged, all confirmed and fixed | somesh-ghaturle |
 
 ---
 
