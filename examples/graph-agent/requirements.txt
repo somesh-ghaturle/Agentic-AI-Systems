@@ -14,4 +14,4 @@
 #
 # No model provider here. The node functions are deterministic, so no langchain-openai and no
 # API key — see the module docstring in graph_agent.py.
-langgraph==1.2.11
+langgraph==1.2.12
