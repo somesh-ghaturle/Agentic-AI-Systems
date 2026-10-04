@@ -122,10 +122,11 @@ section saying what has to be decided first.
 | 86 | Mutation-audit the handler properties only code keeps, and close a fail-open | Security | High | Done | 8 of 12 survived; a deleted fingerprint skipped the tamper check in three trees | 2026-09-27 |
 | 87 | Mutation-audit the Terraform write-boundary locks | Security | High | Done | 9 of 20 survived; GCP's deny policy could be disabled four ways with its tests green | 2026-09-27 |
 | 88 | Mutation-audit the guardrail wiring policy | Security | Medium | Done | A GCP floor setting with enforcement off passed; the flag was never read | 2026-09-27 |
+| 89 | Give the three untested guard scripts a suite | CI/CD | Medium | Done | docs_counts, pairing and linkcheck had none; 13 mutations now caught | 2026-09-27 |
 
 **Status verified 2026-09-01** by running each task's own **Verify** block against the working
-tree, and kept current as tasks have landed since. **All 88 tasks are now `Done`**, the last of
-them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 through 88 on 2026-09-27.
+tree, and kept current as tasks have landed since. **All 89 tasks are now `Done`**, the last of
+them — 53 through 64 — on 2026-09-06, 65 and 66 on 2026-09-07, 67 through 73 on 2026-09-08, 74 through 83 on 2026-09-26, and 84 through 89 on 2026-09-27.
 
 Tasks 53 through 56 are unlike the rest of this plan: they were not planned. Two CI jobs were
 found red on `main` — `lint` and `examples` — and two security findings were open, one raised by
@@ -3905,6 +3906,49 @@ including the new rule disabled.
 **Verify.** `conftest verify --policy infra/policies` runs 15 tests, all passing, and the policy
 passes over all four trees.
 
+### Task 89 — Give the three untested guard scripts a suite
+
+**Goal.** The last layer. CI trusts eight scripts under `.github/scripts/` to catch drift, and
+three had no tests at all: `docs_counts.py`, now checking 39 claims, `pairing.py`, and
+`linkcheck.py`. Each check added in tasks 72 to 83 was mutation-tested once, by hand, when it
+was written, and nothing re-ran those mutations afterwards.
+
+**Status: Done.** 37 new tests:
+
+- **`tests/test_linkcheck.py`, 13 tests.** A broken link is reported with its file and line,
+  and links resolve against the linking file. It pins the two false-positive sources the
+  script's docstring says produced 34 bogus failures on its first run: links inside fenced
+  code (both ``` and ~~~), and `#fragment` suffixes. It also covers external links, titles,
+  skipped directories, and the real tree.
+- **`tests/test_pairing.py`, 13 tests.** A minimal repository passes, then each break is
+  asserted by its exact message. The breaks are: no counterparts line, a renamed example, a
+  missing backlink, a filename used only as a link label (the mutation task 72's author first
+  missed), each way the ROADMAP table can disagree, an unindexed example, and a missing or
+  demoted limits heading. All four accepted heading spellings pass.
+- **`tests/test_docs_counts.py`, 11 tests.** Number parsing covers digits, words, compounds and
+  non-numbers. Test counting is compared against unittest's own discovery, and an import
+  failure stops the check. End-to-end tests run on a trimmed copy of the tree, where a stale
+  table number, a stale number in words, a reworded sentence, a new example directory, and a
+  stale per-tree module count each fail. The copy's own `tests/` is not rediscovered, because
+  same-named modules inside a running test process collide, so the real counts are computed
+  once and reused.
+
+The first full run of the new `docs_counts` suite failed, and correctly. The 37 new tests moved
+the real total from 415 to 452, and ROADMAP still said 415.
+
+**Mutation tested, thirteen breaks, all caught.**
+- `linkcheck`: fence tracking removed, fragments not stripped, external links checked, links
+  resolved against the root, and failures exiting 0.
+- `pairing`: backlinks matched by filename anywhere, the ROADMAP disagreement ignored, the index
+  check removed, and the limits heading no longer required to be a heading.
+- `docs_counts`: compounds unread, reworded sentences skipped, import errors ignored, and
+  mismatches never reported.
+
+With this, every script CI runs over the tree has a suite of its own.
+
+**Verify.** `python3 -m unittest tests.test_linkcheck tests.test_pairing tests.test_docs_counts`
+passes.
+
 ---
 
 ## Definition of Done
@@ -3981,6 +4025,7 @@ git status --short
 | 2026-09-27 | Added task 86: mutation audit of code-kept properties; tamper check fails closed | somesh-ghaturle |
 | 2026-09-27 | Added task 87: mutation audit of the Terraform locks; 9 of 20 had been invisible | somesh-ghaturle |
 | 2026-09-27 | Added task 88: guardrail policy audit; a GCP floor with enforcement off now fails | somesh-ghaturle |
+| 2026-09-27 | Added task 89: suites for docs_counts, pairing and linkcheck | somesh-ghaturle |
 
 ---
 
