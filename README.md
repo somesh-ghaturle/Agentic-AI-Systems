@@ -2,6 +2,8 @@
 
 [![checks](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/checks.yml/badge.svg)](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/checks.yml)
 [![example deps](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/example-deps.yml/badge.svg)](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/example-deps.yml)
+[![publish image](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/publish-image.yml/badge.svg)](https://github.com/somesh-ghaturle/Agentic-AI-Systems/actions/workflows/publish-image.yml)
+[![trace-eval-service](https://img.shields.io/badge/trace--eval--service-GHCR-blue?logo=docker)](https://github.com/somesh-ghaturle/Agentic-AI-Systems/pkgs/container/trace-eval-service)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](QUICKSTART.md)
 [![Terraform 1.6+](https://img.shields.io/badge/Terraform-1.6%2B-blue.svg)](QUICKSTART.md)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
