@@ -118,6 +118,7 @@ Agentic-AI-Systems/
     ├── workflows/example-deps.yml   installs each example's pins and imports it
     ├── workflows/codeql.yml         CodeQL over the Python and the workflows, weekly
     ├── workflows/docs-preview.yml   static HTML preview of Markdown changes in pull requests
+    ├── workflows/publish-image.yml  builds, smoke-tests and pushes the trace-eval-service image to GHCR
     ├── scripts/                     stdlib-only CI guards: links, doc counts, provider pins,
     │                                mermaid, chapter pairing, example deps, cost estimate
     └── dependabot.yml               monthly pip, actions, and provider updates
