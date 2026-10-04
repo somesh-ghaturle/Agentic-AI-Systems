@@ -51,7 +51,7 @@ Agentic-AI-Systems/
 │   ├── CHOOSING-A-TREE.md        which tree to start from, and what you give up
 │   ├── MODULES.md                every module, its dependencies and status
 │   ├── policies/                 OPA policies — do the resources agree with each other?
-│   ├── terraform-aws/            8 modules · envs/{dev,staging,prod}
+│   ├── terraform-aws/            9 modules · envs/{dev,staging,prod}
 │   ├── terraform-azure/          12 modules · envs/{dev,staging,prod,tenant}
 │   ├── terraform-snowflake/      10 modules · envs/{dev,staging,prod} · no src/
 │   ├── terraform-gcp/            10 modules · envs/{dev,staging,prod}
@@ -62,7 +62,7 @@ Agentic-AI-Systems/
 │   │   ├── envs/                 one root per environment
 │   │   ├── src/                  handler source + build.sh (run before plan)
 │   │   └── tests/                write-boundary tests, stdlib unittest
-│   └── terraform-hybrid/         cross-cloud POC · opt-in, disabled by default
+│   └── terraform-hybrid/         4 modules · envs/dev · cross-cloud POC, opt-in, disabled by default
 ├── examples/                     runnable examples and focused proof-of-concepts
 │   ├── hermes-agent/             the write boundary in application code
 │   ├── trace-eval/               scoring the path rather than the answer
@@ -88,6 +88,8 @@ Agentic-AI-Systems/
 │   ├── second-path/              a correct gate, and the route that never reaches it
 │   ├── stale-referent/           the approved call, run against a world that moved
 │   └── hermes-dashboard/         FastAPI/WebSocket approval UX with React
+├── trace_eval_service/           FastAPI wrapper over examples/trace-eval (GET /healthz, POST /score)
+├── services/trace-eval-service/  Dockerfile, compose file and pins for that service
 ├── docs/
 │   ├── agentic-system-architecture/   the six building blocks, as prose
 │   ├── agentic-coding-playbook/       working with coding agents day to day
@@ -97,9 +99,16 @@ Agentic-AI-Systems/
 │   ├── MIGRATION-GUIDE.md             retrofitting these patterns into a project you have
 │   ├── FAQ.md                         recurring questions, including the ones commonly answered wrong
 │   ├── HOW-TO-RECOVER.md              per-cloud runbook for Terraform state, execution state, stuck claims
+│   ├── SECRETS-ROTATION.md            what is credential material, and how each piece rotates
 │   ├── DECISION-LOGS/                 ADRs — the decisions the code cannot explain itself
-│   └── *.md                           governance, security, privacy, runbook, templates
-├── tests/                        example suites run by CI
+│   ├── diagrams/                      interactive HTML diagrams, their JSON sources, and GIF renders
+│   └── *.md                           governance, security, privacy, runbook, templates, roadmaps
+├── scripts/diagram-gif/          renders docs/diagrams/*.html to looping GIFs (Node, puppeteer)
+├── tests/                        example suites run by CI, plus smoke/ and performance/
+├── QUICKSTART.md                 prerequisites and first runs
+├── ROADMAP.md                    direction, priorities and future themes
+├── CITATION.cff                  citation metadata
+├── pyproject.toml · uv.lock      ruff rules and the locked dev environment
 ├── CONTRIBUTING.md               what a good example looks like here
 ├── SECURITY.md                   what counts as a vulnerability here, and how to report it
 ├── COMPLIANCE.md                 the repo's documented operating controls and evidence model
@@ -108,7 +117,9 @@ Agentic-AI-Systems/
     ├── workflows/checks.yml         fmt, lint, validate, tflint, checkov, boundary tests, builds
     ├── workflows/example-deps.yml   installs each example's pins and imports it
     ├── workflows/codeql.yml         CodeQL over the Python and the workflows, weekly
-    ├── scripts/                     linkcheck.py, tfconstraints.py — stdlib-only CI guards
+    ├── workflows/docs-preview.yml   static HTML preview of Markdown changes in pull requests
+    ├── scripts/                     stdlib-only CI guards: links, doc counts, provider pins,
+    │                                mermaid, chapter pairing, example deps, cost estimate
     └── dependabot.yml               monthly pip, actions, and provider updates
 ```
 
@@ -123,7 +134,70 @@ The per-tree files are shown once under `terraform-gcp/` but exist in all four, 
 - **Citation metadata**: [CITATION.cff](CITATION.cff) — cite the repository in research, teaching, or engineering work.
 - **Contribution workflow**: [CONTRIBUTING.md](CONTRIBUTING.md) — what a good example, doc, or patch looks like in this repository.
 
-## System architecture reference
+## System architecture
+
+The runtime shape every tree and every boundary example implements. Reads run on the spot. Writes leave the agent as a proposal, and only the approval executor can turn an approved proposal into a call.
+
+```mermaid
+flowchart LR
+    U["User request"] --> R["Router / orchestrator<br/>holds read tools only"]
+    R -->|"read"| RT["Read tools"]
+    RT --> K[("Knowledge<br/>vector index")]
+    R -->|"write intent"| P["Proposal<br/>fingerprint of exact args"]
+    P --> H{"Human approves<br/>that specific action"}
+    H -->|"single-use, expiring claim"| X["Approval executor<br/>holds write tools only"]
+    X --> WT["Write tools"]
+    WT --> S[("State / audit log")]
+    R -. "trace events" .-> T["Trace store"]
+    X -. "trace events" .-> T
+    T --> E["trace-eval<br/>grades the path, not the answer"]
+    E -. "feedback" .-> R
+```
+
+The identity platform enforces the split between the two halves, not the prompt. Each cloud maps the boxes onto its own primitives, as the table under [Reference infrastructure](#reference-infrastructure) shows.
+
+How the folders of this repository relate to each other:
+
+```mermaid
+flowchart TB
+    subgraph DOCS["docs/ — the why"]
+        ARCH["agentic-system-architecture<br/>six building blocks"]
+        GOV["threat model, FAQ, ADRs,<br/>checklists, runbooks"]
+        DIA["diagrams/ (HTML + GIF)"]
+    end
+    subgraph EX["examples/ — the pattern, runnable offline"]
+        HERMES["hermes-agent<br/>write boundary in code"]
+        TE["trace-eval<br/>path-level grading"]
+        BOUND["second-path, stale-referent,<br/>fuzzing, red-teaming"]
+        MIN["starter, RAG, memory,<br/>context, MCP, dashboard"]
+    end
+    subgraph INFRA["infra/ — the pattern, deployed"]
+        AWS["terraform-aws"]
+        AZ["terraform-azure"]
+        GCP["terraform-gcp"]
+        SF["terraform-snowflake"]
+        HY["terraform-hybrid (opt-in)"]
+        OPA["policies/ (OPA)"]
+    end
+    SVC["trace_eval_service<br/>FastAPI over trace-eval"]
+    CI[".github/ — checks, example-deps,<br/>codeql, docs-preview"]
+    TESTS["tests/ — one suite per example"]
+
+    ARCH -->|"chapter pairs with"| EX
+    ARCH -->|"implemented by"| INFRA
+    TE --> SVC
+    TESTS --> EX
+    TESTS --> SVC
+    OPA --> INFRA
+    CI --> TESTS
+    CI -->|"fmt, validate, tflint,<br/>checkov, conftest, boundary tests"| INFRA
+    CI -->|"links, counts, pairing"| DOCS
+    DIA -.-> ARCH
+```
+
+Every arrow from `.github/` is a check that runs on pull requests without cloud credentials. Per-cloud diagrams live in each tree's `ARCHITECTURE.md`, and the interactive versions in [docs/diagrams/](docs/diagrams/).
+
+### Architecture reference
 
 - **Agentic System Architecture**: [docs/agentic-system-architecture/](docs/agentic-system-architecture/README.md) — reference architecture for building agentic systems as production software. Single-agent vs. multi-agent trade-offs, the six building blocks (model routing, tool contracts, memory and state, orchestration, trace-level evals, approval gates), production engineering principles, and a design-review checklist.
 
@@ -176,6 +250,7 @@ The model layer is the one place the trees diverge on vendor: AWS calls Claude o
 **Applied example** — tracing, audit, provenance, and governance docs over HTTP:
 
 - [e2e-agent](examples/e2e-agent/README.md)
+- [trace-eval-service](services/trace-eval-service/README.md) — the trace-eval graders behind a FastAPI endpoint, with a Dockerfile and compose file
 
 **Boundary and bounds** — each takes one control that is correct and shows what it does not cover:
 
@@ -243,7 +318,8 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 [`.github/workflows/checks.yml`](.github/workflows/checks.yml) runs on any change under `infra/`, `examples/`, `tests/`, `docs/`, the root markdown files, `pyproject.toml`, or the workflow's own scripts — fourteen jobs, checking:
 
 - `terraform fmt -check` across all four trees, plus a provider-pin check that `terraform validate` cannot see
-- `ruff check` over all Python files, against the rules in `pyproject.toml` — the same command and the same verdict a contributor gets locally
+- `ruff check` over all Python files, against the rules in `pyproject.toml` — the same command and the same verdict a contributor gets locally, plus a guard that Mermaid diagrams stay fenced in Markdown rather than in `.mmd` files
+- A Terraform cost estimate over `infra/` that fails above a monthly threshold
 - `terraform validate` on each of the thirteen environment roots, as a matrix so one broken root does not hide the others
 - `tflint` over all forty-five modules and fourteen roots — `validate` only ever sees a module through a root that calls it, which is why nothing reported that twelve Azure modules pinned no provider version
 - `checkov` over the trees, failing on any finding not skipped by name and with a reason in [`.checkov.yaml`](.checkov.yaml)
@@ -255,6 +331,7 @@ Also here: the repository audit of 2026-08-14 and its remediation plan, [docs/RE
 - A syntax check over all twenty-four examples
 - A relative-link check over every markdown file, external URLs deliberately excluded
 - A check that the counts the documentation states match the counts the tree has, because a stale number in prose is invisible until someone acts on it
+- A check that each architecture chapter and its runnable counterpart point at each other
 - A gitleaks scan over the full git history rather than the tip commit, because a credential committed and later deleted is the case history scanning exists to catch
 
 Documentation used to run no checks at all. This repository is mostly markdown by volume and by purpose, and a documentation-only commit merged green until the path filters were widened to cover it — the miss that found was two links to a workflow that had been renamed.
