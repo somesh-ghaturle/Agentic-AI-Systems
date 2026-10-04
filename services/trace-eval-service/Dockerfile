@@ -6,7 +6,7 @@ COPY services/trace-eval-service/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY trace_eval_service ./trace_eval_service
-COPY examples ./examples
+COPY examples/trace-eval/traceeval ./examples/trace-eval/traceeval
 
 EXPOSE 8000
 

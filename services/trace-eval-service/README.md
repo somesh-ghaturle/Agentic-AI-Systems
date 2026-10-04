@@ -9,6 +9,22 @@ traffic.
 - `GET /healthz` — returns service status
 - `POST /score` — scores a trace and answer payload
 
+## Published image
+
+Version tags publish the image to GitHub Container Registry through
+[publish-image.yml](../../.github/workflows/publish-image.yml). The workflow starts the
+container and checks `/healthz` before it pushes anything.
+
+```bash
+docker run --rm -p 8000:8000 ghcr.io/somesh-ghaturle/trace-eval-service:latest
+```
+
+To build it yourself from the repository root, run this:
+
+```bash
+docker build -f services/trace-eval-service/Dockerfile -t trace-eval-service .
+```
+
 ## Example
 
 ```bash
