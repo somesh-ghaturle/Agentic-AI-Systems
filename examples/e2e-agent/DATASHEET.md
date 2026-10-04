@@ -39,4 +39,4 @@
 ## Access & Licensing
 
 - Access: Public within repo; in production, apply access control.
-- License: MIT (follow project LICENSE)
+- License: Apache-2.0 (see the repository [LICENSE](../../LICENSE))

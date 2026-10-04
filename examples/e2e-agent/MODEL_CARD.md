@@ -47,4 +47,4 @@ A small demonstration model used in the E2E Agent example. It is a rule-based/si
 ## Contact & License
 
 - Maintainer contact: platform-team@example.com
-- License: MIT (follow project LICENSE)
+- License: Apache-2.0 (see the repository [LICENSE](../../LICENSE))
