@@ -530,9 +530,12 @@ jobs:
   #
   # If this job becomes a burden, that is the signal to raise the floor rather than to delete
   # the job — and at that point the badge, QUICKSTART.md, and the example READMEs move with it.
+  #
+  # Pinned to 24.04: actions/python-versions publishes no 3.9 build for ubuntu-latest (26.04).
+  # When 24.04 runners retire, raise the floor as above.
   examples-py39:
     name: examples (3.9 floor)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 
