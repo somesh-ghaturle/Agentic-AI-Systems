@@ -141,6 +141,11 @@ The per-tree files are shown once under `terraform-gcp/` but exist in all four, 
 
 The runtime shape every tree and every boundary example implements. Reads run on the spot. Writes leave the agent as a proposal, and only the approval executor can turn an approved proposal into a call.
 
+![Reads run on the spot; writes wait for a human](docs/diagrams/gif/readme-system-architecture.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
+
 ```mermaid
 flowchart LR
     U["User request"] --> R["Router / orchestrator<br/>holds read tools only"]
@@ -157,9 +162,16 @@ flowchart LR
     E -. "feedback" .-> R
 ```
 
+</details>
+
 The identity platform enforces the split between the two halves, not the prompt. Each cloud maps the boxes onto its own primitives, as the table under [Reference infrastructure](#reference-infrastructure) shows.
 
 How the folders of this repository relate to each other:
+
+![How the repository fits together](docs/diagrams/gif/readme-repository-map.gif)
+
+<details>
+<summary>Mermaid source (kept for diff history)</summary>
 
 ```mermaid
 flowchart TB
@@ -197,6 +209,8 @@ flowchart TB
     CI -->|"links, counts, pairing"| DOCS
     DIA -.-> ARCH
 ```
+
+</details>
 
 Every arrow from `.github/` is a check that runs on pull requests without cloud credentials. Per-cloud diagrams live in each tree's `ARCHITECTURE.md`, and the interactive versions in [docs/diagrams/](docs/diagrams/).
 

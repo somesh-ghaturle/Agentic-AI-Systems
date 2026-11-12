@@ -25,7 +25,7 @@ Two supporting commitments follow from it:
 | Examples | 24, stdlib-first; 24 with a suite in `tests/`. `ray-orchestrator`'s runs only where Ray is installed |
 | Tests | 452, running on both the 3.9 floor and current Python |
 | Architecture chapters | 4 disciplines — context, harness, evaluation, environment — plus patterns, building blocks, production principles |
-| Diagrams | 47 interactive HTML viewers, each embedded in its document as a GIF |
+| Diagrams | 49 interactive HTML viewers, each embedded in its document as a GIF |
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
 | Decision logs | 5 ADRs |
