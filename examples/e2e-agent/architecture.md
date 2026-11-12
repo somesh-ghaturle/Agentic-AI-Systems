@@ -64,7 +64,7 @@ environment and the model version from `E2E_AGENT_MODEL`; both are recorded in t
 provenance artifact so a stored answer can be traced back to the configuration that
 produced it. `E2E_AGENT_API_KEY` has no default — the app refuses to start without it.
 
-[architecture.svg](architecture.svg) is an older hand-exported snapshot of the Mermaid
-source above, kept for reference; the interactive diagram linked at the top is the current
-one, and its source of truth is
+The animated diagram at the top is rendered from the interactive
+[`docs/diagrams/e2e-agent-architecture.html`](../../docs/diagrams/e2e-agent-architecture.html),
+and its source of truth is
 [`docs/diagrams/src/e2e-agent-architecture.architecture.json`](../../docs/diagrams/src/e2e-agent-architecture.architecture.json).

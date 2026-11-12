@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Reads run on the spot; writes wait for a human",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "read",
+        "label": "The read half",
+        "focus": [
+          "request",
+          "router",
+          "readtools",
+          "knowledge"
+        ],
+        "note": "The router holds read tools only. Reads are ungated and run immediately."
+      },
+      {
+        "id": "write",
+        "label": "The write half",
+        "focus": [
+          "router",
+          "proposal",
+          "human",
+          "executor",
+          "writetools",
+          "state"
+        ],
+        "note": "A write leaves the agent as a proposal. Only the approval executor can turn an approved proposal into a call."
+      },
+      {
+        "id": "feedback",
+        "label": "The feedback edge",
+        "focus": [
+          "router",
+          "executor",
+          "trace",
+          "evals"
+        ],
+        "note": "Both halves emit trace events; trace-eval grades the path, not the answer."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 5,
+    "cellW": 170,
+    "cellH": 76,
+    "gapX": 100,
+    "gapY": 80,
+    "origin": [
+      60,
+      110
+    ]
+  },
+  "components": [
+    {
+      "id": "readtools",
+      "type": "messagebus",
+      "label": "Read tools",
+      "sublabel": "ungated",
+      "row": 0,
+      "col": 1,
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "knowledge",
+      "type": "database",
+      "label": "Knowledge",
+      "sublabel": "vector index",
+      "row": 0,
+      "col": 2,
+      "size": [
+        168,
+        64
+      ]
+    },
+    {
+      "id": "request",
+      "type": "external",
+      "label": "User request",
+      "row": 1,
+      "col": 0,
+      "size": [
+        160,
+        58
+      ]
+    },
+    {
+      "id": "router",
+      "type": "backend",
+      "label": "Router / orchestrator",
+      "sublabel": "holds read tools only",
+      "row": 1,
+      "col": 1,
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "proposal",
+      "type": "backend",
+      "label": "Proposal",
+      "sublabel": "fingerprint of exact args",
+      "row": 1,
+      "col": 2,
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "human",
+      "type": "security",
+      "label": "Human approves",
+      "sublabel": "that specific action",
+      "row": 1,
+      "col": 3,
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "executor",
+      "type": "security",
+      "label": "Approval executor",
+      "sublabel": "holds write tools only",
+      "row": 1,
+      "col": 4,
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "writetools",
+      "type": "messagebus",
+      "label": "Write tools",
+      "row": 2,
+      "col": 4,
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "state",
+      "type": "database",
+      "label": "State / audit log",
+      "row": 3,
+      "col": 4,
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "evals",
+      "type": "frontend",
+      "label": "trace-eval",
+      "sublabel": "grades the path",
+      "row": 2,
+      "col": 1,
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "trace",
+      "type": "database",
+      "label": "Trace store",
+      "row": 2,
+      "col": 2,
+      "size": [
+        168,
+        64
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "request",
+      "to": "router",
+      "variant": "default"
+    },
+    {
+      "from": "router",
+      "to": "readtools",
+      "label": "read",
+      "variant": "default",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "readtools",
+      "to": "knowledge",
+      "variant": "default"
+    },
+    {
+      "from": "router",
+      "to": "proposal",
+      "label": "write intent",
+      "variant": "emphasis"
+    },
+    {
+      "from": "proposal",
+      "to": "human",
+      "variant": "emphasis"
+    },
+    {
+      "from": "human",
+      "to": "executor",
+      "label": "single-use claim",
+      "variant": "security"
+    },
+    {
+      "from": "executor",
+      "to": "writetools",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "writetools",
+      "to": "state",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "router",
+      "to": "trace",
+      "label": "trace events",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "executor",
+      "to": "trace",
+      "label": "trace events",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "from": "trace",
+      "to": "evals",
+      "variant": "default"
+    },
+    {
+      "from": "evals",
+      "to": "router",
+      "label": "feedback",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "The identity platform enforces the split",
+      "items": [
+        "The router's identity can invoke read tools only; the executor's identity can invoke write tools only",
+        "Each cloud maps these boxes onto its own primitives"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Approval is bound to exact arguments",
+      "items": [
+        "The proposal fingerprints the call; the claim is single-use and expires",
+        "Changing an argument after approval invalidates it"
+      ]
+    }
+  ]
+}

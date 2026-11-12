@@ -48,9 +48,9 @@ flowchart LR
 
 </details>
 
-Full diagram with notes on how to read it: [architecture.md](architecture.md). The rendered
-[architecture.svg](architecture.svg) is a hand-exported snapshot — nothing in CI regenerates
-it, so treat `architecture.md` as the source of truth if the two ever disagree.
+Full diagram with notes on how to read it: [architecture.md](architecture.md), or open the
+interactive version at
+[`docs/diagrams/e2e-agent-architecture.html`](../../docs/diagrams/e2e-agent-architecture.html).
 
 Design guidance & 2026 reference
 

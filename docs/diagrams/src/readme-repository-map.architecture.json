@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "How the repository fits together",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "pattern",
+        "label": "One pattern, three forms",
+        "focus": [
+          "arch",
+          "hermes",
+          "iac"
+        ],
+        "note": "docs/ explains the pattern, examples/ runs it offline, infra/ deploys it."
+      },
+      {
+        "id": "checks",
+        "label": "What keeps it honest",
+        "focus": [
+          "ci",
+          "tests",
+          "opa",
+          "iac",
+          "minimal",
+          "svc"
+        ],
+        "note": "CI runs every test suite and the Terraform and policy checks on each tree."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 4,
+    "cellW": 190,
+    "cellH": 76,
+    "gapX": 120,
+    "gapY": 110,
+    "origin": [
+      80,
+      130
+    ]
+  },
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "examples/ \u2014 the pattern, runnable offline",
+      "wraps": [
+        "hermes",
+        "minimal",
+        "tracee"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "docs/ \u2014 the why",
+      "wraps": [
+        "gov",
+        "arch"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "infra/ \u2014 the pattern, deployed",
+      "wraps": [
+        "iac",
+        "opa"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "id": "hermes",
+      "type": "backend",
+      "label": "hermes-agent",
+      "sublabel": "write boundary in code",
+      "row": 0,
+      "col": 1,
+      "size": [
+        180,
+        70
+      ]
+    },
+    {
+      "id": "minimal",
+      "type": "backend",
+      "label": "Other examples",
+      "sublabel": "boundary \u00b7 RAG \u00b7 memory \u00b7 MCP",
+      "row": 0,
+      "col": 2,
+      "size": [
+        180,
+        70
+      ]
+    },
+    {
+      "id": "tracee",
+      "type": "backend",
+      "label": "trace-eval",
+      "sublabel": "path-level grading",
+      "row": 0,
+      "col": 3,
+      "size": [
+        180,
+        70
+      ]
+    },
+    {
+      "id": "gov",
+      "type": "frontend",
+      "label": "Governance docs",
+      "sublabel": "threat model \u00b7 ADRs \u00b7 diagrams",
+      "row": 1,
+      "col": 0,
+      "size": [
+        180,
+        70
+      ]
+    },
+    {
+      "id": "arch",
+      "type": "frontend",
+      "label": "Architecture guide",
+      "sublabel": "six building blocks",
+      "row": 1,
+      "col": 1,
+      "size": [
+        180,
+        70
+      ]
+    },
+    {
+      "id": "tests",
+      "type": "security",
+      "label": "tests/",
+      "sublabel": "one suite per example",
+      "row": 1,
+      "col": 2,
+      "size": [
+        180,
+        70
+      ]
+    },
+    {
+      "id": "svc",
+      "type": "cloud",
+      "label": "trace_eval_service",
+      "sublabel": "FastAPI over trace-eval",
+      "row": 1,
+      "col": 3,
+      "size": [
+        180,
+        70
+      ]
+    },
+    {
+      "id": "iac",
+      "type": "cloud",
+      "label": "Terraform trees",
+      "sublabel": "aws \u00b7 azure \u00b7 gcp \u00b7 snowflake",
+      "row": 2,
+      "col": 1,
+      "size": [
+        180,
+        70
+      ]
+    },
+    {
+      "id": "opa",
+      "type": "security",
+      "label": "policies/",
+      "sublabel": "OPA",
+      "row": 2,
+      "col": 0,
+      "size": [
+        180,
+        70
+      ]
+    },
+    {
+      "id": "ci",
+      "type": "messagebus",
+      "label": "CI (.github/)",
+      "sublabel": "checks \u00b7 codeql \u00b7 docs-preview",
+      "row": 2,
+      "col": 3,
+      "size": [
+        180,
+        70
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "gov",
+      "to": "arch",
+      "label": "diagrams",
+      "variant": "dashed"
+    },
+    {
+      "from": "arch",
+      "to": "hermes",
+      "label": "pairs with",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "arch",
+      "to": "iac",
+      "label": "implemented by",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "from": "tracee",
+      "to": "svc",
+      "label": "served by",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "from": "tests",
+      "to": "minimal",
+      "label": "covers",
+      "variant": "default",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "tests",
+      "to": "svc",
+      "variant": "default"
+    },
+    {
+      "from": "opa",
+      "to": "iac",
+      "label": "conftest",
+      "variant": "security"
+    },
+    {
+      "from": "ci",
+      "to": "iac",
+      "label": "IaC checks",
+      "variant": "default"
+    },
+    {
+      "from": "ci",
+      "to": "tests",
+      "label": "runs",
+      "variant": "default",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Every chapter has code",
+      "items": [
+        "Each architecture chapter pairs with a runnable example; CI checks the pairing",
+        "The same write boundary is deployed by each Terraform tree"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "CI checks the docs too",
+      "items": [
+        "Links, documented counts and Mermaid fencing are verified on every change",
+        "Terraform trees get fmt, validate, tflint, checkov, conftest and boundary tests"
+      ]
+    }
+  ]
+}
