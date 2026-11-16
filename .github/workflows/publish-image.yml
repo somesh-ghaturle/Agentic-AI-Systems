@@ -60,5 +60,9 @@ jobs:
           context: .
           file: services/trace-eval-service/Dockerfile
           push: true
+          # An SBOM and a build provenance attestation, attached to the image in the registry.
+          # Whoever pulls the tag can then check what is in it and which workflow built it.
+          sbom: true
+          provenance: mode=max
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

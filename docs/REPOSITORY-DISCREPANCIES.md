@@ -4,8 +4,13 @@
 **Scope:** tracked source, documentation, CI configuration, Terraform trees, examples, tests, and
 generated working-tree artifacts.
 
-This is a current-state audit. All discrepancies and consolidation candidates below have been
-resolved. The "Consolidation decisions" section records what was kept, what was removed, and why.
+> **Historical document.** The counts below (45 plan tasks, 310 tests, 130 Python files) describe
+> the repository as it was on 2026-09-01. Live counts are in [ROADMAP.md](../ROADMAP.md), where CI
+> checks them, and open work is in [NEXT-PHASES-PLAN.md](NEXT-PHASES-PLAN.md). This file is
+> retained for its consolidation decisions.
+
+All discrepancies and consolidation candidates below were resolved as of the audit date. The
+"Consolidation decisions" section records what was kept, what was removed, and why.
 
 ## Resolved discrepancies
 

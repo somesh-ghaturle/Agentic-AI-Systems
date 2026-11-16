@@ -62,9 +62,14 @@ updates:
   # FastAPI service for local development and CI smoke checks. It is a deployable service, not
   # an example, so it gets its own group rather than sharing "example-dependencies" — grouping
   # it with the examples would mislabel what the PR is actually bumping.
+  #
+  # /tests rides along: tests/requirements.txt pins the same FastAPI, OpenTelemetry and HTTP
+  # packages so the fast job can import the service, and a bump that reaches only one of the
+  # two files tests a version nobody ships.
   - package-ecosystem: pip
     directories:
       - /services/trace-eval-service
+      - /tests
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
@@ -126,23 +131,57 @@ updates:
   # so it will keep opening PRs for minor releases and not only majors. That is more churn
   # than task 21 decided on, and is a live question rather than a settled one.
   #
-  # Directory list. Only directories that actually declare `required_providers`: the three
-  # trees keep theirs in `envs/*` and `modules/*`, with nothing at tree level (there were two
-  # such files; Dependabot did not maintain them and they were deleted — see task 21).
-  # `/infra/terraform-azure/modules/*` is absent because the Azure modules declare no
-  # required_providers at all, inheriting from whichever root calls them.
+  # Directory list. Every directory that declares `required_providers`: all five trees keep
+  # theirs in `envs/*` and `modules/*`, with nothing at tree level (there were two such files;
+  # Dependabot did not maintain them and they were deleted — see task 21).
+  #
+  # This list used to stop at AWS, the Azure roots and GCP. The Azure modules were left out
+  # because they declared no required_providers, which stopped being true when tflint made
+  # them pin; Snowflake and the hybrid POC were added as trees and never added here. A tree
+  # missing from this list is pinned and then never bumped, which is the failure the pins
+  # were accepted to avoid.
   - package-ecosystem: terraform
     directories:
       - /infra/terraform-aws/envs/*
       - /infra/terraform-aws/modules/*
       - /infra/terraform-azure/envs/*
+      - /infra/terraform-azure/modules/*
       - /infra/terraform-gcp/envs/*
       - /infra/terraform-gcp/modules/*
+      - /infra/terraform-snowflake/envs/*
+      - /infra/terraform-snowflake/modules/*
+      - /infra/terraform-hybrid/envs/*
+      - /infra/terraform-hybrid/modules/*
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
     groups:
       providers:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies
+
+  # ---------------------------------------------------------------------------
+  # npm
+  # ---------------------------------------------------------------------------
+  #
+  # The two package.json files in the tree: the hermes-dashboard frontend (React, Vite) and
+  # the diagram renderer (puppeteer). Both commit a lock file and neither was watched, so a
+  # vulnerable transitive dependency in either would have stayed until someone read the lock.
+  # No Dockerfile entry on purpose: the base images are `python:3.x-slim` tags, which already
+  # float on patch releases, and the minor version each one names is a documented floor.
+  - package-ecosystem: npm
+    directories:
+      - /examples/hermes-dashboard/frontend
+      - /scripts/diagram-gif
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      npm-dependencies:
         patterns:
           - "*"
     commit-message:

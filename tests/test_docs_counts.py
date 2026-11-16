@@ -108,7 +108,7 @@ class TestAgainstACopyOfTheTree(unittest.TestCase):
         self.assertIn("claims 23 examples, tree has 24", out)
 
     def test_a_stale_number_written_as_words_fails(self):
-        with self.edited("README.md", "syntax check over all twenty-four examples",
+        with self.edited("docs/CI.md", "syntax check over all twenty-four examples",
                          "syntax check over all twenty-three examples"):
             code, out = self.run_check()
         self.assertEqual(code, 1)

@@ -28,10 +28,12 @@ Two supporting commitments follow from it:
 | Diagrams | 49 interactive HTML viewers, each embedded in its document as a GIF |
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
-| Decision logs | 5 ADRs |
+| Decision logs | 4 ADRs |
 | Enhancement plan | 89 tasks, all `Done` |
 
-The enhancement plan is the detailed record; this file is the direction.
+The enhancement plan is the detailed record; this file is the direction. The open work list —
+fixes, improvements, and the phase 2 and phase 3 items — is
+[`docs/NEXT-PHASES-PLAN.md`](docs/NEXT-PHASES-PLAN.md).
 
 ## Where the work actually is now
 
