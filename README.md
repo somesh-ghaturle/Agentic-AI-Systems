@@ -123,6 +123,7 @@ Agentic-AI-Systems/
     ├── workflows/codeql.yml         CodeQL over the Python and the workflows, weekly
     ├── workflows/docs-preview.yml   static HTML preview of Markdown changes in pull requests
     ├── workflows/publish-image.yml  builds, smoke-tests and pushes the trace-eval-service image to GHCR
+    ├── workflows/external-links.yml weekly report of dead external links, as an issue; never a gate
     ├── scripts/                     stdlib-only CI guards: links, doc counts, provider pins,
     │                                mermaid, chapter pairing, example deps, cost estimate
     └── dependabot.yml               monthly pip, actions, and provider updates
@@ -364,14 +365,14 @@ If you believe the write boundary can be bypassed — in any of the four Terrafo
 - [Ray](https://github.com/ray-project/ray) — distributed execution for agents and workloads.
 - [Kubeflow](https://www.kubeflow.org/) — ML orchestration and pipelines.
 - [MLflow](https://mlflow.org/) — experiment tracking and reproducibility.
-- [Google MLOps: Continuous Delivery for Machine Learning](https://cloud.google.com/architecture/mlops-continuous-delivery-automation) — the reference guide.
+- [Google MLOps: Continuous Delivery for Machine Learning](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning) — the reference guide.
 - [Hidden Technical Debt in Machine Learning Systems](https://papers.nips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf) — the operational-risk paper worth reading first.
 
 **Governance, risk, and security**
 
 - [NIST AI Risk Management Framework](https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf)
 - [EU AI Act](https://commission.europa.eu/publications/eu-artificial-intelligence-act_en) — summary and compliance guidance.
-- [Responsible AI practices](https://learn.microsoft.com/en-us/azure/ai/fundamentals/responsible-ai) — Microsoft.
+- [Responsible AI practices](https://learn.microsoft.com/en-us/azure/machine-learning/concept-responsible-ai) — Microsoft.
 - [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/) — the LLM-specific list, not the web one.
 - [Model Cards](https://modelcards.withgoogle.com/) — best practices for model documentation and reporting.
 
