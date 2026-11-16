@@ -1,13 +1,12 @@
 # Next phases plan
 
-The open work list after the 2026-11-16 review: what to fix now, what could be better, and what
-phase 2 and phase 3 would add. [ENHANCEMENT-PLAN.md](ENHANCEMENT-PLAN.md) is the record of what
-was already done; [ROADMAP.md](../ROADMAP.md) is the direction. This file is the queue between
-them.
+The work list after the 2026-11-16 review. The "fix now" and "can be better" items are finished
+and recorded here with what was done. Phase 2 and phase 3 are the open plan.
+[ENHANCEMENT-PLAN.md](ENHANCEMENT-PLAN.md) is the record of earlier work and
+[ROADMAP.md](../ROADMAP.md) is the direction.
 
-**Status values.** `Done` — changed in the tree and checked. `Needs maintainer` — a GitHub
-setting or a public action that only the repository owner should take. `Open` — not started.
-`Declined` — looked at and deliberately not done, with the reason.
+**Status values.** `Done` — changed and checked. `Open` — not started. `Declined` — looked at
+and deliberately not done, with the reason.
 
 **Scope of the review.** Repository structure, the root documents, CI, Dependabot, the
 Dockerfiles, and the GitHub settings. The Terraform modules and the architecture chapters were
@@ -17,23 +16,30 @@ not read line by line, so nothing here is a finding about the infrastructure cod
 
 | ID | Item | Status |
 | --- | --- | --- |
-| F1 | Protect `main` | Needs maintainer |
+| F1 | Protect `main` | Done |
 | F2 | Dependabot coverage gaps | Done |
 | F3 | Published image runs as root, with no SBOM or provenance | Done |
 | F4 | `uv.lock` is an empty stub | Done |
 | F5 | ROADMAP says 5 decision records, there are 4 | Done |
 | F6 | `REPOSITORY-DISCREPANCIES.md` reads as current but is stale | Done |
-| F7 | No GitHub Release and no changelog | Changelog done; release needs maintainer |
-| F8 | Discussions are advertised but disabled | Needs maintainer |
+| F7 | No GitHub Release and no changelog | Done |
+| F8 | Discussions are advertised but disabled | Done |
+| F9 | The `rag-langchain` image did not build | Done |
 
 ### F1 — Protect `main`
 
-The repository's thesis is that no change lands without an approval, and `main` accepts a
-direct push. In **Settings → Rules → Rulesets**, add a ruleset for the default branch that
-requires a pull request and requires the `checks` workflow's jobs to pass. Leave required
-approvals at zero while there is one maintainer — GitHub does not let an author approve their
-own pull request, so one required approval would block every merge.
-[`CODEOWNERS`](../.github/CODEOWNERS) is in place for the day a second reviewer exists.
+The repository's thesis is that no change lands without an approval, and `main` accepted a
+direct push. A ruleset named `protect-main` now requires a pull request, and blocks force
+pushes and deletion of the branch.
+
+Two things it deliberately does not require:
+
+- **An approving review.** GitHub does not let an author approve their own pull request, so one
+  required approval would block every merge while there is one maintainer.
+  [`CODEOWNERS`](../.github/CODEOWNERS) is in place for the day a second reviewer exists.
+- **Status checks.** `checks.yml` has path filters, and a required check that never starts
+  leaves a pull request waiting forever. A change that touches only `.github/dependabot.yml`
+  or `CODEOWNERS` matches no filter and would be unmergeable. Requiring checks safely needs one job that always runs; that is P2.9.
 
 ### F2 — Dependabot coverage gaps
 
@@ -47,7 +53,7 @@ own pull request, so one required approval would block every merge.
 **Declined: a Docker entry.** The base images are `python:3.x-slim` tags, which already float
 on patch releases, and the minor version each names is a documented floor. Dependabot would
 only propose minor bumps that have to be refused. Pinning images by digest is the real fix and
-is listed under phase 2.
+is P2.6.
 
 ### F3 — Published image
 
@@ -56,15 +62,9 @@ as uid 10001, and so do the `rag-langchain` and `starter-agent` example images.
 [`publish-image.yml`](../.github/workflows/publish-image.yml) attaches an SBOM and a build
 provenance attestation on push.
 
-**Not verified locally:** Docker was not running when this was changed, so none of the three
-images was built. The publish workflow's own smoke test builds the service image and calls
-`/healthz` before pushing, and will catch a break there; the two example images have no such
-check. Build them once before the next release:
-
-```bash
-docker build -t rag-langchain-check examples/rag-langchain
-docker build -t starter-agent-check examples/starter-agent
-```
+Checked on 2026-11-16 by building all five images in the tree. The service image answered
+`/healthz` as uid 10001; `starter-agent` ran as `nobody`; `rag-langchain` built its index and
+answered a query as uid 10001. `e2e-agent` and `edge-agent` were built and not changed.
 
 ### F4 — `uv.lock`
 
@@ -84,23 +84,20 @@ has, and the README no longer describes it as current.
 
 ### F7 — Release and changelog
 
-[`CHANGELOG.md`](../CHANGELOG.md) exists and covers `0.1.0` and the unreleased changes. The
-release itself is the maintainer's call, because pushing a `v*` tag publishes an image:
-
-```bash
-git tag v0.2.0 && git push origin v0.2.0
-gh release create v0.2.0 --title "v0.2.0" --notes-file CHANGELOG.md
-```
-
-Also create a Release for the existing `v0.1.0` tag, so the first version is not tag-only.
+[`CHANGELOG.md`](../CHANGELOG.md) covers `0.1.0` and `0.2.0`. `v0.2.0` is tagged from the
+merge of this change, which also publishes the image, and both tags have a GitHub Release.
 
 ### F8 — Discussions
 
-The README offers prompts for GitHub Discussions and the feature is off.
+Enabled. The README's discussion prompts now have somewhere to go.
 
-```bash
-gh repo edit --enable-discussions
-```
+### F9 — The `rag-langchain` image did not build
+
+Found while checking F3, and already broken on `main`. The Dockerfile used `python:3.11-slim`
+and a Dependabot bump had moved the `numpy` pin to a version that needs 3.12, so
+`pip install` failed. Nothing noticed, because `example-deps.yml` installs the pins on 3.12 and
+no job builds the image. The Dockerfile now uses 3.12. The class of failure is still open:
+see P2.7.
 
 ## Can be better
 
@@ -109,10 +106,10 @@ gh repo edit --enable-discussions
 | B1 | README length: move the CI section out | Done |
 | B2 | OWASP link pointed at the web Top Ten | Done |
 | B3 | No pull request template, CODEOWNERS, or root `CLAUDE.md` | Done |
-| B4 | Model defaults span generations | Open |
+| B4 | Model defaults span generations | Done — verified and kept |
 | B5 | GIF weight in git | Open — see P2.4 |
-| B6 | External links are never checked | Open |
-| B7 | Local branch clean-up | Needs maintainer |
+| B6 | External links are never checked | Done |
+| B7 | Local branch clean-up | Done |
 
 ### B1 — README length
 
@@ -121,30 +118,37 @@ checks that pointed at the README now point at `CI.md`.
 
 ### B4 — Model defaults
 
-AWS and GCP default to `claude-opus-5`. The Snowflake defaults name `claude-sonnet-4-5` and
-the Azure defaults name `gpt-4o`. Whether those two are still offered by Cortex and Azure
-OpenAI was **not checked** in this review. Action: confirm availability and retirement dates,
-then either bump the defaults or record in the tree's README why the older model is kept. The
-Azure choice is governed by
-[ADR 0002](DECISION-LOGS/0002-azure-openai-vs-claude.md), so a vendor change goes through a
-new record, not an edit.
+AWS and GCP default to `claude-opus-5`, Snowflake to `claude-sonnet-4-5`, Azure to `gpt-4o`
+version `2024-11-20`. Both older defaults were checked against the vendors' documentation on
+2026-11-16 and kept:
+
+- **Snowflake.** `claude-sonnet-4-5` is listed for `AI_COMPLETE` and has no deprecation
+  notice. Run `SHOW CORTEX BASE MODELS` in the target account before an apply, since the
+  catalog differs by region.
+- **Azure.** Microsoft's lifecycle page retires `gpt-4o` version `2024-11-20` on 2027-04-14
+  and names `gpt-5.1` as the replacement. It works today and has an end date, which makes it
+  P2.8 and not a change to make blind: the vendor choice is governed by
+  [ADR 0002](DECISION-LOGS/0002-azure-openai-vs-claude.md).
+
+The dates are recorded beside the allowlist in `tests/test_model_pins.py`, where the next
+person to change a pin will read them.
 
 ### B6 — External links
 
-`linkcheck.py` excludes external URLs on purpose, because a network check in a pull request
-fails for reasons unrelated to the change. A weekly scheduled job that only opens an issue
-keeps that property and still finds dead links. The wrong OWASP link (B2) sat in the README
-because nothing looks.
+[`external_links.py`](../.github/scripts/external_links.py) reports links that return 404 or
+410, or whose host does not resolve. `external-links.yml` runs it weekly and opens an issue;
+it never gates a pull request, which keeps the reason `linkcheck.py` excludes external URLs.
+Its first run found two dead links in the README, both now fixed.
 
 ### B7 — Local branches
 
-Twenty-one local branches are already merged into `main`. `git branch --merged main` lists
-them; delete what is no longer needed.
+Local branches already merged into `main` were deleted with `git branch -d`, which refuses
+anything unmerged. Remote branches were left alone.
 
 ## Phase 2 — make it adoptable
 
-The gap today is not correctness. The repository has no stars, no forks, no release and no
-homepage, and nothing shows any tree has ever been applied.
+The gap today is not correctness. The repository has no stars, no forks and no homepage, and
+nothing shows any tree has ever been applied.
 
 | ID | Item | Why |
 | --- | --- | --- |
@@ -152,9 +156,12 @@ homepage, and nothing shows any tree has ever been applied.
 | P2.2 | Remote state bootstrap | Every tree applies against a local, unbacked-up state file |
 | P2.3 | Azure execution-state recovery | Named in `HOW-TO-RECOVER.md` as having no recovery path |
 | P2.4 | GitHub Pages for the interactive diagrams | Removes GIF weight and fills the empty homepage |
-| P2.5 | Release `v0.2.0` | Follows F7 |
 | P2.6 | Pin container base images by digest | The fix F2 declined to fake |
-| P2.7 | Build the example images in CI | F3 could not be verified without it |
+| P2.7 | Build the example images in CI | F9 was invisible without it |
+| P2.8 | Move Azure off `gpt-4o` before 2027-04-14 | The model has a retirement date |
+| P2.9 | One always-run CI job, then require it on `main` | F1 could not require checks safely |
+
+P2.5 was the `v0.2.0` release and is done under F7.
 
 **P2.1 — One real apply.** ROADMAP declines `terraform plan` in CI because a check that needs a
 secret gets disabled when the secret expires. That objection does not hold for OIDC, which has
@@ -175,6 +182,17 @@ has point-in-time restore, or add a scheduled export, and update the runbook to 
 adds permanent history. Publish `docs/diagrams/*.html` with GitHub Pages, link each document to
 the live viewer, and keep at most the two README GIFs in the tree. Then set the repository
 homepage to the Pages URL.
+
+**P2.7 — Build the example images.** Add a matrix job to `example-deps.yml` that runs
+`docker build` on each example Dockerfile. It belongs in that workflow because it has the same
+trigger and the same cost profile. Update the job count in `CI.md` in the same change.
+
+**P2.8 — Azure model.** Before 2027-04-14, write the ADR that supersedes 0002's model choice,
+move the default to the replacement Microsoft names at that time, and check the handler's call
+shape against it — task 46 was a pin that the handler beside it could not call.
+
+**P2.9 — A required check.** Add one job with no path filter that waits for the others, or
+passes when they were skipped, and require only that job in the `protect-main` ruleset.
 
 ## Phase 3 — go deeper on the theme
 
@@ -211,9 +229,8 @@ teaching a property the existing four do not.
 
 ## Order
 
-1. F1, F8, and B7 — settings and clean-up, a few minutes.
-2. Build the two example images (F3), then tag and release (F7, P2.5).
-3. B4 — verify the model defaults.
-4. P2.4, because it also fixes discoverability.
-5. P2.2 and P2.3, then P2.1 as an ADR.
-6. Phase 3 in table order.
+1. P2.7 and P2.9 — small CI changes that close the two holes this round found.
+2. P2.4, because it also fixes discoverability.
+3. P2.2 and P2.3, then P2.1 as an ADR.
+4. P2.8, with a hard date of 2027-04-14.
+5. P2.6, then phase 3 in table order.

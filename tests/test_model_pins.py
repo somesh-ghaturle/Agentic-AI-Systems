@@ -52,8 +52,11 @@ ALLOWED = {
     "terraform-gcp": {"claude-opus-5"},
     # Cortex serves the models Snowflake chooses to offer. Behind the other Claude trees, and not
     # ours to bump: verify against Snowflake's current catalog before changing this.
+    # Checked 2026-11-16: still listed for AI_COMPLETE, with no deprecation notice.
     "terraform-snowflake": {"claude-sonnet-4-5"},
-    # Deliberate, per ADR 0002. Not drift.
+    # Deliberate, per ADR 0002. Not drift. Checked 2026-11-16: Microsoft's lifecycle page
+    # retires gpt-4o version 2024-11-20 on 2027-04-14 and names gpt-5.1 as the replacement,
+    # so this entry has a date on it. See docs/NEXT-PHASES-PLAN.md, P2.8.
     "terraform-azure": {"gpt-4o"},
     # A rego fixture asserting the Azure guardrail wiring, so it mirrors the Azure tree.
     "policies": {"gpt-4o"},
