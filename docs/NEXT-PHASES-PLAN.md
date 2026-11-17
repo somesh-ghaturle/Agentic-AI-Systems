@@ -149,13 +149,13 @@ anything unmerged. Remote branches were left alone.
 
 ## Phase 2 — make it adoptable
 
-Done on 2026-11-16, with one item that cannot be finished from inside the repository. The gap
+Done on 2026-11-16, except one item that is deferred because it needs a cloud account. The gap
 this phase was aimed at was not correctness: nothing showed a tree had ever been accepted by a
 cloud, state had nowhere safe to live, and the diagrams could only be seen as GIFs.
 
 | ID | Item | Status |
 | --- | --- | --- |
-| P2.1 | Evidence of one real apply | Workflow and ADR done; **the evidence itself needs a cloud account** |
+| P2.1 | Evidence of one real apply | **Deferred.** Workflow, environment and ADR are ready; running it needs a cloud account |
 | P2.2 | Remote state bootstrap | Done |
 | P2.3 | Azure execution-state recovery | Done |
 | P2.4 | GitHub Pages for the interactive diagrams | Done |
@@ -180,8 +180,17 @@ was narrowed: OIDC stores no secret, so the objection that a secret expires no l
 while the objection that a check must not depend on an account still does. The workflow is
 never a required check and never runs on a pull request. `apply` stays a human step.
 
-**Still open, and only the maintainer can close it.** The workflow is inert until an account
-exists for it:
+**Deferred on 2026-11-17, by the maintainer's choice not to open a cloud account for it.**
+Everything inside the repository is ready, so picking this up later is only the four steps
+below; nothing needs rebuilding. For whoever picks it up: a plan creates nothing, and an OIDC
+provider, an IAM role and the read-only calls a plan makes are not billed, so the expected cost
+is zero, but the account itself needs a payment method on file.
+
+While deferred, the repository makes no claim that any tree plans, and nothing else depends on
+this item. ADR 0005's reopen condition — a year with the account never configured — is the
+point at which to decide whether to keep `plan.yml` or remove it.
+
+The steps, when it is picked up:
 
 1. In a sandbox AWS account — one with nothing in it worth reading, since `ReadOnlyAccess`
    can read object contents — add GitHub as an OIDC identity provider.
@@ -375,6 +384,7 @@ teaching a property the existing four do not.
 
 ## Order
 
-1. P2.1's last step: configure the sandbox account and run the `plan` workflow once.
-2. Phase 3 in table order. P3.1 first, because it is the item that connects the examples to
-   the infrastructure.
+1. Phase 3 in table order. P3.1 first, because it is the item that connects the examples to
+   the infrastructure. P3.6 is small and can go alongside it.
+2. P2.1, deferred, whenever a sandbox cloud account is available. Nothing in phase 3 waits
+   on it.
