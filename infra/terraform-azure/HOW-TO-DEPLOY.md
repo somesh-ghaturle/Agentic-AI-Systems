@@ -28,22 +28,17 @@ A walkthrough from an empty Azure subscription to a working dev environment, the
 Local state has no lock. Two people applying at once corrupt each other's work, and nothing stops them. Set this up before a second person touches the environment, and before any prod apply.
 
 ```bash
-az group create --name agentic-tfstate-rg --location eastus
-
-az storage account create \
-  --name agentictfstatesa \
-  --resource-group agentic-tfstate-rg \
-  --location eastus \
-  --sku Standard_LRS \
-  --allow-shared-key-access false
-
-az storage container create \
-  --name tfstate \
-  --account-name agentictfstatesa \
-  --auth-mode login
+cd bootstrap
+terraform init
+terraform apply -var subscription_id=<SUBSCRIPTION_ID> -var storage_account_suffix=<3-8 chars>
+terraform output backend_block
 ```
 
-Then replace the `backend "local" {}` block in `envs/dev/main.tf` (and `envs/prod/main.tf`) with the commented-out `backend "azurerm"` block directly above it, filling in the names you just created.
+[`bootstrap/`](bootstrap/main.tf) is a root of its own, applied once per subscription. It creates a resource group, a storage account with blob versioning and soft delete on and shared keys off, the `tfstate` container, and a `Storage Blob Data Contributor` grant for whoever applied it. Every other principal that runs Terraform against these trees needs the same role.
+
+Then replace the `backend "local" {}` block in `envs/dev/main.tf` (and the other roots) with the block the bootstrap printed, replace `<env>`, and run `terraform init -migrate-state` there.
+
+The bootstrap's own state stays local — an account cannot hold the state that records its own creation — so keep that one file backed up.
 
 `use_azuread_auth = true` in that block is deliberate: it authenticates to the state container as you rather than with a storage account key, which is the same posture the rest of this stack takes.
 
@@ -142,7 +137,7 @@ rehearsal once the handlers land — it is not a throwaway. Do not treat it as d
 | `networking` | Resource Group, VNet, subnet | VPC |
 | `identity` | User-assigned managed identities | IAM roles |
 | `security` | Key Vault with RBAC authorization | KMS + IAM |
-| `state` | Storage Table (`executionstate`) | DynamoDB |
+| `state` | Cosmos DB for Table (`executionstate`) | DynamoDB |
 | `archive` | Blob container with lifecycle policy | S3 + lifecycle rules |
 | `knowledge` | Azure AI Search | OpenSearch Serverless |
 | `tools` | One Function App per tool, one Entra app registration each | Lambda per tool |

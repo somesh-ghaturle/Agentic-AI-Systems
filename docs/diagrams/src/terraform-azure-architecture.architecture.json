@@ -324,7 +324,7 @@
       "title": "Orchestration",
       "items": [
         "A Logic App runs retrieve, then reason, then the gate",
-        "Execution state is kept in a Storage Table"
+        "Execution state is kept in a Cosmos table"
       ]
     },
     {

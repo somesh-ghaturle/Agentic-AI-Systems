@@ -51,19 +51,24 @@ consumer.
 
 ## 1 · Remote state
 
-Uncomment the backend block in the env root and fill it in before the first apply. GCS
-backends lock by default — there is no separate lock table to forget.
+Local state for shared infrastructure means two people applying at once corrupt each other's
+work, and the corruption is only visible later. Create the state bucket first:
 
-```hcl
-backend "gcs" {
-  bucket = "<your-tf-state-bucket>"
-  prefix = "agentic/dev"
-}
+```bash
+cd bootstrap
+terraform init
+terraform apply -var project_id=<PROJECT_ID>
+terraform output backend_block
 ```
 
-Create the bucket out of band, with versioning on. Local state for shared infrastructure
-means two people applying at once corrupt each other's work, and the corruption is only
-visible later.
+[`bootstrap/`](bootstrap/main.tf) is a root of its own, applied once per project. It creates
+one bucket: versioned, uniform bucket-level access, public access prevented. Paste the block
+it prints over the commented `backend "gcs"` block in the env root, replace `<env>`, and run
+`terraform init -migrate-state` there. GCS backends lock by default — there is no separate
+lock table to forget.
+
+The bootstrap's own state stays local — a bucket cannot hold the state that records its own
+creation — so keep that one file backed up.
 
 ---
 

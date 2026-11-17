@@ -62,6 +62,7 @@ Agentic-AI-Systems/
 │   │   ├── HOW-TO-DEPLOY.md      ordered deploy steps and prerequisites
 │   │   ├── modules/              approval, orchestration, tools, state, knowledge…
 │   │   ├── envs/                 one root per environment
+│   │   ├── bootstrap/            creates the remote-state bucket; applied once, first
 │   │   ├── src/                  handler source + build.sh (run before plan)
 │   │   └── tests/                write-boundary tests, stdlib unittest
 │   └── terraform-hybrid/         4 modules · envs/dev · cross-cloud POC, opt-in, disabled by default
@@ -124,12 +125,15 @@ Agentic-AI-Systems/
     ├── workflows/docs-preview.yml   static HTML preview of Markdown changes in pull requests
     ├── workflows/publish-image.yml  builds, smoke-tests and pushes the trace-eval-service image to GHCR
     ├── workflows/external-links.yml weekly report of dead external links, as an issue; never a gate
+    ├── workflows/gate.yml           the one check main requires: waits for all the others
+    ├── workflows/pages.yml          publishes the interactive diagrams to GitHub Pages
+    ├── workflows/plan.yml           hand-run terraform plan through OIDC; never a check (ADR 0005)
     ├── scripts/                     stdlib-only CI guards: links, doc counts, provider pins,
     │                                mermaid, chapter pairing, example deps, cost estimate
     └── dependabot.yml               monthly pip, actions, and provider updates
 ```
 
-The per-tree files are shown once under `terraform-gcp/` but exist in all four, except `src/` — the Snowflake tree has none, because its handler logic is SQL. AWS has no `model-integration` module either: its Bedrock guardrail lives in `modules/security`, because a guardrail is a security control on AWS and a separate service on the other three.
+The per-tree files are shown once under `terraform-gcp/` but exist in all four, except `src/` and `bootstrap/` — the Snowflake tree has neither, because its handler logic is SQL and its Terraform state lives in the cloud that hosts the account. AWS has no `model-integration` module either: its Bedrock guardrail lives in `modules/security`, because a guardrail is a security control on AWS and a separate service on the other three.
 
 ## Community and discussion prompts
 
@@ -146,6 +150,8 @@ The per-tree files are shown once under `terraform-gcp/` but exist in all four, 
 The runtime shape every tree and every boundary example implements. Reads run on the spot. Writes leave the agent as a proposal, and only the approval executor can turn an approved proposal into a call.
 
 ![Reads run on the spot; writes wait for a human](docs/diagrams/gif/readme-system-architecture.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/readme-system-architecture.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
@@ -173,6 +179,8 @@ The identity platform enforces the split between the two halves, not the prompt.
 How the folders of this repository relate to each other:
 
 ![How the repository fits together](docs/diagrams/gif/readme-repository-map.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/readme-repository-map.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
@@ -216,7 +224,7 @@ flowchart TB
 
 </details>
 
-Every arrow from `.github/` is a check that runs on pull requests without cloud credentials. Per-cloud diagrams live in each tree's `ARCHITECTURE.md`, and the interactive versions in [docs/diagrams/](docs/diagrams/).
+Every arrow from `.github/` is a check that runs on pull requests without cloud credentials. Per-cloud diagrams live in each tree's `ARCHITECTURE.md`. The interactive viewers are published at [somesh-ghaturle.github.io/Agentic-AI-Systems](https://somesh-ghaturle.github.io/Agentic-AI-Systems/), and their sources are in [docs/diagrams/](docs/diagrams/).
 
 ### Architecture reference
 
@@ -232,7 +240,7 @@ is an opt-in topology POC and is disabled by default.
 | Tree | Orchestrator | Tools | State / approvals | Knowledge |
 | --- | --- | --- | --- | --- |
 | [terraform-aws/](infra/terraform-aws/) | Step Functions | Lambda | DynamoDB | OpenSearch Serverless |
-| [terraform-azure/](infra/terraform-azure/) | Logic Apps | Functions | Storage Tables / Cosmos DB | AI Search |
+| [terraform-azure/](infra/terraform-azure/) | Logic Apps | Functions | Cosmos DB (table / container) | AI Search |
 | [terraform-gcp/](infra/terraform-gcp/) | Cloud Workflows | Cloud Functions gen2 | Firestore | Vertex AI Vector Search |
 | [terraform-snowflake/](infra/terraform-snowflake/) | Tasks — *scheduler, not workflow engine* | Stored procedures | Hybrid tables | Cortex Search |
 | [terraform-hybrid/](infra/terraform-hybrid/) | AWS Step Functions | GCP Cloud Functions | Azure Cosmos DB | GCP Vertex AI |
@@ -322,7 +330,7 @@ Retrofitting these patterns into an agent that already works, in the order that 
 
 The adversary's view of the write boundary — what a compromised orchestrator reaches, what a prompt-injected model reaches, what a leaked approval claim buys, and which of the four trees survives each: [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md). It is explicit about what is *not* defended, which is the more useful half — and the row where the trees genuinely differ is a later broad grant, which GCP's deny policy survives, AWS and Azure do not, and Snowflake loses transitively.
 
-What to actually run when Terraform's own state is locked or gone, an execution-state row is corrupted, or an approval claim is stuck: [docs/HOW-TO-RECOVER.md](docs/HOW-TO-RECOVER.md). All four trees apply against a local, unbacked-up state file today, and Azure's execution-state table turns out to have no recovery path configured at all — the soft-delete setting on that storage account protects blobs, not the Table Storage resource state actually lives in.
+What to actually run when Terraform's own state is locked or gone, an execution-state row is corrupted, or an approval claim is stuck: [docs/HOW-TO-RECOVER.md](docs/HOW-TO-RECOVER.md). Every tree applies against a local state file until its backend is switched, and each cloud tree has a `bootstrap/` root that creates the versioned bucket to switch to. Azure's execution-state table used to have no recovery path at all — soft delete on its storage account protected blobs, not the Table Storage resource the state lived in — which is why it is now a Cosmos table with continuous backup in prod.
 
 Documents to fill in per system, and one to reach for when it breaks:
 

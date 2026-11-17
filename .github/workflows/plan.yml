@@ -1,0 +1,127 @@
+name: plan
+
+# `terraform plan` on one environment root against a real account. Run by hand, never on a
+# pull request, and never a required check.
+#
+# checks.yml proves the trees are internally consistent without a credential. It cannot prove
+# a cloud provider accepts them: `validate` does not call an API, so a name that is too long,
+# an argument the service rejects, or a data source that resolves to nothing all pass it.
+# This workflow is the smallest thing that closes that gap. ADR 0005 records why it exists
+# when ROADMAP.md used to say there would be no plan in CI.
+#
+# What keeps the no-secrets property:
+#
+#   * No stored credential. The job presents a GitHub OIDC token and the cloud exchanges it
+#     for short-lived credentials, so there is nothing to rotate and nothing to expire.
+#   * Not configured by default. Until the repository variables below are set, the job says
+#     what is missing and stops. A fork has no access to any account.
+#   * Read-only. The role this assumes should carry a read-only policy; `plan` needs nothing
+#     more, and with a read-only role an `apply` could not succeed even if someone added one.
+#
+# `apply` stays a human step, in a terminal. This file must never grow one.
+#
+# Setup, once, in the sandbox account:
+#
+#   1. Add GitHub as an OIDC identity provider (token.actions.githubusercontent.com).
+#   2. Create a role with the AWS-managed ReadOnlyAccess policy, whose trust policy allows
+#      only `repo:<owner>/<repo>:environment:plan`.
+#   3. In the repository: create an environment named `plan`, and set the variables
+#      AWS_PLAN_ROLE_ARN and AWS_PLAN_REGION.
+
+on:
+  workflow_dispatch:
+    inputs:
+      root:
+        description: Environment root to plan
+        type: choice
+        default: infra/terraform-aws/envs/dev
+        options:
+          - infra/terraform-aws/envs/dev
+          - infra/terraform-aws/envs/staging
+          - infra/terraform-aws/envs/prod
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    # The trust policy names this environment, so a workflow elsewhere in the repository
+    # cannot assume the role by copying these steps.
+    environment: plan
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ROOT: ${{ inputs.root }}
+    steps:
+      - name: Stop if the account is not configured
+        env:
+          ROLE: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          REGION: ${{ vars.AWS_PLAN_REGION }}
+        run: |
+          if [ -z "$ROLE" ] || [ -z "$REGION" ]; then
+            echo "::error::Set the repository variables AWS_PLAN_ROLE_ARN and AWS_PLAN_REGION. See the header of plan.yml."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Pinned by commit SHA, like the other third-party actions in this repository.
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          # Keep in step with the pin in checks.yml.
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_PLAN_REGION }}
+
+      # The package paths are hashed at plan time, so the zips have to exist first.
+      - name: Build the handler packages
+        run: infra/terraform-aws/src/build.sh
+
+      # The example values are the configuration the deploy guide tells a reader to copy,
+      # so planning against them plans what people actually apply.
+      - name: Use the example variables
+        run: cp "$ROOT/terraform.tfvars.example" "$ROOT/terraform.tfvars"
+
+      # Local, empty state on purpose: this is a plan of the whole environment from nothing,
+      # which is the question being asked. It touches no real state file.
+      - name: init
+        run: terraform -chdir="$ROOT" init -input=false -no-color
+
+      # `shell: bash` turns on pipefail, so a failed plan fails the step and not just tee.
+      - name: plan
+        shell: bash
+        env:
+          REGION: ${{ vars.AWS_PLAN_REGION }}
+        run: |
+          terraform -chdir="$ROOT" plan -input=false -lock=false -no-color \
+            -var "region=$REGION" | tee plan.txt
+
+      - name: Record what was planned
+        if: always()
+        run: |
+          {
+            echo "### terraform plan — $ROOT"
+            echo
+            echo '```'
+            tail -n 5 plan.txt 2>/dev/null || echo "no plan output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: plan-output
+          path: plan.txt
+          if-no-files-found: ignore
+          retention-days: 30

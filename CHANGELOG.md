@@ -5,6 +5,35 @@ example. The detailed record of why each change was made is
 [docs/ENHANCEMENT-PLAN.md](docs/ENHANCEMENT-PLAN.md) and
 [docs/NEXT-PHASES-PLAN.md](docs/NEXT-PHASES-PLAN.md); this file is the short version.
 
+## Unreleased
+
+Phase 2 of [docs/NEXT-PHASES-PLAN.md](docs/NEXT-PHASES-PLAN.md). Nothing here was planned or
+applied against a real cloud account; it passes the same static checks as the rest of the trees.
+
+### Changed — read before re-copying the Azure tree
+
+- **Azure execution state is a Cosmos DB for Table account, not a Storage Table.** The old
+  table had no recovery path; the new one has continuous backup in prod. Applying this over an
+  existing environment replaces the table. The tool variable `STATE_STORAGE_ACCOUNT` is now
+  `STATE_TABLE_ENDPOINT`.
+- **The Azure default model is `gpt-5.1` `2025-11-13`**, up from `gpt-4o` `2024-11-20`, which
+  Microsoft retires on 2027-04-14. See the amendment to ADR 0002.
+- The Azure `terraform.tfvars.example` files no longer set `MODEL_DEPLOYMENT` on the `reason`
+  tool. That value overrode the deployment name the root wires and pointed at a deployment
+  that does not exist.
+- The AWS backend sketches use `use_lockfile` where they used `dynamodb_table`.
+- Every Dockerfile pins its base image by digest.
+
+### Added
+
+- `bootstrap/` roots for AWS, Azure and GCP that create the remote-state bucket and print the
+  backend block for it.
+- GitHub Pages site for the interactive diagrams, and a link to the live viewer under every
+  embedded GIF.
+- `gate.yml`, the one check `main` requires; a CI job that builds every image; and `plan.yml`,
+  a hand-run `terraform plan` through OIDC that is never a check
+  ([ADR 0005](docs/DECISION-LOGS/0005-opt-in-plan-with-oidc.md)).
+
 ## 0.2.0 — 2026-11-16
 
 ### Fixed

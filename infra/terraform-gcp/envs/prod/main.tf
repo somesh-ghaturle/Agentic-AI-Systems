@@ -55,7 +55,7 @@ terraform {
   # infrastructure means two people applying at once corrupt each other's work.
   #
   # backend "gcs" {
-  #   bucket = "<your-tf-state-bucket>"
+  #   bucket = "<state_bucket output of ../../bootstrap>"
   #   prefix = "agentic/prod"
   # }
 }

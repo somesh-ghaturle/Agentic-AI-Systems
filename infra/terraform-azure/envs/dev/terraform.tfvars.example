@@ -4,12 +4,9 @@
 # Before this plans: the handler packages must exist
 #
 # Every package_path below is checked with fileexists() at plan time, because the zip is
-# read to compute its deployment hash. There is no Azure handler source tree in this repo
-# yet — infra/terraform-aws/src holds the AWS handlers, and they are written against
-# boto3, DynamoDB, and Step Functions task tokens. They will not run on Functions
-# unmodified. See ARCHITECTURE.md section "Remaining work".
-#
-# Until that source exists, this environment validates but does not plan.
+# read to compute its deployment hash. Build them first: `../../src/build.sh` writes one
+# zip per handler into ../../build/. Without them this environment validates but does
+# not plan.
 # ---------------------------------------------------------------------------
 
 project         = "acme-agent"
@@ -48,9 +45,11 @@ tools = {
     access       = "read"
     package_path = "../../build/reason.zip"
 
-    environment = {
-      MODEL_DEPLOYMENT = "gpt-4o"
-    }
+    # MODEL_DEPLOYMENT is deliberately not set here. The root passes the deployment name
+    # to every tool from modules/model-integration, and a value here would override it:
+    # this file used to name a model, the deployment is called something else, and a
+    # handler calling a deployment that does not exist gets a 404.
+    environment = {}
   }
 
   # A write tool: moves money, so it is irreversible and customer-visible. Gated.

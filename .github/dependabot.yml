@@ -124,7 +124,7 @@ updates:
   #
   # No version numbers are named here on purpose. The previous version of this comment listed
   # every constraint, and the first Dependabot merge made it wrong. The constraints live in
-  # the .tf files, the resolved versions live in the 14 committed `.terraform.lock.hcl`
+  # the .tf files, the resolved versions live in the 17 committed `.terraform.lock.hcl`
   # files, and `.github/scripts/tfconstraints.py` is what enforces the rule about them.
   #
   # Note that Dependabot writes `~> 6.58`, not `~> 6.0` — it floors at the current *minor*,
@@ -152,6 +152,10 @@ updates:
       - /infra/terraform-snowflake/modules/*
       - /infra/terraform-hybrid/envs/*
       - /infra/terraform-hybrid/modules/*
+      # The remote-state bootstraps: one root per cloud, outside envs/ and modules/.
+      - /infra/terraform-aws/bootstrap
+      - /infra/terraform-azure/bootstrap
+      - /infra/terraform-gcp/bootstrap
     schedule:
       interval: monthly
     open-pull-requests-limit: 3
@@ -171,8 +175,6 @@ updates:
   # The two package.json files in the tree: the hermes-dashboard frontend (React, Vite) and
   # the diagram renderer (puppeteer). Both commit a lock file and neither was watched, so a
   # vulnerable transitive dependency in either would have stayed until someone read the lock.
-  # No Dockerfile entry on purpose: the base images are `python:3.x-slim` tags, which already
-  # float on patch releases, and the minor version each one names is a documented floor.
   - package-ecosystem: npm
     directories:
       - /examples/hermes-dashboard/frontend
@@ -182,6 +184,41 @@ updates:
     open-pull-requests-limit: 3
     groups:
       npm-dependencies:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies
+
+  # ---------------------------------------------------------------------------
+  # Container base images
+  # ---------------------------------------------------------------------------
+  #
+  # Every Dockerfile pins its base image by digest, so the image that built yesterday is the
+  # image that builds today. The cost is the same as every other pin here: a digest does not
+  # pick up a patched base on its own. This entry is what moves it.
+  #
+  # Minor and major bumps are ignored. The Python minor each image names is a documented floor
+  # (e2e-agent's 3.11 is in QUICKSTART.md), and raising one is a decision about the example,
+  # not a dependency update. What remains is the digest behind the same tag.
+  - package-ecosystem: docker
+    directories:
+      - /examples/e2e-agent
+      - /examples/edge-agent
+      - /examples/rag-langchain
+      - /examples/starter-agent
+      - /services/trace-eval-service
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: python
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+    groups:
+      base-images:
         patterns:
           - "*"
     commit-message:

@@ -26,11 +26,16 @@ on:
     paths:
       - "examples/**"
       - "tests/**"
+      # For the image job below: the service's Dockerfile and the package it copies in.
+      - "services/**"
+      - "trace_eval_service/**"
       - ".github/workflows/example-deps.yml"
   pull_request:
     paths:
       - "examples/**"
       - "tests/**"
+      - "services/**"
+      - "trace_eval_service/**"
       - ".github/workflows/example-deps.yml"
 
 permissions:
@@ -152,3 +157,48 @@ jobs:
       - name: graph-agent — timing guard
         if: matrix.example == 'graph-agent'
         run: python3 -m unittest tests.performance.test_performance -v
+
+  # Builds every Dockerfile in the tree. The job above installs each example's pins on this
+  # workflow's Python; nothing built the images, which install the same pins on the Python
+  # the Dockerfile names. Those two drifted: rag-langchain's base image was 3.11 while its
+  # pinned numpy needed 3.12, the import leg stayed green on 3.12, and the image had stopped
+  # building without anything saying so.
+  #
+  # In this workflow rather than checks.yml for the reason at the top of the file: it has the
+  # same trigger and the same cost profile as the installs above.
+  images:
+    name: image ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: e2e-agent
+            context: examples/e2e-agent
+            dockerfile: examples/e2e-agent/Dockerfile
+          - image: edge-agent
+            context: examples/edge-agent
+            dockerfile: examples/edge-agent/Dockerfile
+          - image: rag-langchain
+            context: examples/rag-langchain
+            dockerfile: examples/rag-langchain/Dockerfile
+          - image: starter-agent
+            context: examples/starter-agent
+            dockerfile: examples/starter-agent/Dockerfile
+          # Built from the repository root, as publish-image.yml and its compose file do.
+          - image: trace-eval-service
+            context: .
+            dockerfile: services/trace-eval-service/Dockerfile
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build
+        run: docker build -t "check-${{ matrix.image }}" -f "${{ matrix.dockerfile }}" "${{ matrix.context }}"
+
+      # Every image here is meant to drop root. A Dockerfile edit that loses the USER line
+      # still builds, so the build alone would not notice.
+      - name: Assert it does not run as root
+        run: |
+          uid=$(docker run --rm --entrypoint id "check-${{ matrix.image }}" -u)
+          echo "runs as uid $uid"
+          test "$uid" != "0"

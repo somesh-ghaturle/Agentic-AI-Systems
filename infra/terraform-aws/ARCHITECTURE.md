@@ -17,6 +17,8 @@ walked without a human, and the boundary is drawn by IAM rather than by conventi
 
 ![AWS — the write path has no direct route](../../docs/diagrams/gif/terraform-aws-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/terraform-aws-architecture.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -87,6 +89,8 @@ one requires both sides to agree, and neither side names the other's tools.
 
 ![AWS — why the boundary holds: two independent locks](../../docs/diagrams/gif/aws-two-locks.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/aws-two-locks.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -132,6 +136,8 @@ the one that turns a confused agent into lateral movement.
 The state machine as actually defined in `envs/*/state-machine.json.tftpl`.
 
 ![AWS — request lifecycle](../../docs/diagrams/gif/aws-request-lifecycle.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/aws-request-lifecycle.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
@@ -194,6 +200,8 @@ not polling, not sleeping — and resumes only when someone resolves the token.
 
 ![AWS — the approval round trip](../../docs/diagrams/gif/aws-approval-roundtrip.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/aws-approval-roundtrip.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -254,6 +262,8 @@ and is invisible to every alarm.
 
 ![AWS — observability](../../docs/diagrams/gif/aws-observability.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/aws-observability.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -298,6 +308,8 @@ step multiply-counts spend.
 ## 6 · What Terraform builds
 
 ![AWS — what Terraform builds](../../docs/diagrams/gif/aws-terraform-builds.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/aws-terraform-builds.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

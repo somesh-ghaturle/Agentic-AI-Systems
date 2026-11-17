@@ -21,6 +21,8 @@ reaching a capable agent**, where "capable" means it can execute, write, or tran
 
 ![Untrusted text reaches the context, and capability turns it into impact](../diagrams/gif/agent-security-threat-model.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/agent-security-threat-model.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

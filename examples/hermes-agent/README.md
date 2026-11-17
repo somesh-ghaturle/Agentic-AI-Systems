@@ -22,6 +22,8 @@ python3 examples/hermes-agent/agent.py --approve "restart the billing service"
 
 ![Hermes — the read/write split, in one process](../../docs/diagrams/gif/hermes-shape.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/hermes-shape.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

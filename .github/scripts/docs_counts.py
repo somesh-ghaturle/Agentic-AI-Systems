@@ -19,8 +19,9 @@ tables. A claim whose regex stops matching is a failure, not a skip: rewording t
 exactly when the number needs looking at again.
 
 Three different numbers describe the Terraform trees on purpose, and conflating them is the
-mistake this guards. `validate` skips the hybrid POC (13 roots); tflint walks every module and
-root including it (44 and 14); the write-boundary suites cover the four non-hybrid trees.
+mistake this guards. `validate` skips the hybrid POC and adds the three remote-state bootstraps
+(13 environment roots, 16 in the matrix); tflint walks every module and root including the
+hybrid (45 and 14); the write-boundary suites cover the four non-hybrid trees.
 
 Test counts are read by loading the suite, not by running it or grepping for `def test_`.
 Loading imports every test module, and each one is written to import cleanly without its optional
@@ -175,8 +176,8 @@ CLAIMS = [
     ("ROADMAP.md", "tf_trees", r"\| Terraform trees \| (\d+) —", "terraform trees"),
     # Said 5 while the directory held 4: the index README had been counted as a record.
     ("ROADMAP.md", "adrs", r"\| Decision logs \| (\d+) ADRs", "decision records"),
-    ("docs/CI.md","validate_roots", r"`terraform validate` on each of the (\S+) environment roots",
-     "environment roots in the validate matrix"),
+    ("docs/CI.md","validate_roots", r"`terraform validate` on each of the (\S+) roots",
+     "roots in the validate matrix"),
     ("docs/CI.md","tf_modules", r"`tflint` over all (\S+) modules", "terraform modules"),
     ("docs/CI.md","tf_env_roots", r"`tflint` over all \S+ modules and (\S+) roots",
      "env roots tflint walks"),

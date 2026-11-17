@@ -18,7 +18,7 @@ existed would trade that away for an answer this test does not need. The cost is
 below goes stale on its own schedule. That is the honest shape of the problem rather than a
 solution to it: the list is a record of a human decision, and it expires the way decisions do.
 
-The four trees do not agree, and are not supposed to. Azure runs `gpt-4o` on purpose — see
+The four trees do not agree, and are not supposed to. Azure runs an OpenAI model on purpose — see
 DECISION-LOGS/0002-azure-openai-vs-claude.md, which chose Azure OpenAI for its attachable content
 filter and named the condition under which that should be revisited. Snowflake runs whatever
 `SNOWFLAKE.CORTEX.COMPLETE` offers, on Snowflake's schedule, not ours. Divergence is a finding
@@ -54,12 +54,12 @@ ALLOWED = {
     # ours to bump: verify against Snowflake's current catalog before changing this.
     # Checked 2026-11-16: still listed for AI_COMPLETE, with no deprecation notice.
     "terraform-snowflake": {"claude-sonnet-4-5"},
-    # Deliberate, per ADR 0002. Not drift. Checked 2026-11-16: Microsoft's lifecycle page
-    # retires gpt-4o version 2024-11-20 on 2027-04-14 and names gpt-5.1 as the replacement,
-    # so this entry has a date on it. See docs/NEXT-PHASES-PLAN.md, P2.8.
-    "terraform-azure": {"gpt-4o"},
+    # Azure OpenAI, deliberately, per ADR 0002. Not drift. Moved from gpt-4o on 2026-11-16:
+    # Microsoft's lifecycle page retires gpt-4o version 2024-11-20 on 2027-04-14 and names
+    # gpt-5.1 as the replacement. The vendor decision in the ADR is unchanged.
+    "terraform-azure": {"gpt-5.1"},
     # A rego fixture asserting the Azure guardrail wiring, so it mirrors the Azure tree.
-    "policies": {"gpt-4o"},
+    "policies": {"gpt-5.1"},
     # No model pin of its own; it composes the trees above.
     "terraform-hybrid": set(),
 }

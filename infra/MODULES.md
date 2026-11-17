@@ -87,7 +87,7 @@ All modules are in `infra/terraform-azure/modules/`.
 | **observability** | Monitor and alerts for Azure resources. | - | `azurerm_log_analytics_workspace`, `azurerm_monitor_metric_alert`, `azurerm_monitor_scheduled_query_rules_alert_v2` | **Stable** | Monitors Function Apps, Cosmos DB |
 | **orchestration** | Logic Apps workflows that coordinate the agent. | approval, tools, state | `azurerm_logic_app_workflow`, `azurerm_logic_app_trigger_http_request` | **Stable** | Uses managed identity |
 | **security** | Security controls and access policies. | - | `azurerm_role_definition`, `azurerm_role_assignment` | **Stable** | RBAC for the deployment |
-| **state** | Storage Table for execution state. | - | `azurerm_storage_account`, `azurerm_storage_table` | **Stable** | Uses Table Storage for session state |
+| **state** | Cosmos DB for Table account for execution state. | - | `azurerm_cosmosdb_account`, `azurerm_cosmosdb_table` | **Stable** | Continuous backup in prod; Table Storage has no point-in-time restore |
 | **tools** | Linux Function Apps for all read and write actions. | state, security, identity | `azurerm_linux_function_app`, `azurerm_service_plan` | **Stable** | Write functions have `app_role_assignment_required = true` |
 
 ### Azure-Specific Notes
@@ -143,11 +143,11 @@ Choosing between the three is a decision this table does not make; see
 |---------|-----|-------|-----|
 | **Write boundary** | Two allow-shaped locks — identity policy **and** Lambda resource policy | One load-bearing lock (`app_role_assignment_required`) plus two mitigations | One allow **and** one deny — the only tree a later broad grant cannot reopen |
 | **Model Provider** | Bedrock (Claude) | Azure OpenAI | Vertex AI (Claude) |
-| **State Storage** | DynamoDB | Cosmos DB + Storage Tables | Firestore |
+| **State Storage** | DynamoDB | Cosmos DB (a table for runs, a container for approvals) | Firestore |
 | **Orchestrator** | Step Functions | Logic Apps | Cloud Workflows |
 | **Tools Runtime** | Lambda | Functions | Cloud Functions gen2 |
 | **Knowledge/RAG** | OpenSearch Serverless | AI Search | Vertex AI Vector Search |
-| **Audit Storage** | S3 | Storage Tables | Cloud Storage |
+| **Audit Storage** | S3 | Blob Storage | Cloud Storage |
 | **Identity Model** | Per-module IAM roles | Centralized identities | Centralized service accounts |
 | **Security Controls** | IAM + Lambda policies + Guardrails | RBAC + Entra alerts | IAM Deny policies |
 
@@ -242,6 +242,8 @@ and GCP, and the environment keeps all resources disabled unless explicitly enab
 ## Dependency Graph
 
 ![Cross-cloud module dependency graph](../docs/diagrams/gif/modules-dependency-graph.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/modules-dependency-graph.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

@@ -28,6 +28,8 @@ tools, and retrieves the context.
 
 ![Single-agent system — one loop, no delegation](../diagrams/gif/single-agent-system.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/single-agent-system.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -68,6 +70,8 @@ Work decomposed across specialized agents — Planner, Retriever, Coder, Reviewe
 coordinating toward a shared goal.
 
 ![Multi-agent system — specialised roles around shared state](../diagrams/gif/multi-agent-system.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/multi-agent-system.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

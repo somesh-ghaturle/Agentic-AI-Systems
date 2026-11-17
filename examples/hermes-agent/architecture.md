@@ -5,6 +5,8 @@ reasoning; this page is the diagram and just enough text to read it.
 
 ![Hermes — the write boundary](../../docs/diagrams/gif/hermes-agent-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/hermes-agent-architecture.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

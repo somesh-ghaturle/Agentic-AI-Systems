@@ -50,11 +50,11 @@ terraform {
   # not viable in prod.
   #
   # backend "s3" {
-  #   bucket         = "<your-tf-state-bucket>"
-  #   key            = "agentic/staging/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   dynamodb_table = "<your-tf-lock-table>"
-  #   encrypt        = true
+  #   bucket       = "<state_bucket output of ../../bootstrap>"
+  #   key          = "agentic/staging/terraform.tfstate"
+  #   region       = "us-east-1"
+  #   use_lockfile = true
+  #   encrypt      = true
   # }
 }
 

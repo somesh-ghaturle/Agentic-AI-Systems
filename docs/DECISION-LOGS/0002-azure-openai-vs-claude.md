@@ -1,6 +1,6 @@
 # ADR 0002 — Azure calls Azure OpenAI while the other two trees call Claude
 
-**Status: Accepted** · Decided 2026-08-07 · Confirmed 2026-08-14 · Reopen condition tested 2026-09-03, not met · Scope: `infra/terraform-azure/`
+**Status: Accepted** · Decided 2026-08-07 · Confirmed 2026-08-14 · Reopen condition tested 2026-09-03, not met · Amended 2026-11-16 (default model) · Scope: `infra/terraform-azure/`
 
 ## Context
 
@@ -13,8 +13,9 @@ current-generation identifier. The decision below is unaffected — it turns on 
 not on which Claude the other two trees call.)
 
 Azure could serve Claude too, through the Azure AI model catalog. It does not. It provisions
-Azure OpenAI and deploys `gpt-4o` by default. That is the single largest cross-tree divergence
-in the repository, and it is deliberate.
+Azure OpenAI and deploys an OpenAI model by default — `gpt-4o` when this was written, `gpt-5.1`
+since 2026-11-16 (see the amendment at the end). That is the single largest cross-tree
+divergence in the repository, and it is deliberate.
 
 The reason is the guardrail. Each tree needs one content filter that Terraform owns end to end,
 because a control that has to be clicked into place after apply is a control that is missing
@@ -113,3 +114,33 @@ So the guardrail argument holds unchanged, and the trade is still worth making. 
 matters more than it might look: an untested reopen condition and a tested one that failed look
 identical from outside, and only one of them is evidence. Re-test when #31140 closes — that
 issue closing is the single signal that makes this worth revisiting, and nothing before it is.
+
+### Amended 2026-11-16 — the default model moved, the decision did not
+
+The default deployment moved from `gpt-4o` version `2024-11-20` to `gpt-5.1` version
+`2025-11-13`. Microsoft's model lifecycle page retires the former on 2027-04-14 and names the
+latter as its replacement, and a reference tree whose default stops deploying on a known date is
+a tree that is quietly wrong from that date.
+
+This is inside the decision above, not a change to it: the vendor is still Azure OpenAI, the
+deployment is still an `azurerm_cognitive_deployment`, and `rai_policy_name` still binds the
+filter to it.
+
+What was checked, against Microsoft's documentation and not against a live deployment:
+
+- `gpt-5.1` supports Chat Completions, structured outputs, and system messages, which are the
+  three things [`reason/handler.py`](../../infra/terraform-azure/src/reason/handler.py) uses.
+- The gpt-5 family rejects `max_tokens` and the sampling parameters. The handler already sends
+  `max_completion_tokens` and none of the others, so its call shape did not change.
+- `gpt-5.1` `2025-11-13` is offered on the regional `Standard` SKU, the module's default, in
+  `eastus`, the example region. It is not offered there in every region; `brazilsouth` and
+  `canadaeast` have it on Global Standard only.
+
+What was not checked: whether the handler's default `OPENAI_API_VERSION` of `2024-10-21` is
+accepted for this model. Microsoft's examples for the gpt-5 family use the `/openai/v1`
+endpoint. If a deployment rejects the dated version, set `OPENAI_API_VERSION` on the `reason`
+tool; that is an app setting, not a code change.
+
+`reasoning_effort` defaults to `none` on `gpt-5.1`, so the step behaves as it did: it does not
+reason unless a caller asks it to. Turning it on is a separate decision, with a cost and a
+latency attached.

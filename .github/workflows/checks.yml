@@ -189,6 +189,11 @@ jobs:
           - infra/terraform-snowflake/envs/dev
           - infra/terraform-snowflake/envs/prod
           - infra/terraform-snowflake/envs/staging
+          # The remote-state bootstraps. Roots of their own, applied once before any
+          # environment, so no environment root reaches them and nothing else validates them.
+          - infra/terraform-aws/bootstrap
+          - infra/terraform-azure/bootstrap
+          - infra/terraform-gcp/bootstrap
     steps:
       - uses: actions/checkout@v7
 
@@ -265,7 +270,7 @@ jobs:
       - name: Lint every module and root
         run: |
           failed=0
-          for dir in infra/terraform-*/modules/*/ infra/terraform-*/envs/*/; do
+          for dir in infra/terraform-*/modules/*/ infra/terraform-*/envs/*/ infra/terraform-*/bootstrap/; do
             args=(--chdir="$dir" --config="$PWD/.tflint.hcl" --format=compact)
             if [ -f "$dir/terraform.tfvars.example" ]; then
               args+=(--var-file=terraform.tfvars.example)

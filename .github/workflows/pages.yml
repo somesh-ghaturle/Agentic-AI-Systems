@@ -1,0 +1,75 @@
+name: pages
+
+# Publishes the interactive diagrams in docs/diagrams/ to GitHub Pages.
+#
+# On GitHub a `.html` file renders as source, so the 49 viewers were only ever seen as the GIF
+# each one was rendered to. The GIFs stay, because an inline picture is what a reader scrolling
+# a document needs, but each now links to the live viewer this workflow publishes.
+#
+# Deploys from main only. A pull request changes nothing that is public.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/diagrams/*.html"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time, and never cancel one that is in flight: a half-published site is
+# worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy diagrams
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # The viewers are self-contained, so the site is the files plus an index that lists them
+      # by the title each one already carries.
+      - name: Build the site
+        run: |
+          mkdir site
+          cp docs/diagrams/*.html site/
+          python3 - <<'EOF'
+          import html, pathlib, re
+          rows = []
+          for page in sorted(pathlib.Path("site").glob("*.html")):
+              match = re.search(r"<title>(.*?)</title>", page.read_text(encoding="utf-8"), re.S)
+              title = match.group(1).strip() if match else page.stem
+              rows.append(f'<li><a href="{page.name}">{html.escape(html.unescape(title))}</a></li>')
+          pathlib.Path("site/index.html").write_text(
+              "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
+              "<title>Agentic AI Systems — diagrams</title>"
+              "<style>body{font:16px/1.6 system-ui;max-width:46rem;margin:3rem auto;padding:0 1rem}</style>"
+              "<h1>Agentic AI Systems — interactive diagrams</h1>"
+              "<p>Source and documentation: "
+              "<a href='https://github.com/somesh-ghaturle/Agentic-AI-Systems'>the repository</a>.</p>"
+              f"<ul>{''.join(rows)}</ul>",
+              encoding="utf-8",
+          )
+          print(f"{len(rows)} diagrams indexed")
+          EOF
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v5

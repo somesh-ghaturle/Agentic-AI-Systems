@@ -6,6 +6,8 @@ text to read it.
 
 ![e2e-agent — one request, four records](../../docs/diagrams/gif/e2e-agent-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/e2e-agent-architecture.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

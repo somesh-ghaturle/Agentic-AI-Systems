@@ -16,6 +16,7 @@ DETAILS = f"<details>\n{MARKER}\n\n"
 
 # scripts/diagram-gif/embed.py -> repo root -> the rendered GIFs.
 GIF_DIR = pathlib.Path(__file__).resolve().parents[2] / "docs" / "diagrams" / "gif"
+PAGES = "https://somesh-ghaturle.github.io/Agentic-AI-Systems/"
 
 
 def main(path, index, slug, alt):
@@ -38,7 +39,10 @@ def main(path, index, slug, alt):
     # os.path.relpath, not Path.relative_to: the link walks up out of the doc's directory,
     # which relative_to only learned to do with walk_up in 3.12.
     rel = os.path.relpath(gif, md.parent)
-    new = f"![{alt}]({rel})\n\n{DETAILS}{b.group(0)}\n</details>\n"
+    # The GIF is the inline picture; the link is the viewer pages.yml publishes from the
+    # same slug.
+    live = f"[Open the interactive version]({PAGES}{slug}.html)"
+    new = f"![{alt}]({rel})\n\n{live}\n\n{DETAILS}{b.group(0)}\n</details>\n"
     md.write_text(src[:b.start()] + new + src[b.end():])
     print(f"{path} #{index}: embedded {slug}.gif")
 

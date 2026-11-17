@@ -28,7 +28,7 @@ Two supporting commitments follow from it:
 | Diagrams | 49 interactive HTML viewers, each embedded in its document as a GIF |
 | Terraform trees | 5 — AWS, Azure, GCP, Snowflake, and an opt-in cross-cloud hybrid POC |
 | CI | 14 jobs; CodeQL over Python and workflows on a schedule |
-| Decision logs | 4 ADRs |
+| Decision logs | 5 ADRs |
 | Enhancement plan | 89 tasks, all `Done` |
 
 The enhancement plan is the detailed record; this file is the direction. The open work list —
@@ -109,8 +109,13 @@ Recorded so the absence reads as a decision rather than an oversight:
   emptying the skip list: 99 findings across 44 rules are declined by policy, each named with
   its reason in [`.checkov.yaml`](.checkov.yaml). CodeQL still has no HCL analyser, which is a
   fact about CodeQL rather than a gap in coverage.
-- **No `terraform plan` in CI.** It needs cloud credentials, and the no-secrets constraint is
-  worth more than the extra coverage. The write-boundary suites read source instead.
+- **No `terraform plan` in the checks.** Nothing that gates a pull request touches a cloud
+  account, and the write-boundary suites read source instead. Since 2026-11-16 there is one
+  hand-run workflow, [`plan.yml`](.github/workflows/plan.yml), that plans one AWS root through
+  OIDC with a read-only role and no stored secret. It is inert until an account is configured
+  and it is never a required check;
+  [ADR 0005](docs/DECISION-LOGS/0005-opt-in-plan-with-oidc.md) records why the absolute rule
+  was narrowed and what would reopen it.
 - **No benchmark numbers.** `trace-eval` shows a method over seven hand-written cases. It is
   not a score worth quoting, and saying so is part of the point.
 

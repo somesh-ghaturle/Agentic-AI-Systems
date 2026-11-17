@@ -13,8 +13,8 @@ terraform {
   # other's work and there is no lock to stop them. Fill this in before the first apply.
   #
   # backend "azurerm" {
-  #   resource_group_name  = "<tf-state-rg>"
-  #   storage_account_name = "<tfstatesa>"
+  #   resource_group_name  = "<project>-tfstate-rg"
+  #   storage_account_name = "<storage_account_name output of ../../bootstrap>"
   #   container_name       = "tfstate"
   #   key                  = "agentic/prod.tfstate"
   #   use_azuread_auth     = true
@@ -115,9 +115,9 @@ module "state" {
   resource_group_name = module.networking.resource_group_name
   location            = var.location
 
-  # Zone-redundant: execution state is what an in-flight run resumes from, so losing a
-  # zone should not lose the runs.
-  account_replication_type = "ZRS"
+  # Point-in-time restore: execution state is what an in-flight run resumes from, and a
+  # bad write to it should cost a restore, not the runs. One-way — see the module.
+  enable_continuous_backup = true
 
   tags = local.tags
 }
@@ -257,7 +257,7 @@ module "tools" {
   common_environment = {
     KNOWLEDGE_SEARCH_SERVICE = module.knowledge.search_service_name
     KNOWLEDGE_INDEX          = module.knowledge.index_name
-    STATE_STORAGE_ACCOUNT    = module.state.storage_account_name
+    STATE_TABLE_ENDPOINT     = module.state.table_endpoint
     STATE_TABLE_NAME         = module.state.table_name
     ARCHIVE_STORAGE_ACCOUNT  = module.archive.storage_account_name
     ARCHIVE_CONTAINER        = module.archive.container_name

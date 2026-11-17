@@ -17,7 +17,7 @@ Every tree needs two stores with genuinely different properties:
   claimed twice.
 
 GCP allows multiple named Firestore databases per project, which is what makes separating them
-cheap here. On AWS it is two DynamoDB tables; on Azure a Storage Table and a Cosmos container.
+cheap here. On AWS it is two DynamoDB tables; on Azure a Cosmos table and a Cosmos container (the first was a Storage Table until 2026-11-16).
 
 The approval claim is the other constraint. The executor must claim a record exactly once under
 Pub/Sub redelivery. Each cloud spells the same invariant differently — DynamoDB condition

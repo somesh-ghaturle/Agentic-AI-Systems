@@ -39,8 +39,8 @@ terraform {
   # to stop them. Fill this in before a second person touches the environment.
   #
   # backend "azurerm" {
-  #   resource_group_name  = "<tf-state-rg>"
-  #   storage_account_name = "<tfstatesa>"
+  #   resource_group_name  = "<project>-tfstate-rg"
+  #   storage_account_name = "<storage_account_name output of ../../bootstrap>"
   #   container_name       = "tfstate"
   #   key                  = "agentic/dev.tfstate"
   #   use_azuread_auth     = true
@@ -286,7 +286,7 @@ module "tools" {
   common_environment = {
     KNOWLEDGE_SEARCH_SERVICE = module.knowledge.search_service_name
     KNOWLEDGE_INDEX          = module.knowledge.index_name
-    STATE_STORAGE_ACCOUNT    = module.state.storage_account_name
+    STATE_TABLE_ENDPOINT     = module.state.table_endpoint
     STATE_TABLE_NAME         = module.state.table_name
     ARCHIVE_STORAGE_ACCOUNT  = module.archive.storage_account_name
     ARCHIVE_CONTAINER        = module.archive.container_name

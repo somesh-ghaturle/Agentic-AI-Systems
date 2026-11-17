@@ -19,6 +19,8 @@ right and the rest is ordinary git.
 
 ![Shared, personal, or team knowledge: what to commit and what to gitignore](../diagrams/gif/team-workflow-what-to-commit.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/team-workflow-what-to-commit.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

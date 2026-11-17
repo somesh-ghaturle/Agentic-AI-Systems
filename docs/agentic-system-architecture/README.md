@@ -38,6 +38,8 @@ That framing is the thesis of this folder.
 
 ![The shape of an agentic system — and the edge that lets you improve it](../diagrams/gif/agentic-architecture-overview.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/agentic-architecture-overview.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
