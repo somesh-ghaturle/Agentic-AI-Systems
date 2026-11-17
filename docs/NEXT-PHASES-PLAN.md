@@ -186,7 +186,10 @@ exists for it:
 1. In a sandbox AWS account — one with nothing in it worth reading, since `ReadOnlyAccess`
    can read object contents — add GitHub as an OIDC identity provider.
 2. Create a role with the AWS-managed `ReadOnlyAccess` policy, trusted only for the subject
-   `repo:somesh-ghaturle/Agentic-AI-Systems:environment:plan`.
+   `repo:somesh-ghaturle@47133595/Agentic-AI-Systems@1320326483:environment:plan`. This
+   repository emits GitHub's immutable subject claim, which includes the numeric owner and
+   repository IDs. An earlier version of this step gave the short
+   `repo:somesh-ghaturle/Agentic-AI-Systems:...` form, which would have been refused.
 3. In the repository, set the variables `AWS_PLAN_ROLE_ARN` and `AWS_PLAN_REGION`. The `plan`
    environment already exists and only deploys from `main`, which is what stops a branch
    from reaching the role by editing the workflow.

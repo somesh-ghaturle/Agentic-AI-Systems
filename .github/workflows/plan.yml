@@ -30,7 +30,13 @@ name: plan
 #
 #   1. Add GitHub as an OIDC identity provider (token.actions.githubusercontent.com).
 #   2. Create a role with the AWS-managed ReadOnlyAccess policy, whose trust policy allows
-#      only the subject `repo:<owner>/<repo>:environment:plan`.
+#      only the subject
+#      `repo:somesh-ghaturle@47133595/Agentic-AI-Systems@1320326483:environment:plan`.
+#      This repository emits GitHub's immutable subject claim, which carries the owner's
+#      and the repository's numeric IDs; the shorter `repo:<owner>/<repo>:...` form does
+#      not match it and the role refuses every token. A copy of this repository has
+#      different IDs: read its prefix from
+#      `gh api repos/<owner>/<repo>/actions/oidc/customization/sub`.
 #   3. In the repository, set the variables AWS_PLAN_ROLE_ARN and AWS_PLAN_REGION. The
 #      `plan` environment already exists and is restricted to `main`; keep it that way.
 
