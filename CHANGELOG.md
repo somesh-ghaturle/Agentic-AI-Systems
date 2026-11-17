@@ -2,9 +2,18 @@
 
 What changed between tagged versions, for someone deciding whether to re-copy a tree or an
 example. The detailed record of why each change was made is
-[docs/ENHANCEMENT-PLAN.md](docs/ENHANCEMENT-PLAN.md); this file is the short version.
+[docs/ENHANCEMENT-PLAN.md](docs/ENHANCEMENT-PLAN.md) and
+[docs/NEXT-PHASES-PLAN.md](docs/NEXT-PHASES-PLAN.md); this file is the short version.
 
-## Unreleased
+## 0.2.0 — 2026-11-16
+
+### Fixed
+
+- The `rag-langchain` image did not build: its base image was Python 3.11 and the pinned
+  `numpy` needs 3.12. It now uses 3.12.
+- `ROADMAP.md` said 5 decision records; there are 4.
+- Three README links: the OWASP link pointed at the web Top Ten rather than the LLM one, and
+  the Google MLOps and Microsoft Responsible AI links were dead.
 
 ### Changed
 
@@ -20,6 +29,7 @@ example. The detailed record of why each change was made is
 
 ### Added
 
+- A weekly report of dead external links, opened as an issue and never a gate.
 - [docs/NEXT-PHASES-PLAN.md](docs/NEXT-PHASES-PLAN.md), `CLAUDE.md`, `CODEOWNERS`, and a pull
   request template.
 - A CI check that the decision-record count in `ROADMAP.md` matches the directory.
@@ -27,11 +37,6 @@ example. The detailed record of why each change was made is
 ### Removed
 
 - `uv.lock`. It was an empty stub that locked nothing.
-
-### Fixed
-
-- `ROADMAP.md` said 5 decision records; there are 4.
-- The OWASP link in the README pointed at the web Top Ten rather than the LLM one.
 
 ## 0.1.0 — 2026-10-04
 
