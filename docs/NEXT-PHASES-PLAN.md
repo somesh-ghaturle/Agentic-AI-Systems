@@ -311,6 +311,24 @@ be passed before they appear. The double look narrows that window and does not c
 Closing it means listing the checks each path is expected to trigger, which is a list that
 would drift from the workflows it describes.
 
+Verified after merge: `gate` ran on the next pull request (#79) and passed after the other
+checks finished, and the ruleset was then changed to require it.
+
+### Found after phase 2 — provider updates had been failing for two months
+
+Checking the first runs after the merge turned up a Dependabot failure on the Terraform entry.
+It was not new: every run since 2026-09-26 had failed with "Previous version was not provided
+for: hashicorp/google", so no provider had been bumped in two months while the entry looked
+configured. The first failure came right after the module-level lock files were deleted. A
+module directory has a constraint and no lock file, and that is enough to make the whole
+grouped update error.
+
+The entry now lists only roots — every `envs/*` and the three bootstraps — which is where the
+lock files are. Routine releases only change lock files, because every constraint is
+`~> major.minor`. A new major still needs a human to move roots and modules together, and
+`tfconstraints.py` blocks a half-done one. **Not yet confirmed:** the cause is inferred from
+the error and the timing, and the next scheduled Dependabot run is what proves the fix.
+
 ## Phase 3 — go deeper on the theme
 
 | ID | Item | Why |

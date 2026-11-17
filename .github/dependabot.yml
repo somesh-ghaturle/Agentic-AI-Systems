@@ -127,31 +127,34 @@ updates:
   # the .tf files, the resolved versions live in the 17 committed `.terraform.lock.hcl`
   # files, and `.github/scripts/tfconstraints.py` is what enforces the rule about them.
   #
-  # Note that Dependabot writes `~> 6.58`, not `~> 6.0` — it floors at the current *minor*,
-  # so it will keep opening PRs for minor releases and not only majors. That is more churn
-  # than task 21 decided on, and is a live question rather than a settled one.
+  # Note that Dependabot writes `~> 6.58`, not `~> 6.0` — it floors at the current *minor*
+  # when it does rewrite a constraint. `~> 6.58` still admits every later 6.x, so in-major
+  # releases arrive as lock-file updates and the constraint only moves on a major.
   #
-  # Directory list. Every directory that declares `required_providers`: all five trees keep
-  # theirs in `envs/*` and `modules/*`, with nothing at tree level (there were two such files;
-  # Dependabot did not maintain them and they were deleted — see task 21).
+  # Directory list. Every ROOT, and no module. A root is a directory with a committed
+  # `.terraform.lock.hcl`: every `envs/*` in all five trees, plus the three bootstraps.
   #
-  # This list used to stop at AWS, the Azure roots and GCP. The Azure modules were left out
-  # because they declared no required_providers, which stopped being true when tflint made
-  # them pin; Snowflake and the hybrid POC were added as trees and never added here. A tree
-  # missing from this list is pinned and then never bumped, which is the failure the pins
-  # were accepted to avoid.
+  # Modules are left out on purpose, and including them is what broke this entry. Every run
+  # from 2026-09-26 on failed with "Previous version was not provided for: hashicorp/google",
+  # starting with the first run after the module-level lock files were deleted (see
+  # docs/REPOSITORY-DISCREPANCIES.md, "Consolidation decisions"). A module directory has a
+  # constraint and no lock, so for an in-range release Dependabot has no previous version to
+  # report and the whole grouped update errors — taking the roots down with it. So for two
+  # months nothing here was bumped while the entry looked configured.
+  #
+  # Leaving modules out loses nothing for the updates this entry actually makes. Every
+  # constraint here is `~> <major>.<minor>`, which admits every later release of the same
+  # major, so a routine bump changes lock files and no constraint. A new MAJOR is the one
+  # update that needs constraint edits, in roots and modules together, and that is a
+  # deliberate change for a human: `tfconstraints.py` fails CI until every declaration of the
+  # provider agrees, which is what makes a half-done major bump impossible to merge.
   - package-ecosystem: terraform
     directories:
       - /infra/terraform-aws/envs/*
-      - /infra/terraform-aws/modules/*
       - /infra/terraform-azure/envs/*
-      - /infra/terraform-azure/modules/*
       - /infra/terraform-gcp/envs/*
-      - /infra/terraform-gcp/modules/*
       - /infra/terraform-snowflake/envs/*
-      - /infra/terraform-snowflake/modules/*
       - /infra/terraform-hybrid/envs/*
-      - /infra/terraform-hybrid/modules/*
       # The remote-state bootstraps: one root per cloud, outside envs/ and modules/.
       - /infra/terraform-aws/bootstrap
       - /infra/terraform-azure/bootstrap
