@@ -20,6 +20,7 @@ changelog and not a summary of the architecture; for that, read each tree's `ARC
 | [0002](0002-azure-openai-vs-claude.md) | Azure calls Azure OpenAI while the other two trees call Claude | `infra/terraform-azure/` | Accepted |
 | [0003](0003-gcp-firestore-over-spanner.md) | Two Firestore databases on GCP, not one Spanner instance | `infra/terraform-gcp/` | Accepted |
 | [0004](0004-stdlib-only-examples.md) | An example gets a dependency only when the dependency is the subject | `examples/` | Accepted |
+| [0005](0005-opt-in-plan-with-oidc.md) | A hand-run `terraform plan` with OIDC, and still no plan in the checks | `.github/workflows/` | Accepted |
 
 ## Format
 

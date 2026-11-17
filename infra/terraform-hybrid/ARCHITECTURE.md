@@ -7,6 +7,8 @@ one cloud credentials for another cloud.
 
 ![Hybrid — three clouds, no shared credentials](../../docs/diagrams/gif/terraform-hybrid-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/terraform-hybrid-architecture.html)
+
 The interactive version is [`docs/diagrams/terraform-hybrid-architecture.html`](../../docs/diagrams/terraform-hybrid-architecture.html),
 and its source of truth is
 [`docs/diagrams/src/terraform-hybrid-architecture.architecture.json`](../../docs/diagrams/src/terraform-hybrid-architecture.architecture.json).

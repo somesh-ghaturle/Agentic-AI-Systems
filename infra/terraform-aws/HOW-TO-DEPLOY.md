@@ -12,7 +12,7 @@ for prod. Roughly an hour for dev if the handler code already exists.
 - Terraform ≥ 1.6 (`optional()` in object types and `lifecycle.precondition` on resources)
 - AWS credentials with permission to create IAM roles, Lambda, Step Functions, DynamoDB,
   S3, OpenSearch Serverless, KMS, SNS, and CloudWatch
-- An S3 bucket and DynamoDB table for remote state (see below)
+- An S3 bucket for remote state, which `bootstrap/` creates (see below)
 
 **Decide before the first apply,** because these cannot be changed without recreating
 resources:
@@ -31,17 +31,19 @@ Local state for shared infrastructure means two people applying at once corrupt 
 other's work. Set this up first:
 
 ```bash
-aws s3api create-bucket --bucket my-tf-state --region us-east-1
-aws s3api put-bucket-versioning --bucket my-tf-state \
-  --versioning-configuration Status=Enabled
-
-aws dynamodb create-table --table-name my-tf-locks \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST
+cd bootstrap
+terraform init
+terraform apply          # one bucket: versioned, encrypted, private, TLS-only
+terraform output backend_block
 ```
 
-Then uncomment the `backend "s3"` block in `envs/dev/main.tf` and fill it in.
+[`bootstrap/`](bootstrap/main.tf) is a root of its own, applied once per account. Paste the
+block it prints over the commented `backend "s3"` block in `envs/dev/main.tf`, replace
+`<env>`, and run `terraform init -migrate-state` there.
+
+The bootstrap's own state stays local — a bucket cannot hold the state that records its own
+creation — so keep that one file backed up. Locking uses the S3 backend's lock file, which
+needs Terraform 1.10 or newer; `bootstrap/main.tf` says what to add on an older version.
 
 ---
 

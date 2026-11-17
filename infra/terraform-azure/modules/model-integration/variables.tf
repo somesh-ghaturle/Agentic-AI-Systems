@@ -72,14 +72,19 @@ variable "public_network_access_enabled" {
 
 variable "model_name" {
   type        = string
-  description = "Model to deploy, e.g. gpt-4o. Availability is region-specific."
-  default     = "gpt-4o"
+  description = "Model to deploy, e.g. gpt-5.1. Availability is region-specific and differs by deployment SKU."
+
+  # Moved from gpt-4o on 2026-11-16: Microsoft retires gpt-4o version 2024-11-20 on
+  # 2027-04-14 and names gpt-5.1 as its replacement. The reasoning handler needed no change,
+  # because it already sends `max_completion_tokens` and no sampling parameters, which is
+  # the only request shape the gpt-5 family accepts. ADR 0002 records the amendment.
+  default = "gpt-5.1"
 }
 
 variable "model_version" {
   type        = string
   description = "Model version. Pinned rather than floating: a model that changes underneath a prompt-versioned reasoning step makes results non-reproducible, and nothing in the trace record would attribute the change."
-  default     = "2024-11-20"
+  default     = "2025-11-13"
 }
 
 variable "model_deployment_name" {

@@ -34,6 +34,8 @@ python3 examples/trace-eval/eval.py
 
 ![Trace eval — the experiment that finds the blind spot](../../docs/diagrams/gif/trace-eval-experiment.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/trace-eval-experiment.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

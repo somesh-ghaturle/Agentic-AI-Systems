@@ -11,18 +11,33 @@ controls defend against and [SECRETS-ROTATION.md](SECRETS-ROTATION.md) for what 
 
 ## Before you need this
 
-All four trees apply against a **local** Terraform state file today. AWS, Azure, and GCP each
-have a `backend "s3"/"azurerm"/"gcs"` block written out and commented in every `envs/*/main.tf`
-— an aspirational sketch, not active configuration. Azure additionally declares
-`backend "local" {}` explicitly. Snowflake has no backend block at all, commented or otherwise,
-in any environment.
+All four trees apply against a **local** Terraform state file until you change that. AWS,
+Azure, and GCP each have a `backend "s3"/"azurerm"/"gcs"` block written out and commented in
+every `envs/*/main.tf`, and each has a `bootstrap/` root that creates the versioned bucket or
+storage account the block points at and prints the block filled in. Azure additionally declares
+`backend "local" {}` explicitly. Snowflake has no backend block and no bootstrap of its own: its
+state goes in the bootstrap of whichever cloud hosts the account
+(`infra/terraform-snowflake/HOW-TO-DEPLOY.md`, "Remote state").
 
 `*.tfstate` and `*.tfstate.*` are gitignored, so none of this is backed up by version control.
-The only copy of Terraform's own state lives on whichever machine last ran `apply`. If that
-disk is lost, there is no `terraform state pull` to fall back on — recovery means
-`terraform import` for every resource, by hand, one at a time, starting with `modules/state`
-and `modules/approval` since most other modules reference them. Uncommenting the backend block
-for your environment before that happens is cheaper than reconstructing state after.
+On the local backend the only copy of Terraform's own state lives on whichever machine last ran
+`apply`. If that disk is lost, there is no `terraform state pull` to fall back on — recovery
+means `terraform import` for every resource, by hand, one at a time, starting with
+`modules/state` and `modules/approval` since most other modules reference them. Applying
+`bootstrap/` and switching the backend before that happens is cheaper than reconstructing state
+after. The bootstrap root's own state stays local by necessity, and losing it costs an import of
+one to three resources, not of an environment.
+
+## Terraform's own state (remote backend)
+
+Once an environment is on its remote backend, every write keeps the previous version:
+
+- **Corrupted or wrong after a bad apply.** Restore the previous object version — S3 object
+  versions, Azure blob versions, or GCS generations — of the environment's state key. The
+  bootstraps keep 90 days of old versions on AWS, 30 generations on GCP, and every version on
+  Azure until it is deleted, with 30 days of soft delete after that.
+- **Locked by a crashed apply.** `terraform force-unlock <LOCK_ID>`, as on the local backend.
+  On Azure the lock is a blob lease and can also be broken from the portal.
 
 ## Terraform's own state (local backend, all four trees)
 
@@ -64,18 +79,37 @@ block.
 
 ## Azure
 
-**Execution state** (`azurerm_storage_table.execution_state`, `modules/state`) **has no
-configured recovery mechanism today.** The module's `soft_delete_retention_days` (7 days in
-dev/staging, 90 in prod) sets `blob_properties.delete_retention_policy` and
-`container_delete_retention_policy` on the storage account — both scoped to Blob Storage. The
-variable's own description says as much: "days a deleted **blob or container** remains
-recoverable." `execution_state` is an `azurerm_storage_table`, a separate data plane within the
-same account, and this module configures no table-level soft delete for it. A deleted or
-overwritten row in `execution_state` is not recoverable through anything this tree turns on —
-functionally the same position as AWS dev without PITR, except here it's true in every
-environment including prod. Resume the execution rather than trying to repair its state, and
-if durable recovery becomes a requirement, that's a module change (a table-level soft-delete or
-export step), not an operational step available today.
+**Execution state** (`azurerm_cosmosdb_sql_container.execution_state`, `modules/state`). Continuous
+backup is **off in dev and staging, on in prod** (`enable_continuous_backup`, 7-day window
+unless `continuous_backup_tier` says otherwise). Staging leaves it off because it is a one-way
+door: Cosmos continuous backup cannot be disabled once enabled. As with AWS and GCP, a restore
+creates a **new** account as of a timestamp — it does not repair the existing one in place:
+
+```bash
+az cosmosdb restore \
+  --resource-group <name_prefix>-rg \
+  --account-name <name_prefix>-state \
+  --target-database-account-name <name_prefix>-state-restored \
+  --restore-timestamp <ISO8601 UTC timestamp> \
+  --location <region>
+```
+
+Point `STATE_COSMOS_ENDPOINT` at the restored account once you've confirmed it's good. In dev
+and staging, with continuous backup off, the account keeps only Cosmos's default periodic
+backups, and restoring from those is a support request to Microsoft, not a command — resume
+the execution instead of trying to repair its state.
+
+One thing to know before relying on any of this: no handler in this tree reads or writes the
+container. The Logic App keeps its own run state in the platform, and the account's endpoint,
+database and container are passed to every tool as `STATE_COSMOS_ENDPOINT`, `STATE_DATABASE`
+and `STATE_CONTAINER` for the handlers you add. Account keys are off, so a tool that uses it
+needs a Cosmos data-plane role assignment on the account, which nothing grants today —
+`modules/approval` shows the shape, for the executor and the approvals account.
+
+This store was an `azurerm_storage_table` until 2026-11-16, and in that form it had no
+recovery path in any environment: the storage account's soft delete covers blobs and
+containers, and Table Storage is a separate data plane with no soft delete and no
+point-in-time restore. If you copied the tree before that date, that is still your position.
 
 **Stuck approval claim.** Same shape as AWS: `STALE_CLAIM_SECONDS` is an app-setting
 environment variable with no backing Terraform variable
@@ -136,11 +170,12 @@ procedure (`CLAIMED_AT < DATEADD(second, -stale_claim_seconds, SYSDATE())`). A s
 isn't freed the moment the timer expires; it's freed the next time something calls that
 procedure. If nothing is retrying, it sits stale until the next attempt.
 
-**One Snowflake-specific wrinkle.** This tree's own Terraform state has no aspirational backend
-scaffold at all — AWS, Azure, and GCP each carry a commented `backend` block in every
-`envs/*/main.tf` as a sketch of where remote state would go; Snowflake's `envs/*/main.tf` has
-none. Setting up remote state here for the first time starts from nothing, not from an
-uncomment.
+**One Snowflake-specific wrinkle.** This tree's own Terraform state has no backend scaffold in
+its roots — AWS, Azure, and GCP each carry a commented `backend` block in every
+`envs/*/main.tf`; Snowflake's `envs/*/main.tf` has none, because Snowflake offers nothing a
+Terraform backend can use. Its state goes in the `bootstrap/` bucket of whichever cloud hosts
+the account, and the block has to be added by hand; `infra/terraform-snowflake/HOW-TO-DEPLOY.md`
+("Remote state") says how.
 
 ## Why the archive is out of scope
 

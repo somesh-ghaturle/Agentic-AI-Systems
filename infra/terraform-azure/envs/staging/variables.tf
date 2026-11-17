@@ -261,13 +261,13 @@ variable "model_deployment_name" {
 variable "model_name" {
   description = "Model to deploy when create_openai_account is true. Availability is region-specific. Match prod: a rehearsal against a different model measures a different system."
   type        = string
-  default     = "gpt-4o"
+  default     = "gpt-5.1"
 }
 
 variable "model_version" {
   description = "Model version, pinned. A model that moves underneath a prompt-versioned reasoning step makes results non-reproducible and nothing in the trace record explains the change."
   type        = string
-  default     = "2024-11-20"
+  default     = "2025-11-13"
 }
 
 # ---------------------------------------------------------------------------

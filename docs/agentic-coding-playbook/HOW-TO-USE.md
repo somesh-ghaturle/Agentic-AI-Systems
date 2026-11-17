@@ -151,6 +151,8 @@ the point.
 
 ![The daily loop: plan to a file, verify in the loop, fold learnings back](../diagrams/gif/playbook-daily-loop.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/playbook-daily-loop.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

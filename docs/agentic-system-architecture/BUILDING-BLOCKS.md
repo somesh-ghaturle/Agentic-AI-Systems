@@ -5,6 +5,8 @@ makes the implicit decisions explicit.
 
 ![The six building blocks — and the feedback edge](../diagrams/gif/building-blocks-overview.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/building-blocks-overview.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -98,6 +100,8 @@ Every tool needs, without exception:
 Hard architectural split, not a convention:
 
 ![Separate read from write — the tool boundary](../diagrams/gif/read-write-split.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/read-write-split.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
@@ -323,6 +327,8 @@ external messages — require human-in-the-loop authorization.
 ### The enforcement flow
 
 ![The enforcement flow — code decides, not the prompt](../diagrams/gif/enforcement-flow.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/enforcement-flow.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

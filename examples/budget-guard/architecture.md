@@ -2,6 +2,8 @@
 
 ![budget-guard — the check happens before the spend](../../docs/diagrams/gif/budget-guard-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/budget-guard-architecture.html)
+
 ## The decision this example exists to make
 
 The four bounds the architecture docs name -- steps, wall-clock, tokens, and no-progress -- are four ways an autonomous loop fails to stop. The harness-agent exercises three. The question this example answers is: what does the token bound look like when it is the one that fires?

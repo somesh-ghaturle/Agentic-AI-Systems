@@ -12,6 +12,8 @@ it must refuse to authorize.
 
 ![multi-agent-debate — the panel proposes, a human executes](../../docs/diagrams/gif/multi-agent-debate-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/multi-agent-debate-architecture.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -57,6 +59,8 @@ machine principal that can approve its own proposal turns the gate into a formal
 <summary>Additional diagram</summary>
 
 ![Multi-agent debate — the convergence loop](../../docs/diagrams/gif/debate-loop.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/debate-loop.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

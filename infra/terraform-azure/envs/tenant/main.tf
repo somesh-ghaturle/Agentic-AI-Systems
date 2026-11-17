@@ -40,8 +40,8 @@ terraform {
   # apply touch a tenant-level security control.
   #
   # backend "azurerm" {
-  #   resource_group_name  = "<tf-state-rg>"
-  #   storage_account_name = "<tfstatesa>"
+  #   resource_group_name  = "<project>-tfstate-rg"
+  #   storage_account_name = "<storage_account_name output of ../../bootstrap>"
   #   container_name       = "tfstate"
   #   key                  = "agentic/tenant.tfstate"
   #   use_azuread_auth     = true

@@ -44,7 +44,7 @@ test_aws_version_referencing_another_guardrail_is_denied if {
 test_azure_rai_policy_not_named_by_deployment_is_denied if {
 	result := deny with input as combined({
 		"azurerm_cognitive_account_rai_policy": {"guardrail": [{"name": "g"}]},
-		"azurerm_cognitive_deployment": {"model": [{"name": "gpt-4o"}]},
+		"azurerm_cognitive_deployment": {"model": [{"name": "gpt-5.1"}]},
 	})
 	count(result) == 1
 }

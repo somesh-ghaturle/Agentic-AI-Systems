@@ -9,6 +9,8 @@ the other three assume.
 
 ![Snowflake — the write boundary is a role graph](../../docs/diagrams/gif/terraform-snowflake-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/terraform-snowflake-architecture.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -123,6 +125,8 @@ property of a container this tree controls.
 ## 3 · The approval flow, and where it differs
 
 ![Snowflake — the approval flow, and where it differs](../../docs/diagrams/gif/snowflake-approval-flow.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/snowflake-approval-flow.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

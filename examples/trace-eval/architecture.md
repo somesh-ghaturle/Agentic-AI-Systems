@@ -6,6 +6,8 @@ diagram and enough text to read it.
 
 ![trace-eval — grading the answer and the trace separately](../../docs/diagrams/gif/trace-eval-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/trace-eval-architecture.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

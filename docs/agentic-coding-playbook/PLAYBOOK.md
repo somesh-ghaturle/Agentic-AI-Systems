@@ -224,6 +224,8 @@ Practical consequences:
 
 ![Eight practices, and the one that folds back into the rules](../diagrams/gif/playbook-eight-practices.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/playbook-eight-practices.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

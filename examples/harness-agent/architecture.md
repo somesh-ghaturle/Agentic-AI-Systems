@@ -9,6 +9,8 @@ declares premature victory gets agreement.
 
 ![harness-agent — the harness verifies, the agent does not](../../docs/diagrams/gif/harness-agent-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/harness-agent-architecture.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -56,6 +58,8 @@ only the sessions that were going to be fine anyway.
 <summary>Additional diagram</summary>
 
 ![Harness agent — the task state machine](../../docs/diagrams/gif/harness-state-machine.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/harness-state-machine.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

@@ -36,6 +36,8 @@ in the repository; where the answer differs by cloud, it says so rather than ave
 
 ![The only path to a write tool runs through a human](diagrams/gif/threat-model-write-path.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/threat-model-write-path.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

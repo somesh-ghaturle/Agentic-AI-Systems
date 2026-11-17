@@ -54,6 +54,16 @@ argument for a smaller grant that cannot do the job.
 | Which cloud hosts the account | `workload_identity_provider` | Determines the WIF block shape; not a Terraform-side choice |
 | Archive retention | `archive_retention_days` | From your records policy |
 
+### Remote state
+
+Snowflake has no object store of its own that Terraform can use as a backend, so this tree's
+state lives in the cloud that hosts the account. Apply that cloud's `bootstrap/` root —
+[AWS](../terraform-aws/bootstrap/main.tf), [Azure](../terraform-azure/bootstrap/main.tf) or
+[GCP](../terraform-gcp/bootstrap/main.tf) — and add the backend block it prints to the
+`terraform` block of each root here, with a key or prefix of its own such as
+`agentic/snowflake-dev`. Until then each root applies against a local state file, which is
+acceptable for a dev rehearsal and not for a shared account.
+
 ---
 
 ## Step 2 — workload identity federation

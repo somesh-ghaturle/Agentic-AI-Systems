@@ -70,7 +70,7 @@ terraform {
   # verifies a release, so local state has the same problem here it has in prod.
   #
   # backend "gcs" {
-  #   bucket = "<your-tf-state-bucket>"
+  #   bucket = "<state_bucket output of ../../bootstrap>"
   #   prefix = "agentic/staging"
   # }
 }

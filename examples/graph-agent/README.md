@@ -22,6 +22,8 @@ code because the code produces it.
 
 ![Graph agent — the topology the graph draws itself](../../docs/diagrams/gif/graph-agent-topology.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/graph-agent-topology.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

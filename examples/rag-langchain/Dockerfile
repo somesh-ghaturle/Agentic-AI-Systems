@@ -1,7 +1,7 @@
 # 3.12, matching the interpreter `example-deps.yml` installs these pins on. This said 3.11
 # until the pinned numpy dropped 3.11, at which point the image stopped building and nothing
 # noticed, because CI installs the pins but never built the image.
-FROM python:3.12-slim
+FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
 WORKDIR /app
 COPY . .
 RUN python -m pip install --upgrade pip && pip install -r requirements.txt

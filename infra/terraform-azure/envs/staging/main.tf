@@ -48,8 +48,8 @@ terraform {
   # once corrupt each other's work and there is no lock to stop them.
   #
   # backend "azurerm" {
-  #   resource_group_name  = "<tf-state-rg>"
-  #   storage_account_name = "<tfstatesa>"
+  #   resource_group_name  = "<project>-tfstate-rg"
+  #   storage_account_name = "<storage_account_name output of ../../bootstrap>"
   #   container_name       = "tfstate"
   #   key                  = "agentic/staging.tfstate"
   #   use_azuread_auth     = true
@@ -142,9 +142,10 @@ module "state" {
   resource_group_name = module.networking.resource_group_name
   location            = var.location
 
-  # LRS, not prod's ZRS. Zone redundancy buys durability and changes no behaviour a
-  # rehearsal can observe — a staging run cannot tell which zones its table lives in.
-  account_replication_type = "LRS"
+  # Off, where prod has it on, for the reason the approvals account below gives: Cosmos
+  # continuous backup cannot be disabled once enabled, and staging takes none of prod's
+  # one-way doors. A staging run's state does not outlive the rehearsal.
+  enable_continuous_backup = false
 
   tags = local.tags
 }
@@ -283,8 +284,9 @@ module "tools" {
   common_environment = {
     KNOWLEDGE_SEARCH_SERVICE = module.knowledge.search_service_name
     KNOWLEDGE_INDEX          = module.knowledge.index_name
-    STATE_STORAGE_ACCOUNT    = module.state.storage_account_name
-    STATE_TABLE_NAME         = module.state.table_name
+    STATE_COSMOS_ENDPOINT    = module.state.endpoint
+    STATE_DATABASE           = module.state.database_name
+    STATE_CONTAINER          = module.state.container_name
     ARCHIVE_STORAGE_ACCOUNT  = module.archive.storage_account_name
     ARCHIVE_CONTAINER        = module.archive.container_name
     KEY_VAULT_URI            = module.security.keyvault_uri

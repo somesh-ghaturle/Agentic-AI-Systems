@@ -29,6 +29,8 @@ without a human, and the boundary is drawn by Cloud IAM rather than by conventio
 
 ![GCP — the write path has no IAM route](../../docs/diagrams/gif/terraform-gcp-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/terraform-gcp-architecture.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -101,6 +103,8 @@ parks it, and the executor resuming it is what moves it forward.
 ## 2 · Why the boundary holds — two independent locks
 
 ![GCP — why the boundary holds: two independent locks](../../docs/diagrams/gif/gcp-two-locks.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/gcp-two-locks.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
@@ -202,6 +206,8 @@ no credentials and runs in CI.
 
 ![GCP — request lifecycle](../../docs/diagrams/gif/gcp-request-lifecycle.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/gcp-request-lifecycle.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -263,6 +269,8 @@ daily budget alert fires on arithmetic rather than on money.
 ## 4 · The approval round trip
 
 ![GCP — the approval round trip](../../docs/diagrams/gif/gcp-approval-roundtrip.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/gcp-approval-roundtrip.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
@@ -343,6 +351,8 @@ no structured payload. Every filter in `modules/observability` misses it and eve
 sits at zero. The logs are right there in the console, which is what makes it convincing.
 
 ![GCP — observability](../../docs/diagrams/gif/gcp-observability.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/gcp-observability.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

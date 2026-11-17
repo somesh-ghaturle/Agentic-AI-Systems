@@ -13,6 +13,8 @@ code, because the code produces it.
 
 ![graph-agent — approval is the only path to an effect](../../docs/diagrams/gif/graph-agent-architecture.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/graph-agent-architecture.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 
@@ -58,6 +60,8 @@ and `TestTopology` does.
 <summary>Additional diagram</summary>
 
 ![Graph agent — where the write boundary actually is](../../docs/diagrams/gif/graph-write-boundary.gif)
+
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/graph-write-boundary.html)
 
 <details>
 <summary>Mermaid source (kept for diff history)</summary>

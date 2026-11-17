@@ -15,6 +15,8 @@ on AWS. Every module maps to a building block from that document, and the commen
 
 ![AWS — what this builds](../../docs/diagrams/gif/aws-what-this-builds.gif)
 
+[Open the interactive version](https://somesh-ghaturle.github.io/Agentic-AI-Systems/aws-what-this-builds.html)
+
 <details>
 <summary>Mermaid source (kept for diff history)</summary>
 

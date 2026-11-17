@@ -22,7 +22,7 @@
     { "id": "kms", "type": "security", "label": "Key Vault", "sublabel": "RBAC authorization", "row": 3, "col": 0, "size": [188, 64] },
     { "id": "te", "type": "backend", "label": "trace_emitter", "row": 3, "col": 1, "size": [168, 60] },
     { "id": "lg", "type": "database", "label": "Log Analytics workspace", "sublabel": "queries + alerts", "row": 3, "col": 2, "size": [188, 64] },
-    { "id": "stt", "type": "database", "label": "Storage Table", "row": 2, "col": 0, "size": [168, 60] },
+    { "id": "stt", "type": "database", "label": "Cosmos state", "row": 2, "col": 0, "size": [168, 60] },
     { "id": "aoss", "type": "database", "label": "Azure AI Search", "sublabel": "knowledge", "row": 2, "col": 3, "size": [188, 60] },
     { "id": "s3", "type": "database", "label": "Blob + lifecycle", "sublabel": "archive", "row": 3, "col": 3, "size": [188, 60] }
   ],

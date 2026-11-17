@@ -29,11 +29,11 @@ terraform {
   # Remote state is not optional in prod. Uncomment and fill in before the first apply.
   #
   # backend "s3" {
-  #   bucket         = "<your-tf-state-bucket>"
-  #   key            = "agentic/prod/terraform.tfstate"
-  #   region         = "us-east-1"
-  #   dynamodb_table = "<your-tf-lock-table>"
-  #   encrypt        = true
+  #   bucket       = "<state_bucket output of ../../bootstrap>"
+  #   key          = "agentic/prod/terraform.tfstate"
+  #   region       = "us-east-1"
+  #   use_lockfile = true
+  #   encrypt      = true
   # }
 }
 

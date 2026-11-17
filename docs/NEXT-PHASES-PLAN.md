@@ -1,7 +1,8 @@
 # Next phases plan
 
-The work list after the 2026-11-16 review. The "fix now" and "can be better" items are finished
-and recorded here with what was done. Phase 2 and phase 3 are the open plan.
+The work list after the 2026-11-16 review. The "fix now" and "can be better" items and phase 2
+are finished and recorded here with what was done. Phase 3 is the open plan, along with one
+step of phase 2 that needs a cloud account.
 [ENHANCEMENT-PLAN.md](ENHANCEMENT-PLAN.md) is the record of earlier work and
 [ROADMAP.md](../ROADMAP.md) is the direction.
 
@@ -32,14 +33,16 @@ The repository's thesis is that no change lands without an approval, and `main` 
 direct push. A ruleset named `protect-main` now requires a pull request, and blocks force
 pushes and deletion of the branch.
 
-Two things it deliberately does not require:
+It also requires the `gate` check since P2.9. One thing it deliberately does not require, and
+one it could not require at first:
 
 - **An approving review.** GitHub does not let an author approve their own pull request, so one
   required approval would block every merge while there is one maintainer.
   [`CODEOWNERS`](../.github/CODEOWNERS) is in place for the day a second reviewer exists.
 - **Status checks.** `checks.yml` has path filters, and a required check that never starts
   leaves a pull request waiting forever. A change that touches only `.github/dependabot.yml`
-  or `CODEOWNERS` matches no filter and would be unmergeable. Requiring checks safely needs one job that always runs; that is P2.9.
+  or `CODEOWNERS` matches no filter and would be unmergeable. Requiring checks safely needed
+  one job that always runs, which is what P2.9 added.
 
 ### F2 — Dependabot coverage gaps
 
@@ -50,10 +53,9 @@ Two things it deliberately does not require:
 - The two npm manifests: `examples/hermes-dashboard/frontend` and `scripts/diagram-gif`.
 - `tests/requirements.txt`, grouped with the service it mirrors.
 
-**Declined: a Docker entry.** The base images are `python:3.x-slim` tags, which already float
-on patch releases, and the minor version each names is a documented floor. Dependabot would
-only propose minor bumps that have to be refused. Pinning images by digest is the real fix and
-is P2.6.
+**Declined at the time: a Docker entry.** The base images were bare `python:3.x-slim` tags,
+which float on patch releases, so Dependabot would only have proposed minor bumps that have to
+be refused. Pinning by digest was the real fix; P2.6 did that and added the entry with it.
 
 ### F3 — Published image
 
@@ -96,8 +98,8 @@ Enabled. The README's discussion prompts now have somewhere to go.
 Found while checking F3, and already broken on `main`. The Dockerfile used `python:3.11-slim`
 and a Dependabot bump had moved the `numpy` pin to a version that needs 3.12, so
 `pip install` failed. Nothing noticed, because `example-deps.yml` installs the pins on 3.12 and
-no job builds the image. The Dockerfile now uses 3.12. The class of failure is still open:
-see P2.7.
+no job builds the image. The Dockerfile now uses 3.12, and P2.7 added the job
+that builds every image.
 
 ## Can be better
 
@@ -107,7 +109,7 @@ see P2.7.
 | B2 | OWASP link pointed at the web Top Ten | Done |
 | B3 | No pull request template, CODEOWNERS, or root `CLAUDE.md` | Done |
 | B4 | Model defaults span generations | Done — verified and kept |
-| B5 | GIF weight in git | Open — see P2.4 |
+| B5 | GIF weight in git | Addressed by P2.4, which kept the GIFs and says why |
 | B6 | External links are never checked | Done |
 | B7 | Local branch clean-up | Done |
 
@@ -147,52 +149,167 @@ anything unmerged. Remote branches were left alone.
 
 ## Phase 2 — make it adoptable
 
-The gap today is not correctness. The repository has no stars, no forks and no homepage, and
-nothing shows any tree has ever been applied.
+Done on 2026-11-16, with one item that cannot be finished from inside the repository. The gap
+this phase was aimed at was not correctness: nothing showed a tree had ever been accepted by a
+cloud, state had nowhere safe to live, and the diagrams could only be seen as GIFs.
 
-| ID | Item | Why |
+| ID | Item | Status |
 | --- | --- | --- |
-| P2.1 | Evidence of one real apply | A reader cannot tell a validated tree from an applied one |
-| P2.2 | Remote state bootstrap | Every tree applies against a local, unbacked-up state file |
-| P2.3 | Azure execution-state recovery | Named in `HOW-TO-RECOVER.md` as having no recovery path |
-| P2.4 | GitHub Pages for the interactive diagrams | Removes GIF weight and fills the empty homepage |
-| P2.6 | Pin container base images by digest | The fix F2 declined to fake |
-| P2.7 | Build the example images in CI | F9 was invisible without it |
-| P2.8 | Move Azure off `gpt-4o` before 2027-04-14 | The model has a retirement date |
-| P2.9 | One always-run CI job, then require it on `main` | F1 could not require checks safely |
+| P2.1 | Evidence of one real apply | Workflow and ADR done; **the evidence itself needs a cloud account** |
+| P2.2 | Remote state bootstrap | Done |
+| P2.3 | Azure execution-state recovery | Done |
+| P2.4 | GitHub Pages for the interactive diagrams | Done |
+| P2.5 | Release `v0.2.0` | Done under F7 |
+| P2.6 | Pin container base images by digest | Done |
+| P2.7 | Build the example images in CI | Done |
+| P2.8 | Move Azure off `gpt-4o` before 2027-04-14 | Done |
+| P2.9 | One always-run CI job, then require it on `main` | Done |
 
-P2.5 was the `v0.2.0` release and is done under F7.
+**What "done" means here.** Every change was checked with the tools CI runs: `terraform
+validate` on the roots touched, `tflint`, `checkov`, `conftest`, and the test suites. **Nothing
+was planned or applied against a real AWS, Azure, GCP or Snowflake account**, because no
+credentials were available. The Terraform in P2.2, P2.3 and P2.8 is therefore validated and
+not proven, which is the same standing as the rest of the trees and the reason P2.1 exists.
 
-**P2.1 — One real apply.** ROADMAP declines `terraform plan` in CI because a check that needs a
-secret gets disabled when the secret expires. That objection does not hold for OIDC, which has
-no secret. Proposal: one `workflow_dispatch` workflow, federated to a sandbox account, that
-runs `plan` on one tree and uploads the output as an artifact. It is never a required check
-and never runs on a pull request, so the no-secrets property of `checks.yml` is unchanged.
-`apply` stays a human step. This reopens a recorded decision, so it starts as an ADR.
+### P2.1 — Evidence of one real apply
 
-**P2.2 — Remote state.** Each tree already carries a commented-out backend block. Add a small
-bootstrap root per tree that creates the bucket or container and the lock, so switching is one
-uncomment and not a separate project.
+[`plan.yml`](../.github/workflows/plan.yml) runs `terraform plan` on one AWS environment root,
+by hand, through OIDC with a read-only role, and uploads the output.
+[ADR 0005](DECISION-LOGS/0005-opt-in-plan-with-oidc.md) records why the "no plan in CI" rule
+was narrowed: OIDC stores no secret, so the objection that a secret expires no longer holds,
+while the objection that a check must not depend on an account still does. The workflow is
+never a required check and never runs on a pull request. `apply` stays a human step.
 
-**P2.3 — Azure state recovery.** Soft delete on the storage account protects blobs, not the
-Table Storage resource that execution state lives in. Either move that state to Cosmos, which
-has point-in-time restore, or add a scheduled export, and update the runbook to match.
+**Still open, and only the maintainer can close it.** The workflow is inert until an account
+exists for it:
 
-**P2.4 — Pages.** The 49 GIFs are 80 MB in plain git, the largest 6.5 MB, and every re-render
-adds permanent history. Publish `docs/diagrams/*.html` with GitHub Pages, link each document to
-the live viewer, and keep at most the two README GIFs in the tree. Then set the repository
-homepage to the Pages URL.
+1. In a sandbox AWS account — one with nothing in it worth reading, since `ReadOnlyAccess`
+   can read object contents — add GitHub as an OIDC identity provider.
+2. Create a role with the AWS-managed `ReadOnlyAccess` policy, trusted only for the subject
+   `repo:somesh-ghaturle/Agentic-AI-Systems:environment:plan`.
+3. In the repository, set the variables `AWS_PLAN_ROLE_ARN` and `AWS_PLAN_REGION`. The `plan`
+   environment already exists and only deploys from `main`, which is what stops a branch
+   from reaching the role by editing the workflow.
+4. Run the `plan` workflow from the Actions tab, on `main`.
 
-**P2.7 — Build the example images.** Add a matrix job to `example-deps.yml` that runs
-`docker build` on each example Dockerfile. It belongs in that workflow because it has the same
-trigger and the same cost profile. Update the job count in `CI.md` in the same change.
+Until that run exists the repository still cannot show that a tree plans. A plan is also not an
+apply: quota and create-time limits only appear on apply, which remains out of scope for CI.
 
-**P2.8 — Azure model.** Before 2027-04-14, write the ADR that supersedes 0002's model choice,
-move the default to the replacement Microsoft names at that time, and check the handler's call
-shape against it — task 46 was a pin that the handler beside it could not call.
+### P2.2 — Remote state bootstrap
 
-**P2.9 — A required check.** Add one job with no path filter that waits for the others, or
-passes when they were skipped, and require only that job in the `protect-main` ruleset.
+`infra/terraform-aws/bootstrap/`, `infra/terraform-azure/bootstrap/` and
+`infra/terraform-gcp/bootstrap/` each create the versioned, private bucket or storage account an
+environment's backend block points at, and print that block filled in. Each is a root of its
+own, applied once, so no environment root can destroy the store holding its own state. The
+three are in the `validate` matrix, the `tflint` sweep and Dependabot.
+
+- **AWS** — one S3 bucket: versioned, encrypted, public access blocked, TLS-only, 90 days of old
+  versions. Locking uses the S3 backend's lock file, which needs Terraform 1.10 or newer; the
+  environment sketches now say `use_lockfile` where they said `dynamodb_table`.
+- **Azure** — a resource group, a storage account with blob versioning and soft delete on and
+  shared keys off, the `tfstate` container, and a data role for whoever applies it.
+- **GCP** — one bucket: versioned, uniform access, public access prevented, 30 generations kept.
+- **Snowflake** — no bootstrap, because Snowflake offers nothing a backend can use. Its deploy
+  guide says to use the bootstrap of whichever cloud hosts the account.
+
+The environment roots still ship on local state; switching is pasting the printed block and
+running `terraform init -migrate-state`. That is deliberate: a committed backend block names a
+bucket that exists in one account only.
+
+### P2.3 — Azure execution-state recovery
+
+`modules/state` is now a Cosmos DB account with one container where it was a Storage Table.
+Table Storage has no soft delete, no versioning and no point-in-time restore, so the old table
+had no recovery path in any environment. Cosmos adds continuous backup: on in prod, off in dev
+and staging, because it cannot be disabled once enabled.
+[HOW-TO-RECOVER.md](HOW-TO-RECOVER.md) has the restore command.
+
+The first version of this change used the Cosmos Table API, to keep the old data model. A
+security review of the commit pointed out that it left account keys enabled on a publicly
+reachable account. Keys can only be switched off on a NoSQL account, so the module uses the
+NoSQL API and sets `local_authentication_enabled = false`. Nothing had written to the old
+table, so there was no client to stay compatible with.
+
+Four things worth knowing:
+
+- **No handler reads or writes this container.** That was already true of the table. The Logic
+  App keeps its own run state, and the store is wired to the tools by environment variable for
+  the handlers a copier adds: `STATE_COSMOS_ENDPOINT`, `STATE_DATABASE` and `STATE_CONTAINER`
+  replace `STATE_STORAGE_ACCOUNT` and `STATE_TABLE_NAME`. A tool that uses it needs a Cosmos
+  data-plane role assignment, which nothing grants yet.
+- **The approvals account still has keys enabled.** Its comment says the attribute that
+  disables them was deprecated with no pinned replacement. The replacement is
+  `local_authentication_enabled`, and it validates on the provider version this tree pins. It
+  was not changed here: that account is the audit trail behind the write boundary, the
+  handlers reach it with a managed identity while `.checkov.yaml` says a connection string is
+  still in use, and the two need reconciling before a key is switched off. That is P3.6.
+- **The account is publicly reachable by default**, like the approvals account and for the
+  same recorded reason: this tree has no private endpoints, and `.checkov.yaml` says so by
+  name. `public_network_access_enabled = false` is an input; with keys off, identity is the
+  control either way.
+- **Zone redundancy was not carried over.** Prod's storage account was ZRS. Whether a
+  serverless Cosmos account can be zone-redundant in a given region was not verified, so the
+  module does not set it.
+- **It is a replacement, not a migration.** Applying this to an environment that already has
+  the old table destroys that table. Nothing in this tree wrote to it, so nothing is lost
+  unless a copier's own handlers did.
+
+The two diagrams that labelled the store were updated and re-rendered.
+
+### P2.4 — GitHub Pages
+
+[`pages.yml`](../.github/workflows/pages.yml) publishes the interactive viewers to
+<https://somesh-ghaturle.github.io/Agentic-AI-Systems/>, with an index. Each of the 49 embedded
+GIFs now has a link to its live viewer under it, `embed.py` adds that link for new diagrams,
+and the repository homepage points at the site.
+
+**Changed from the plan: the GIFs stay.** The plan said to remove all but two. Removing them
+would not shrink the repository, since they remain in history, and it would cost the inline
+picture a reader scrolling a document relies on. The growth that matters is future re-renders,
+and those are now optional: a diagram can change on the site without a new GIF.
+
+### P2.6 — Base images pinned by digest
+
+All five Dockerfiles pin `python:3.x-slim` by digest, and Dependabot has a `docker` entry that
+moves the digest. Minor and major Python bumps are ignored there, because the minor each image
+names is a documented floor.
+
+### P2.7 — Example images built in CI
+
+`example-deps.yml` builds every Dockerfile and asserts the image does not run as root. This is
+the check that would have caught F9.
+
+### P2.8 — Azure model
+
+The default moved from `gpt-4o` `2024-11-20` to `gpt-5.1` `2025-11-13`, the replacement Microsoft
+names. This is an amendment to ADR 0002 and not a new record, because the vendor decision is
+unchanged. The handler's call shape needed no change: it already sent `max_completion_tokens`
+and no sampling parameters. Checked against Microsoft's documentation, not a live deployment;
+the one thing not confirmed is whether the handler's default API version `2024-10-21` is
+accepted for this model. ADR 0002's amendment says how to override it.
+
+Found on the way: all three Azure `terraform.tfvars.example` files set
+`MODEL_DEPLOYMENT = "gpt-4o"` on the `reason` tool. A per-tool value overrides the one the root
+wires from the model module, the deployment is named `reasoning`, and a handler calling a
+deployment that does not exist gets a 404. The override is removed. The same files also said
+the tree had no handler source, which stopped being true when `src/` was added.
+
+### P2.9 — The required check
+
+[`gate.yml`](../.github/workflows/gate.yml) runs on every pull request, waits for every other
+check on the commit, and fails unless all of them passed or were skipped. The `protect-main`
+ruleset requires it. The other workflows keep their path filters, so nothing waits on a check
+that never starts.
+
+It runs from the copy of the workflow on `main`, not the one in the pull request, so a change
+cannot rewrite the gate it is judged by. A security review of the first version prompted that
+and two other hardenings: it fails on any conclusion it does not recognise, and it looks twice
+before believing every check is done.
+
+One limit remains. A pull request whose checks all take longer than a minute to *start* could
+be passed before they appear. The double look narrows that window and does not close it.
+Closing it means listing the checks each path is expected to trigger, which is a list that
+would drift from the workflows it describes.
 
 ## Phase 3 — go deeper on the theme
 
@@ -203,6 +320,7 @@ passes when they were skipped, and require only that job in the `protect-main` r
 | P3.3 | Two-person approval | Strengthens the human gate for the highest-risk writes |
 | P3.4 | Approval fatigue | A gate that is clicked through is not a gate |
 | P3.5 | Compliance mapping | Makes the evidence model usable in a regulated review |
+| P3.6 | Switch off account keys on the Azure approvals account | The audit trail should not have a key path nothing needs |
 
 **P3.1 — Trace schema.** Trace field names differ per tree today because each provider's
 queries match different ones. Define one schema (the OpenTelemetry GenAI conventions are the
@@ -224,13 +342,18 @@ automatic approval path; both make the existing one harder to hollow out.
 control to the EU AI Act human-oversight article and the NIST AI RMF function it supports, and
 to the test in this tree that demonstrates it.
 
+**P3.6 — Approvals account keys.** `modules/approval` leaves key-based authentication on,
+with a comment saying the provider attribute was deprecated. `local_authentication_enabled`
+is the replacement and `modules/state` already uses it. Before setting it: confirm every
+caller uses a managed identity (`shared/cosmos_io.py` does), remove the stale connection-string
+note and the two matching skips from `.checkov.yaml`, and run the Azure handler and boundary
+suites. Small, but it touches the store behind the write boundary, so it gets its own change.
+
 **Declined: a Kubernetes or fifth-cloud tree.** It adds a tree to keep at parity without
 teaching a property the existing four do not.
 
 ## Order
 
-1. P2.7 and P2.9 — small CI changes that close the two holes this round found.
-2. P2.4, because it also fixes discoverability.
-3. P2.2 and P2.3, then P2.1 as an ADR.
-4. P2.8, with a hard date of 2027-04-14.
-5. P2.6, then phase 3 in table order.
+1. P2.1's last step: configure the sandbox account and run the `plan` workflow once.
+2. Phase 3 in table order. P3.1 first, because it is the item that connects the examples to
+   the infrastructure.
