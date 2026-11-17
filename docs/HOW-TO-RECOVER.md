@@ -79,7 +79,7 @@ block.
 
 ## Azure
 
-**Execution state** (`azurerm_cosmosdb_table.execution_state`, `modules/state`). Continuous
+**Execution state** (`azurerm_cosmosdb_sql_container.execution_state`, `modules/state`). Continuous
 backup is **off in dev and staging, on in prod** (`enable_continuous_backup`, 7-day window
 unless `continuous_backup_tier` says otherwise). Staging leaves it off because it is a one-way
 door: Cosmos continuous backup cannot be disabled once enabled. As with AWS and GCP, a restore
@@ -94,17 +94,19 @@ az cosmosdb restore \
   --location <region>
 ```
 
-Point `STATE_TABLE_ENDPOINT` at the restored account once you've confirmed it's good. In dev
+Point `STATE_COSMOS_ENDPOINT` at the restored account once you've confirmed it's good. In dev
 and staging, with continuous backup off, the account keeps only Cosmos's default periodic
 backups, and restoring from those is a support request to Microsoft, not a command — resume
 the execution instead of trying to repair its state.
 
 One thing to know before relying on any of this: no handler in this tree reads or writes the
-table. The Logic App keeps its own run state in the platform, and the table's endpoint and name
-are passed to every tool as `STATE_TABLE_ENDPOINT` and `STATE_TABLE_NAME` for the handlers you
-add. A tool that uses it also needs a data role on the account, which nothing grants today.
+container. The Logic App keeps its own run state in the platform, and the account's endpoint,
+database and container are passed to every tool as `STATE_COSMOS_ENDPOINT`, `STATE_DATABASE`
+and `STATE_CONTAINER` for the handlers you add. Account keys are off, so a tool that uses it
+needs a Cosmos data-plane role assignment on the account, which nothing grants today —
+`modules/approval` shows the shape, for the executor and the approvals account.
 
-This table was an `azurerm_storage_table` until 2026-11-16, and in that form it had no
+This store was an `azurerm_storage_table` until 2026-11-16, and in that form it had no
 recovery path in any environment: the storage account's soft delete covers blobs and
 containers, and Table Storage is a separate data plane with no soft delete and no
 point-in-time restore. If you copied the tree before that date, that is still your position.

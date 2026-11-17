@@ -12,10 +12,11 @@ applied against a real cloud account; it passes the same static checks as the re
 
 ### Changed — read before re-copying the Azure tree
 
-- **Azure execution state is a Cosmos DB for Table account, not a Storage Table.** The old
-  table had no recovery path; the new one has continuous backup in prod. Applying this over an
-  existing environment replaces the table. The tool variable `STATE_STORAGE_ACCOUNT` is now
-  `STATE_TABLE_ENDPOINT`.
+- **Azure execution state is a Cosmos DB container, not a Storage Table.** The old table had
+  no recovery path; the new account has continuous backup in prod and account keys switched
+  off. Applying this over an existing environment replaces the table. The tool variables
+  `STATE_STORAGE_ACCOUNT` and `STATE_TABLE_NAME` are now `STATE_COSMOS_ENDPOINT`,
+  `STATE_DATABASE` and `STATE_CONTAINER`.
 - **The Azure default model is `gpt-5.1` `2025-11-13`**, up from `gpt-4o` `2024-11-20`, which
   Microsoft retires on 2027-04-14. See the amendment to ADR 0002.
 - The Azure `terraform.tfvars.example` files no longer set `MODEL_DEPLOYMENT` on the `reason`

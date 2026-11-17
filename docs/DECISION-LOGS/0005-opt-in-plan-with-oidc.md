@@ -38,6 +38,11 @@ runs with no credential.
 `apply` remains a human step in a terminal. The workflow must never contain one, and the role
 it assumes is read-only so that one could not succeed.
 
+The role is reachable from `main` only. `workflow_dispatch` can be started from any branch and
+a branch can rewrite the workflow, so the workflow file is not the control. The `plan`
+environment is restricted to `main`, and the role's trust policy names that environment as the
+token subject, so a run from another branch is refused before it holds a usable token.
+
 ## Consequences
 
 - **The repository can now show evidence, and does not yet.** The workflow exists and is
@@ -45,6 +50,9 @@ it assumes is read-only so that one could not succeed.
   the `plan` environment of this repository, and two repository variables. Until then it
   fails at its first step with a message saying what is missing. This record does not claim a
   tree has been planned.
+- **Read-only is not harmless.** `ReadOnlyAccess` can read anything in the account, object
+  contents included. The account this points at should be a sandbox with nothing in it worth
+  reading, and never the one that holds a real environment's state bucket.
 - **A plan is not an apply.** It proves the provider accepts the configuration and can resolve
   everything it reads. It does not prove a resource can be created — quota, service limits
   enforced at create time, and eventual-consistency failures between resources all appear only

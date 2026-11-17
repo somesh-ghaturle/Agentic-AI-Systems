@@ -240,7 +240,7 @@ is an opt-in topology POC and is disabled by default.
 | Tree | Orchestrator | Tools | State / approvals | Knowledge |
 | --- | --- | --- | --- | --- |
 | [terraform-aws/](infra/terraform-aws/) | Step Functions | Lambda | DynamoDB | OpenSearch Serverless |
-| [terraform-azure/](infra/terraform-azure/) | Logic Apps | Functions | Cosmos DB (table / container) | AI Search |
+| [terraform-azure/](infra/terraform-azure/) | Logic Apps | Functions | Cosmos DB | AI Search |
 | [terraform-gcp/](infra/terraform-gcp/) | Cloud Workflows | Cloud Functions gen2 | Firestore | Vertex AI Vector Search |
 | [terraform-snowflake/](infra/terraform-snowflake/) | Tasks — *scheduler, not workflow engine* | Stored procedures | Hybrid tables | Cortex Search |
 | [terraform-hybrid/](infra/terraform-hybrid/) | AWS Step Functions | GCP Cloud Functions | Azure Cosmos DB | GCP Vertex AI |
@@ -330,7 +330,7 @@ Retrofitting these patterns into an agent that already works, in the order that 
 
 The adversary's view of the write boundary — what a compromised orchestrator reaches, what a prompt-injected model reaches, what a leaked approval claim buys, and which of the four trees survives each: [docs/THREAT-MODEL.md](docs/THREAT-MODEL.md). It is explicit about what is *not* defended, which is the more useful half — and the row where the trees genuinely differ is a later broad grant, which GCP's deny policy survives, AWS and Azure do not, and Snowflake loses transitively.
 
-What to actually run when Terraform's own state is locked or gone, an execution-state row is corrupted, or an approval claim is stuck: [docs/HOW-TO-RECOVER.md](docs/HOW-TO-RECOVER.md). Every tree applies against a local state file until its backend is switched, and each cloud tree has a `bootstrap/` root that creates the versioned bucket to switch to. Azure's execution-state table used to have no recovery path at all — soft delete on its storage account protected blobs, not the Table Storage resource the state lived in — which is why it is now a Cosmos table with continuous backup in prod.
+What to actually run when Terraform's own state is locked or gone, an execution-state row is corrupted, or an approval claim is stuck: [docs/HOW-TO-RECOVER.md](docs/HOW-TO-RECOVER.md). Every tree applies against a local state file until its backend is switched, and each cloud tree has a `bootstrap/` root that creates the versioned bucket to switch to. Azure's execution-state table used to have no recovery path at all — soft delete on its storage account protected blobs, not the Table Storage resource the state lived in — which is why it is now a Cosmos container with continuous backup in prod.
 
 Documents to fill in per system, and one to reach for when it breaks:
 

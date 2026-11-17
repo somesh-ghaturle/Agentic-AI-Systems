@@ -137,7 +137,7 @@ rehearsal once the handlers land — it is not a throwaway. Do not treat it as d
 | `networking` | Resource Group, VNet, subnet | VPC |
 | `identity` | User-assigned managed identities | IAM roles |
 | `security` | Key Vault with RBAC authorization | KMS + IAM |
-| `state` | Cosmos DB for Table (`executionstate`) | DynamoDB |
+| `state` | Cosmos DB container (`executionstate`) | DynamoDB |
 | `archive` | Blob container with lifecycle policy | S3 + lifecycle rules |
 | `knowledge` | Azure AI Search | OpenSearch Serverless |
 | `tools` | One Function App per tool, one Entra app registration each | Lambda per tool |

@@ -183,12 +183,14 @@ never a required check and never runs on a pull request. `apply` stays a human s
 **Still open, and only the maintainer can close it.** The workflow is inert until an account
 exists for it:
 
-1. In a sandbox AWS account, add GitHub as an OIDC identity provider.
-2. Create a role with the AWS-managed `ReadOnlyAccess` policy, trusted only for
+1. In a sandbox AWS account — one with nothing in it worth reading, since `ReadOnlyAccess`
+   can read object contents — add GitHub as an OIDC identity provider.
+2. Create a role with the AWS-managed `ReadOnlyAccess` policy, trusted only for the subject
    `repo:somesh-ghaturle/Agentic-AI-Systems:environment:plan`.
-3. In the repository, create an environment named `plan` and set the variables
-   `AWS_PLAN_ROLE_ARN` and `AWS_PLAN_REGION`.
-4. Run the `plan` workflow from the Actions tab.
+3. In the repository, set the variables `AWS_PLAN_ROLE_ARN` and `AWS_PLAN_REGION`. The `plan`
+   environment already exists and only deploys from `main`, which is what stops a branch
+   from reaching the role by editing the workflow.
+4. Run the `plan` workflow from the Actions tab, on `main`.
 
 Until that run exists the repository still cannot show that a tree plans. A plan is also not an
 apply: quota and create-time limits only appear on apply, which remains out of scope for CI.
@@ -216,17 +218,35 @@ bucket that exists in one account only.
 
 ### P2.3 — Azure execution-state recovery
 
-`modules/state` is now a Cosmos DB for Table account where it was a Storage Table. Table
-Storage has no soft delete, no versioning and no point-in-time restore, so the old table had no
-recovery path in any environment. Cosmos for Table keeps the same data model and client and
-adds continuous backup: on in prod, off in dev and staging, because it cannot be disabled once
-enabled. [HOW-TO-RECOVER.md](HOW-TO-RECOVER.md) has the restore command.
+`modules/state` is now a Cosmos DB account with one container where it was a Storage Table.
+Table Storage has no soft delete, no versioning and no point-in-time restore, so the old table
+had no recovery path in any environment. Cosmos adds continuous backup: on in prod, off in dev
+and staging, because it cannot be disabled once enabled.
+[HOW-TO-RECOVER.md](HOW-TO-RECOVER.md) has the restore command.
 
-Three things worth knowing:
+The first version of this change used the Cosmos Table API, to keep the old data model. A
+security review of the commit pointed out that it left account keys enabled on a publicly
+reachable account. Keys can only be switched off on a NoSQL account, so the module uses the
+NoSQL API and sets `local_authentication_enabled = false`. Nothing had written to the old
+table, so there was no client to stay compatible with.
 
-- **No handler reads or writes this table.** That was already true. The Logic App keeps its own
-  run state, and the table is wired to the tools by environment variable for the handlers a
-  copier adds. The variable was renamed from `STATE_STORAGE_ACCOUNT` to `STATE_TABLE_ENDPOINT`.
+Four things worth knowing:
+
+- **No handler reads or writes this container.** That was already true of the table. The Logic
+  App keeps its own run state, and the store is wired to the tools by environment variable for
+  the handlers a copier adds: `STATE_COSMOS_ENDPOINT`, `STATE_DATABASE` and `STATE_CONTAINER`
+  replace `STATE_STORAGE_ACCOUNT` and `STATE_TABLE_NAME`. A tool that uses it needs a Cosmos
+  data-plane role assignment, which nothing grants yet.
+- **The approvals account still has keys enabled.** Its comment says the attribute that
+  disables them was deprecated with no pinned replacement. The replacement is
+  `local_authentication_enabled`, and it validates on the provider version this tree pins. It
+  was not changed here: that account is the audit trail behind the write boundary, the
+  handlers reach it with a managed identity while `.checkov.yaml` says a connection string is
+  still in use, and the two need reconciling before a key is switched off. That is P3.6.
+- **The account is publicly reachable by default**, like the approvals account and for the
+  same recorded reason: this tree has no private endpoints, and `.checkov.yaml` says so by
+  name. `public_network_access_enabled = false` is an input; with keys off, identity is the
+  control either way.
 - **Zone redundancy was not carried over.** Prod's storage account was ZRS. Whether a
   serverless Cosmos account can be zone-redundant in a given region was not verified, so the
   module does not set it.
@@ -277,8 +297,19 @@ the tree had no handler source, which stopped being true when `src/` was added.
 ### P2.9 — The required check
 
 [`gate.yml`](../.github/workflows/gate.yml) runs on every pull request, waits for every other
-check on the commit, and fails if any failed. The `protect-main` ruleset requires it. The other
-workflows keep their path filters, so nothing waits on a check that never starts.
+check on the commit, and fails unless all of them passed or were skipped. The `protect-main`
+ruleset requires it. The other workflows keep their path filters, so nothing waits on a check
+that never starts.
+
+It runs from the copy of the workflow on `main`, not the one in the pull request, so a change
+cannot rewrite the gate it is judged by. A security review of the first version prompted that
+and two other hardenings: it fails on any conclusion it does not recognise, and it looks twice
+before believing every check is done.
+
+One limit remains. A pull request whose checks all take longer than a minute to *start* could
+be passed before they appear. The double look narrows that window and does not close it.
+Closing it means listing the checks each path is expected to trigger, which is a list that
+would drift from the workflows it describes.
 
 ## Phase 3 — go deeper on the theme
 
@@ -289,6 +320,7 @@ workflows keep their path filters, so nothing waits on a check that never starts
 | P3.3 | Two-person approval | Strengthens the human gate for the highest-risk writes |
 | P3.4 | Approval fatigue | A gate that is clicked through is not a gate |
 | P3.5 | Compliance mapping | Makes the evidence model usable in a regulated review |
+| P3.6 | Switch off account keys on the Azure approvals account | The audit trail should not have a key path nothing needs |
 
 **P3.1 — Trace schema.** Trace field names differ per tree today because each provider's
 queries match different ones. Define one schema (the OpenTelemetry GenAI conventions are the
@@ -309,6 +341,13 @@ automatic approval path; both make the existing one harder to hollow out.
 **P3.5 — Compliance mapping.** Extend [COMPLIANCE.md](../COMPLIANCE.md) with a table from each
 control to the EU AI Act human-oversight article and the NIST AI RMF function it supports, and
 to the test in this tree that demonstrates it.
+
+**P3.6 — Approvals account keys.** `modules/approval` leaves key-based authentication on,
+with a comment saying the provider attribute was deprecated. `local_authentication_enabled`
+is the replacement and `modules/state` already uses it. Before setting it: confirm every
+caller uses a managed identity (`shared/cosmos_io.py` does), remove the stale connection-string
+note and the two matching skips from `.checkov.yaml`, and run the Azure handler and boundary
+suites. Small, but it touches the store behind the write boundary, so it gets its own change.
 
 **Declined: a Kubernetes or fifth-cloud tree.** It adds a tree to keep at parity without
 teaching a property the existing four do not.

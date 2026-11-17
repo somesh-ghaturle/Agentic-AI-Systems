@@ -55,7 +55,7 @@ flowchart TB
     end
 
     subgraph data["State and evidence"]
-        tbl[("Execution state<br/>Cosmos table")]
+        tbl[("Execution state<br/>Cosmos container")]
         cosmos[("Approvals<br/>Cosmos DB")]
         law["Log Analytics<br/><i>workspace</i>"]
         archive[("Archive<br/>Blob + immutability")]
@@ -458,7 +458,7 @@ flowchart TB
         law["Log Analytics workspace"]
     end
     subgraph st["state"]
-        stt[("Cosmos table")]
+        stt[("Cosmos state")]
     end
     subgraph kb["knowledge"]
         srch[("Azure AI Search")]
@@ -491,7 +491,7 @@ everything with a principal depends on it — which is the only reason it exists
 | `approval` | Cosmos account, Service Bus topic, validator, executor | Strong consistency + ETag claim. Only the validator holds Data Sender |
 | `orchestration` | Logic App workflow + full action definition, orchestrator identity attached | Identity must match the one `tools` granted read roles to, or every call 403s while looking correct in the portal. Every outbound call sets an explicit `audience` — omit it and the platform requests an ARM-scoped token that Easy Auth correctly refuses, which reads as a permissions bug |
 | `observability` | Workspace, diagnostic settings, trace emitter, action group, 5 alert rules | Diagnostic settings are per-resource and `for_each`ed over every Function App. Miss one and it vanishes from every query with no error |
-| `state` | Cosmos DB for Table account, table `executionstate` | Continuous backup in prod. Table Storage, which this used to be, has no point-in-time restore — see `docs/HOW-TO-RECOVER.md` |
+| `state` | Cosmos DB account, container `executionstate` | Account keys off; continuous backup in prod. Table Storage, which this used to be, has no point-in-time restore — see `docs/HOW-TO-RECOVER.md` |
 | `knowledge` | Azure AI Search service | Data-plane access is separate from control-plane RBAC, same trap as OpenSearch on AWS |
 | `archive` | Blob container, immutability policy, versioning, lifecycle policy | Tiers to cool then archive, 7-year expiry in prod. `locked = true` in prod is irreversible — retention can be extended, never shortened |
 | `entra-audit` | Tenant-scoped Entra diagnostic setting, severity-0 alert on the write boundary being disabled | Applied from `envs/tenant`, not dev or prod. Tenant-scoped, so two roots managing it would revert each other. See section 2 |

@@ -286,8 +286,9 @@ module "tools" {
   common_environment = {
     KNOWLEDGE_SEARCH_SERVICE = module.knowledge.search_service_name
     KNOWLEDGE_INDEX          = module.knowledge.index_name
-    STATE_TABLE_ENDPOINT     = module.state.table_endpoint
-    STATE_TABLE_NAME         = module.state.table_name
+    STATE_COSMOS_ENDPOINT    = module.state.endpoint
+    STATE_DATABASE           = module.state.database_name
+    STATE_CONTAINER          = module.state.container_name
     ARCHIVE_STORAGE_ACCOUNT  = module.archive.storage_account_name
     ARCHIVE_CONTAINER        = module.archive.container_name
     KEY_VAULT_URI            = module.security.keyvault_uri

@@ -35,7 +35,9 @@ Everything runs without cloud credentials, which is deliberate: a check that nee
 
 ## The one required check
 
-[`.github/workflows/gate.yml`](../.github/workflows/gate.yml) is the only check the `main` ruleset requires. The workflows above have path filters, and a required check that never starts leaves a pull request waiting forever, so their jobs cannot be required by name. `gate` has no filter: it runs on every pull request, waits for whatever else started on the same commit, and fails if any of it failed. Requiring that one job requires all the others exactly when they apply.
+[`.github/workflows/gate.yml`](../.github/workflows/gate.yml) is the only check the `main` ruleset requires. The workflows above have path filters, and a required check that never starts leaves a pull request waiting forever, so their jobs cannot be required by name. `gate` has no filter: it runs on every pull request, waits for whatever else started on the same commit, and fails unless all of it passed or was skipped. Requiring that one job requires all the others exactly when they apply.
+
+It runs from the copy of the workflow on `main`, not the one in the pull request (`pull_request_target`), so a change cannot rewrite the gate it is judged by. That trigger is safe here for a specific reason: the job checks out nothing, runs no code from the pull request, and holds one permission, reading check results.
 
 ## What is not a check
 

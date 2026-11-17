@@ -17,16 +17,22 @@ name: plan
 #     what is missing and stops. A fork has no access to any account.
 #   * Read-only. The role this assumes should carry a read-only policy; `plan` needs nothing
 #     more, and with a read-only role an `apply` could not succeed even if someone added one.
+#   * Main only. `workflow_dispatch` can be started from any branch, and a branch can edit
+#     this file, so the file is not what restricts the role. Two things do: the `plan`
+#     environment only deploys from `main`, and the role's trust policy names that
+#     environment. A run from any other branch is refused the environment and never gets a
+#     token the role will accept.
 #
 # `apply` stays a human step, in a terminal. This file must never grow one.
 #
-# Setup, once, in the sandbox account:
+# Setup, once, in a SANDBOX account — one with nothing in it worth reading, because
+# ReadOnlyAccess can read whatever is there, including object contents:
 #
 #   1. Add GitHub as an OIDC identity provider (token.actions.githubusercontent.com).
 #   2. Create a role with the AWS-managed ReadOnlyAccess policy, whose trust policy allows
-#      only `repo:<owner>/<repo>:environment:plan`.
-#   3. In the repository: create an environment named `plan`, and set the variables
-#      AWS_PLAN_ROLE_ARN and AWS_PLAN_REGION.
+#      only the subject `repo:<owner>/<repo>:environment:plan`.
+#   3. In the repository, set the variables AWS_PLAN_ROLE_ARN and AWS_PLAN_REGION. The
+#      `plan` environment already exists and is restricted to `main`; keep it that way.
 
 on:
   workflow_dispatch:
