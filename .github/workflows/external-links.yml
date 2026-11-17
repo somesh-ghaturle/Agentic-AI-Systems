@@ -27,6 +27,9 @@ jobs:
 
       - name: Check external links
         id: links
+        # `shell: bash` is what turns on pipefail. Without it the step takes tee's exit
+        # status, always succeeds, and the issue below is never opened.
+        shell: bash
         run: python3 .github/scripts/external_links.py . | tee report.txt
         continue-on-error: true
 
