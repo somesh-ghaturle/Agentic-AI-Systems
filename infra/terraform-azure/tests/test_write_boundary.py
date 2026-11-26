@@ -253,6 +253,31 @@ class TestWhoHoldsTheWriteRole(unittest.TestCase):
         self.assertGreaterEqual(found, 1, "no auth_settings_v2 block in modules/tools")
 
 
+class TestNoCosmosKeys(unittest.TestCase):
+    """The approvals account is the audit trail of who authorized what (P3.6).
+
+    Every caller reaches it with a managed identity and a data-plane role, so an account
+    key is a second way in that skips both. checkov cannot guard this: its rule reads the
+    deprecated `local_authentication_disabled` and is skipped in .checkov.yaml.
+    """
+
+    def test_every_cosmos_account_has_keys_off(self):
+        header = re.compile(r'resource\s+"azurerm_cosmosdb_account"\s+"(?P<name>\w+)"\s*\{')
+        found, wrong = 0, []
+        for path in tf_files():
+            with open(path, encoding="utf-8") as fh:
+                text = strip_comments_preserving_lines(fh.read())
+            for m in header.finditer(text):
+                found += 1
+                body = block_body(text, m.end() - 1)
+                v = re.search(r"^\s*local_authentication_enabled\s*=\s*(\S+)", body, re.M)
+                if not v or v.group(1) != "false":
+                    wrong.append(f"{os.path.relpath(path, TREE)}: {m.group('name')}")
+        # approvals and state today; zero means the walk broke and the check is vacuous.
+        self.assertGreaterEqual(found, 2, "no azurerm_cosmosdb_account found; walk broken?")
+        self.assertEqual([], wrong, "Cosmos accounts with account keys on")
+
+
 class TestTheReaderItself(unittest.TestCase):
     """The reader is a claim like any other, and it was the one nothing checked.
 

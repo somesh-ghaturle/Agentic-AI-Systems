@@ -173,13 +173,15 @@ resource "azurerm_cosmosdb_account" "approvals" {
   public_network_access_enabled     = var.cosmos_public_network_access_enabled
   is_virtual_network_filter_enabled = var.cosmos_public_network_access_enabled == false
 
-  # Key-based auth to Cosmos should be off — every caller here uses its managed identity
-  # via the SQL role assignments below, so the account keys grant a path nothing
-  # legitimate needs. The provider attribute that did this is deprecated and its
-  # replacement is not pinned in this repo's provider version, so it is deliberately not
-  # set here rather than guessed at. Enforce it with Azure Policy
-  # ("Cosmos DB database accounts should have local authentication methods disabled")
-  # until this is re-pinned. Tracked in ARCHITECTURE.md section "Remaining work".
+  # No account keys. Every caller — the validator and executor, through
+  # shared/cosmos_io.py — authenticates with its managed identity via the SQL role
+  # assignments below, so a key would be a path into the audit trail that nothing
+  # legitimate uses. modules/state sets the same attribute for the same reason.
+  local_authentication_enabled = false
+  # And no key-authorized changes to databases and containers. Moot while keys are off;
+  # set so that turning keys back on does not also hand them the management plane.
+  # Terraform is unaffected: azurerm creates these through Resource Manager, not a key.
+  access_key_metadata_writes_enabled = false
 
   tags = var.tags
 }

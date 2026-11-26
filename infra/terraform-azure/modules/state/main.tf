@@ -70,6 +70,9 @@ resource "azurerm_cosmosdb_account" "state" {
   # No account keys. Nothing reads this account yet, so there is no caller to break, and
   # the first one should arrive with a role assignment and not a connection string.
   local_authentication_enabled = false
+  # Moot while keys are off; set so that turning them on does not also hand them the
+  # management plane. azurerm creates the database and container through Resource Manager.
+  access_key_metadata_writes_enabled = false
 
   public_network_access_enabled     = var.public_network_access_enabled
   is_virtual_network_filter_enabled = var.public_network_access_enabled == false
