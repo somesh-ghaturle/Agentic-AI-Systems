@@ -19,7 +19,7 @@
 # file was written, out of 110 findings then.
 #
 # Those are historical numbers and they are not the length of this list. Measured today:
-# 99 findings across 44 rules, which is what the entries below suppress. Re-measure with
+# 103 findings across 42 rules, which is what the entries below suppress. Re-measure with
 #
 #     checkov -d infra --framework terraform -o json   # run from OUTSIDE the repo root,
 #                                                      # or this config is auto-loaded and
@@ -156,16 +156,23 @@ skip-check:
   # Shared-key and local authentication.
   #
   # Disabling these is right and is blocked by something concrete: the Function
-  # Apps mount their content share from the storage account with a shared key, and
-  # Cosmos and Service Bus are reached through connection strings held in Key Vault
-  # rather than through managed identity. Both are tracked as work, not as posture
-  # — moving them to identity is a code change in infra/terraform-azure/src/ as
-  # well as in the HCL.
+  # Apps mount their content share from the storage account with a shared key.
+  # Moving that to identity is a code change in infra/terraform-azure/src/ as well
+  # as in the HCL.
+  #
+  # CKV_AZURE_140 is a different case: both Cosmos accounts in the Azure tree DO
+  # have keys off, via `local_authentication_enabled = false`. checkov 3.3.13 reads
+  # only `local_authentication_disabled`, the attribute azurerm deprecated in favour
+  # of that one, so it fails a resource that is configured correctly. Re-test when
+  # the checkov pin is raised, and delete the entry once it passes.
+  #
+  # CKV_AZURE_203 is not stale: Service Bus local auth is an input,
+  # `servicebus_local_auth_enabled`. Staging and prod turn it off; dev keeps the
+  # default, on, so the check still fires there.
   # -------------------------------------------------------------------------
   - CKV2_AZURE_40  # Storage account allows Shared Key authorization
   - CKV2_AZURE_41  # Storage account has no SAS expiration policy
-  - CKV_AZURE_140  # Cosmos DB local authentication not disabled
-  - CKV_AZURE_132  # Cosmos DB management-plane changes not restricted
+  - CKV_AZURE_140  # Cosmos DB local authentication — scanner reads the deprecated attribute
   - CKV_AZURE_203  # Service Bus local authentication not disabled
 
   # -------------------------------------------------------------------------

@@ -254,7 +254,8 @@ Four things worth knowing:
   `local_authentication_enabled`, and it validates on the provider version this tree pins. It
   was not changed here: that account is the audit trail behind the write boundary, the
   handlers reach it with a managed identity while `.checkov.yaml` says a connection string is
-  still in use, and the two need reconciling before a key is switched off. That is P3.6.
+  still in use, and the two need reconciling before a key is switched off. That is P3.6,
+  now done.
 - **The account is publicly reachable by default**, like the approvals account and for the
   same recorded reason: this tree has no private endpoints, and `.checkov.yaml` says so by
   name. `public_network_access_enabled = false` is an input; with keys off, identity is the
@@ -378,6 +379,18 @@ is the replacement and `modules/state` already uses it. Before setting it: confi
 caller uses a managed identity (`shared/cosmos_io.py` does), remove the stale connection-string
 note and the two matching skips from `.checkov.yaml`, and run the Azure handler and boundary
 suites. Small, but it touches the store behind the write boundary, so it gets its own change.
+
+*Done (2026-11-26).* The only client is `shared/cosmos_io.py`, which uses the function app's
+managed identity; nothing in the tree reads an account key or connection string. Both Cosmos
+accounts now set `local_authentication_enabled = false` and
+`access_key_metadata_writes_enabled = false`. The second setting removed the `CKV_AZURE_132`
+skip. `CKV_AZURE_140` stays skipped, for a different reason: checkov 3.3.13 checks only
+`local_authentication_disabled`, the deprecated attribute, so it fails accounts that are
+configured correctly. The skip's comment now says that, and should be checked again when
+the checkov pin is raised. The stale "Cosmos local auth" item is gone from the Azure
+HOW-TO-DEPLOY. Because checkov cannot guard the setting, `TestNoCosmosKeys` in the Azure
+boundary suite does. It went red with the approvals account's keys switched back on.
+Not applied to a real account (see P2.1).
 
 **Declined: a Kubernetes or fifth-cloud tree.** It adds a tree to keep at parity without
 teaching a property the existing four do not.
